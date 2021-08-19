@@ -1,4 +1,4 @@
-package it.pagopa.pdnd.uservice.resttemplate.api.impl
+package it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl
 
 import akka.actor.typed.ActorSystem
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityRef}

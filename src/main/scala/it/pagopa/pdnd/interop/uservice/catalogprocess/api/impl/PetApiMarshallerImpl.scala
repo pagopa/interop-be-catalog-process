@@ -1,4 +1,4 @@
-package it.pagopa.pdnd.uservice.resttemplate.api.impl
+package it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.marshalling.ToEntityMarshaller

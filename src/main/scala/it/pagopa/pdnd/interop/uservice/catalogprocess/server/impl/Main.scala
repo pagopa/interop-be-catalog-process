@@ -1,4 +1,4 @@
-package it.pagopa.pdnd.uservice.resttemplate.server.impl
+package it.pagopa.pdnd.interop.uservice.catalogprocess.server.impl
 
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.Behaviors
@@ -18,8 +18,9 @@ import akka.persistence.typed.PersistenceId
 import akka.projection.ProjectionBehavior
 import akka.{actor => classic}
 import io.github.resilience4j.ratelimiter.{RateLimiter, RateLimiterConfig, RateLimiterRegistry, RequestNotPermitted}
+import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl.{PetApiMarshallerImpl, PetApiServiceImpl}
 import it.pagopa.pdnd.uservice.resttemplate.api.PetApi
-import it.pagopa.pdnd.uservice.resttemplate.api.impl.{PetApiMarshallerImpl, PetApiServiceImpl}
+import it.pagopa.pdnd.uservice.resttemplate.api.impl.PetApiMarshallerImpl
 import it.pagopa.pdnd.uservice.resttemplate.common.system.Authenticator
 import it.pagopa.pdnd.uservice.resttemplate.model.persistence.{Command, PetPersistentBehavior, PetPersistentProjection}
 import it.pagopa.pdnd.uservice.resttemplate.server.Controller

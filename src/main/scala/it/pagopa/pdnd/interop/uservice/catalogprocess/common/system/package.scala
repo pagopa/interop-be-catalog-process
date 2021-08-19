@@ -1,4 +1,5 @@
-package it.pagopa.pdnd.uservice.resttemplate.common
+package it.pagopa.pdnd.interop.uservice.catalogprocess.common
+
 import akka.http.scaladsl.server.Directives.Authenticator
 import akka.http.scaladsl.server.directives.Credentials
 import akka.util.Timeout
