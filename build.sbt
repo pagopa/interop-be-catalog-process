@@ -11,6 +11,10 @@ ThisBuild / libraryDependencies := Dependencies.Jars.`server`.map(m =>
 )
 ThisBuild / dependencyOverrides ++= Dependencies.Jars.overrides
 
+ThisBuild / resolvers += "Pagopa Nexus Snapshots" at s"https://gateway.interop.pdnd.dev/nexus/repository/maven-snapshots/"
+ThisBuild / resolvers += "Pagopa Nexus Releases" at s"https://gateway.interop.pdnd.dev/nexus/repository/maven-releases/"
+credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
+
 val generateCode = taskKey[Unit]("A task for generating the code starting from the swagger definition")
 
 val packagePrefix = settingKey[String]("The package prefix derived from the uservice name")
