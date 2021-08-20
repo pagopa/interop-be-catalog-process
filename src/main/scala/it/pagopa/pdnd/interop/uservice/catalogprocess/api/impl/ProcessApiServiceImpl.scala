@@ -21,5 +21,5 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
   override def listEServices()(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerEServicearray: ToEntityMarshaller[Seq[EService]]
-  ): Route = ???
+  ): Route = listEServices200(Seq(EService(Some("1234567890"), "MyService")))
 }

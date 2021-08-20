@@ -7,6 +7,7 @@ import akka.http.scaladsl.server.directives.Credentials
 import akka.util.Timeout
 import akka.{actor => classic}
 import akka.actor.typed.scaladsl.adapter.TypedActorSystemOps
+import akka.http.scaladsl.server.directives.Credentials.{Missing, Provided}
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.DurationInt
@@ -23,6 +24,12 @@ package object system {
   implicit val timeout: Timeout = 300.seconds
 
   object Authenticator extends Authenticator[Seq[(String, String)]] {
-    override def apply(credentials: Credentials): Option[Seq[(String, String)]] = Some(Seq.empty[(String, String)])
+
+    override def apply(credentials: Credentials): Option[Seq[(String, String)]] = {
+      credentials match {
+        case Provided(identifier) => Some(Seq("bearer" -> identifier))
+        case Missing              => None
+      }
+    }
   }
 }

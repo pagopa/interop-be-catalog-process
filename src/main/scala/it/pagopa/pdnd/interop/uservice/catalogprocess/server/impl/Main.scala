@@ -36,16 +36,17 @@ trait CatalogManagementAPI {
   Array(
     "org.wartremover.warts.StringPlusAny",
     "org.wartremover.warts.Nothing",
-    "org.wartremover.warts.ImplicitConversion"
+    "org.wartremover.warts.ImplicitConversion",
+    "org.wartremover.warts.NonUnitStatements"
   )
 )
 object Main extends App with CorsSupport with CatalogManagementAPI {
 
   Kamon.init()
 
-  val processApi = new ProcessApi(
+  val processApi: ProcessApi = new ProcessApi(
     ProcessApiServiceImpl(catalogManagementService),
-    new ProcessApiMarshallerImpl,
+    ProcessApiMarshallerImpl(),
     SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
   )
 
@@ -56,7 +57,7 @@ object Main extends App with CorsSupport with CatalogManagementAPI {
   )
 
   locally {
-    AkkaManagement.get(classicActorSystem).start()
+    val _ = AkkaManagement.get(classicActorSystem).start()
   }
 
   val controller: Controller = new Controller(healthApi, processApi)
