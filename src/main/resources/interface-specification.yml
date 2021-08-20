@@ -2,9 +2,16 @@ openapi: 3.0.3
 info:
   title: Catalog Process Micro Service
   description: This service is the catalog process
-  version: '{{version}}'
+  version: '0.0.1'
+  contact:
+    name: API Support
+    url: http://www.example.com/support
+    email: support@example.com
+  termsOfService: 'http://swagger.io/terms/'
+  x-api-id: an x-api-id
+  x-summary: an x-summary
 servers:
-  - url: /pdnd-interop-uservice-catalog-process/0.0.1
+  - url: https://gateway.interop.pdnd.dev/pdnd-interop-uservice-catalog-process/0.0.1
     description: This service is the catalog process
 security:
   - bearerAuth: [ ]
@@ -28,7 +35,7 @@ paths:
       description: Return the list of all EServices
       operationId: listEServices
       responses:
-        200:
+        '200':
           description: List of EServices
           content:
             application/json:
@@ -121,3 +128,9 @@ components:
       required:
         - status
         - title
+  securitySchemes:
+    bearerAuth:
+      type: http
+      description: A bearer token in the format of a JWS and comformed to the specifications included in [RFC8725](https://tools.ietf.org/html/RFC8725).
+      scheme: bearer
+      bearerFormat: JWT
