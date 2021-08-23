@@ -1,3 +1,10 @@
 package it.pagopa.pdnd.interop.uservice.catalogprocess.service
 
-trait CatalogManagementService
+import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.BearerToken
+import it.pagopa.pdnd.interopuservice.catalogprocess.model.{EService, EServiceSeed}
+
+import scala.concurrent.Future
+
+trait CatalogManagementService {
+  def createEService(bearerToken: BearerToken, eServiceSeed: EServiceSeed): Future[EService]
+}

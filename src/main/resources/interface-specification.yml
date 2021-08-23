@@ -28,21 +28,48 @@ tags:
       url: http://swagger.io
 paths:
   /eservices:
-    get:
+#    get:
+#      tags:
+#        - process
+#      summary: Get all EServices
+#      description: Return the list of all EServices
+#      operationId: listEServices
+#      responses:
+#        '200':
+#          description: List of EServices
+#          content:
+#            application/json:
+#              schema:
+#                type: array
+#                items:
+#                  $ref: '#/components/schemas/EService'
+    post:
+      security:
+        - bearerAuth: [ ]
       tags:
         - process
-      summary: Get all EServices
-      description: Return the list of all EServices
-      operationId: listEServices
+      summary: Create a new e-service
+      operationId: createEService
+      requestBody:
+        description: A E-Service seed
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EServiceSeed'
+        required: true
       responses:
-        '200':
-          description: List of EServices
+        "200":
+          description: EService created
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/EService'
+                $ref: '#/components/schemas/EService'
+        "400":
+          description: Invalid input
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /status:
     get:
       security:
@@ -85,19 +112,143 @@ paths:
 #          description: successful operation
 components:
   schemas:
-    EService:
-      required:
-        - name
+    EServiceSeed:
       type: object
+      required:
+        - producerId
+        - name
+        - description
+        - audience
+        - technology
+        - attributes
+        - voucherLifespan
+      properties:
+        producerId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        audience:
+          type: array
+          items:
+            type: string
+        technology:
+          type: string
+          enum: [ 'REST', 'SOAP' ]
+        voucherLifespan:
+          type: integer
+          format: int32
+        attributes:
+          $ref: '#/components/schemas/Attributes'
+    EService:
+      type: object
+      required:
+        - id
+        - producerId
+        - name
+        - description
+        - audience
+        - technology
+        - voucherLifespan
+        - attributes
+        - descriptors
       properties:
         id:
           type: string
-          pattern: "^\\d+"
+          format: uuid
+        producerId:
+          type: string
+          format: uuid
         name:
           type: string
-          example: doggie
-          maxLength: 64
-          minLength: 6
+        description:
+          type: string
+        audience:
+          type: array
+          items:
+            type: string
+        technology:
+          type: string
+        voucherLifespan:
+          type: integer
+          format: int32
+        attributes:
+          $ref: '#/components/schemas/Attributes'
+        descriptors:
+          type: array
+          items:
+            $ref: '#/components/schemas/EServiceDescriptor'
+    EServiceDoc:
+      type: object
+      required:
+        - id
+        - name
+        - contentType
+        - description
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        contentType:
+          type: string
+        description:
+          type: string
+    EServiceDescriptor:
+      type: object
+      required:
+        - id
+        - version
+        - docs
+        - status
+        - creationDate
+      properties:
+        id:
+          type: string
+          format: uuid
+        version:
+          type: string
+        description:
+          type: string
+        interface:
+          $ref: '#/components/schemas/EServiceDoc'
+        docs:
+          type: array
+          items:
+            $ref: '#/components/schemas/EServiceDoc'
+        status:
+          type: string
+          enum: [ 'draft', 'published','deprecated','archived' ]
+    Attribute:
+      type: object
+      properties:
+        simple:
+          type: string
+        group:
+          type: array
+          items:
+            type: string
+    Attributes:
+      properties:
+        certified:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attribute'
+        declared:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attribute'
+        verified:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attribute'
+      required:
+        - certified
+        - declared
+        - verified
     Problem:
       properties:
         detail:

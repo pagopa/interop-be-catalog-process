@@ -57,7 +57,7 @@ object Main extends App with CorsSupport with CatalogManagementAPI {
   )
 
   locally {
-    val _ = AkkaManagement.get(classicActorSystem).start()
+    AkkaManagement.get(classicActorSystem).start()
   }
 
   val controller: Controller = new Controller(healthApi, processApi)
