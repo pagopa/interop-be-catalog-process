@@ -6,6 +6,12 @@ import it.pagopa.pdnd.interopuservice.catalogprocess.model.{EService, EServiceSe
 import scala.concurrent.Future
 
 trait CatalogManagementService {
+  def getEServices(
+    bearerToken: BearerToken,
+    producerId: Option[String],
+    consumerId: Option[String],
+    status: Option[String]
+  ): Future[Seq[EService]]
   def createEService(bearerToken: BearerToken, eServiceSeed: EServiceSeed): Future[EService]
   def deleteDraft(bearerToken: BearerToken, eServiceId: String, descriptorId: String): Future[Unit]
 }

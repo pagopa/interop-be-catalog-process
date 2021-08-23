@@ -9,7 +9,7 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-@SuppressWarnings(Array("org.wartremover.warts.ImplicitParameter"))
+@SuppressWarnings(Array("org.wartremover.warts.ImplicitParameter", "org.wartremover.warts.StringPlusAny"))
 final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker, api: EServiceApi)(implicit
   ec: ExecutionContext
 ) extends CatalogManagementService {
@@ -29,7 +29,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
           logger.error(s"Error while creating E-Service ${ex.getMessage}")
           Future.failed[client.model.EService](ex)
         }
-        .map(eServiceSeedFromCatalogClientSeed)
+        .map(eServiceFromCatalogClient)
     } yield result
 
   }
@@ -48,5 +48,29 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         )
         Future.failed[Unit](ex)
       }
+  }
+
+  override def getEServices(
+    bearerToken: BearerToken,
+    producerId: Option[String],
+    consumerId: Option[String],
+    status: Option[String]
+  ): Future[Seq[EService]] = {
+    val request: ApiRequest[Seq[client.model.EService]] = api.getEServices(producerId, consumerId, status)(bearerToken)
+    invoker
+      .execute[Seq[client.model.EService]](request)
+      .map { result =>
+        logger.info(
+          s"E-Services list retrieved for filters: producerId = $producerId, consumerId = $consumerId, status = $status"
+        )
+        result.content
+      }
+      .recoverWith { case ex =>
+        logger.error(
+          s"Error while retrieving E-Services for filters: producerId = $producerId, consumerId = $consumerId, status = $status"
+        )
+        Future.failed[Seq[client.model.EService]](ex)
+      }
+      .map(_.map(eServiceFromCatalogClient))
   }
 }

@@ -44,7 +44,7 @@ package object impl {
       status = clientDescriptor.status.toString
     )
 
-  def eServiceSeedFromCatalogClientSeed(clientEService: client.model.EService): EService =
+  def eServiceFromCatalogClient(clientEService: client.model.EService): EService =
     EService(
       id = clientEService.id,
       producerId = clientEService.producerId,

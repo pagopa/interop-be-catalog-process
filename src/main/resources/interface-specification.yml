@@ -28,21 +28,34 @@ tags:
       url: http://swagger.io
 paths:
   /eservices:
-#    get:
-#      tags:
-#        - process
-#      summary: Get all EServices
-#      description: Return the list of all EServices
-#      operationId: listEServices
-#      responses:
-#        '200':
-#          description: List of EServices
-#          content:
-#            application/json:
-#              schema:
-#                type: array
-#                items:
-#                  $ref: '#/components/schemas/EService'
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Retrieve a list of E-Service
+      operationId: getEServices
+      parameters:
+        - in: query
+          name: producerId
+          schema:
+            type: string
+        - in: query
+          name: consumerId
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [ draft, active, suspended ]
+      responses:
+        "200":
+          description: A list of E-Service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EServices'
     post:
       security:
         - bearerAuth: [ ]
@@ -216,6 +229,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EServiceDescriptor'
+    EServices:
+      type: array
+      items:
+        $ref: '#/components/schemas/EService'
     EServiceDoc:
       type: object
       required:

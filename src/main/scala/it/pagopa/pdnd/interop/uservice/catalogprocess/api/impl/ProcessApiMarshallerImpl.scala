@@ -18,4 +18,7 @@ final case class ProcessApiMarshallerImpl()
   override implicit def toEntityMarshallerProblem: ToEntityMarshaller[Problem] = sprayJsonMarshaller[Problem]
 
   override implicit def toEntityMarshallerEService: ToEntityMarshaller[EService] = sprayJsonMarshaller[EService]
+
+  override implicit def toEntityMarshallerEServicearray: ToEntityMarshaller[Seq[EService]] =
+    sprayJsonMarshaller[Seq[EService]]
 }

@@ -77,6 +77,24 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     }
   }
 
+  /** Code: 200, Message: A list of E-Service, DataType: Seq[EService]
+    */
+  override def getEServices(producerId: Option[String], consumerId: Option[String], status: Option[String])(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerEServicearray: ToEntityMarshaller[Seq[EService]]
+  ): Route = {
+    val result =
+      for {
+        bearer   <- tokenFromContext(contexts)
+        response <- catalogManagementService.getEServices(bearer, producerId, consumerId, status)
+      } yield response
+
+    onComplete(result) {
+      case Success(response) => getEServices200(response)
+      case Failure(_)        => ??? // TODO consider 500?
+    }
+  }
+
   private[this] def tokenFromContext(context: Seq[(String, String)]): Future[BearerToken] =
     Future.fromTry(
       context
