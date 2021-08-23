@@ -3,7 +3,7 @@ package it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl
 import akka.http.scaladsl.marshalling.ToEntityMarshaller
 import akka.http.scaladsl.server.Directives.onComplete
 import akka.http.scaladsl.server.Route
-import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.BearerToken
+import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.{ApiError, BearerToken}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.CatalogManagementService
 import it.pagopa.pdnd.interopuservice.catalogprocess.api.ProcessApiService
 import it.pagopa.pdnd.interopuservice.catalogprocess.model.{EService, EServiceSeed, Problem}
@@ -39,16 +39,9 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerEService: ToEntityMarshaller[EService]
   ): Route = {
-    val bearerToken = Future.fromTry(
-      contexts
-        .find(_._1 == "bearer")
-        .map(header => BearerToken(header._2))
-        .toRight(new RuntimeException("Bearer Token not provided"))
-        .toTry
-    )
     val result =
       for {
-        bearer          <- bearerToken
+        bearer          <- tokenFromContext(contexts)
         createdEService <- catalogManagementService.createEService(bearer, eServiceSeed)
       } yield createdEService
 
@@ -59,4 +52,37 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
         createEService400(errorResponse)
     }
   }
+
+  /** Code: 204, Message: E-Service draft Descriptor deleted
+    * Code: 400, Message: Invalid input, DataType: Problem
+    * Code: 404, Message: Not found, DataType: Problem
+    */
+  override def deleteDraft(eServiceId: String, descriptorId: String)(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+  ): Route = {
+    val result =
+      for {
+        bearer <- tokenFromContext(contexts)
+        _      <- catalogManagementService.deleteDraft(bearer, eServiceId, descriptorId)
+      } yield ()
+
+    onComplete(result) {
+      case Success(_) => deleteDraft204
+      case Failure(ex: ApiError[_]) if ex.code == 400 =>
+        deleteDraft400(Problem(Option(ex.getMessage), 400, "Error while deleting draft E-Service"))
+      case Failure(ex: ApiError[_]) if ex.code == 404 =>
+        deleteDraft404(Problem(Option(ex.getMessage), 404, "Error while deleting draft E-Service"))
+      case Failure(_) => ??? // TODO consider 500?
+    }
+  }
+
+  private[this] def tokenFromContext(context: Seq[(String, String)]): Future[BearerToken] =
+    Future.fromTry(
+      context
+        .find(_._1 == "bearer")
+        .map(header => BearerToken(header._2))
+        .toRight(new RuntimeException("Bearer Token not provided"))
+        .toTry
+    )
 }

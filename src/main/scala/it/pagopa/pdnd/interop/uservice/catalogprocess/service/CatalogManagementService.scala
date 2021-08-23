@@ -7,4 +7,5 @@ import scala.concurrent.Future
 
 trait CatalogManagementService {
   def createEService(bearerToken: BearerToken, eServiceSeed: EServiceSeed): Future[EService]
+  def deleteDraft(bearerToken: BearerToken, eServiceId: String, descriptorId: String): Future[Unit]
 }

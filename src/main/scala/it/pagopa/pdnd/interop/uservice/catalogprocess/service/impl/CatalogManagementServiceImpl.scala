@@ -33,4 +33,20 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
     } yield result
 
   }
+
+  override def deleteDraft(bearerToken: BearerToken, eServiceId: String, descriptorId: String): Future[Unit] = {
+    val request: ApiRequest[Unit] = api.deleteDraft(eServiceId, descriptorId)(bearerToken)
+    invoker
+      .execute[Unit](request)
+      .map { result =>
+        logger.info(s"Draft E-Service deleted. E-Service Id: $eServiceId Descriptor Id: $descriptorId")
+        result.content
+      }
+      .recoverWith { case ex =>
+        logger.error(
+          s"Error while deleting E-Service with Id $eServiceId and descriptor Id $descriptorId. Error: ${ex.getMessage}"
+        )
+        Future.failed[Unit](ex)
+      }
+  }
 }

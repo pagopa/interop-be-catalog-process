@@ -70,6 +70,42 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /eservices/{eServiceId}/descriptors/{descriptorId}:
+    delete:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Deletes a draft descriptor
+      operationId: deleteDraft
+      parameters:
+        - name: eServiceId
+          in: path
+          description: The E-Service Id
+          required: true
+          schema:
+            type: string
+        - name: descriptorId
+          in: path
+          description: The Descriptor Id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: E-Service draft Descriptor deleted
+        "400":
+          description: Invalid input
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "404":
+          description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /status:
     get:
       security:
