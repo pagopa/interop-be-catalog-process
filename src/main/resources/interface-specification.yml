@@ -83,6 +83,40 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /eservices/{eServiceId}:
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Get an e-service
+      operationId: getEService
+      parameters:
+        - name: eServiceId
+          in: path
+          description: The E-Service id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: E-Service retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EService'
+        '404':
+          description: E-Service not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /eservices/{eServiceId}/descriptors/{descriptorId}:
     delete:
       security:
@@ -107,6 +141,46 @@ paths:
       responses:
         "204":
           description: E-Service draft Descriptor deleted
+        "400":
+          description: Invalid input
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "404":
+          description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /eservices/{eServiceId}/descriptors/{descriptorId}/publish:
+    post:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Publish the descriptors
+      operationId: publishDescriptor
+      parameters:
+        - name: eServiceId
+          in: path
+          description: the eservice id
+          required: true
+          schema:
+            type: string
+        - name: descriptorId
+          in: path
+          description: the descriptor Id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: E-Service Descriptor published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EService'
         "400":
           description: Invalid input
           content:

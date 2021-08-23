@@ -73,4 +73,45 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       }
       .map(_.map(eServiceFromCatalogClient))
   }
+
+  override def publishDescriptor(
+    bearerToken: BearerToken,
+    eServiceId: String,
+    descriptorId: String
+  ): Future[EService] = {
+    val request: ApiRequest[client.model.EService] = api.publishDescriptor(eServiceId, descriptorId)(bearerToken)
+    invoker
+      .execute[client.model.EService](request)
+      .map { result =>
+        logger.info(s"Descriptor $descriptorId published for E-Services $eServiceId")
+        result.content
+      }
+      .recoverWith { case ex =>
+        logger.error(s"Error while publishing descriptor $descriptorId for E-Services $eServiceId")
+        Future.failed[client.model.EService](ex)
+      }
+      .map(eServiceFromCatalogClient)
+  }
+
+  override def getEService(bearerToken: BearerToken, eServiceId: String): Future[EService] = {
+    val request: ApiRequest[client.model.EService] = api.getEService(eServiceId)(bearerToken)
+    invoker
+      .execute[client.model.EService](request)
+      .map { result =>
+        logger.info(s"E-Service with id $eServiceId retrieved")
+        result.content
+      }
+      .recoverWith { case ex =>
+        logger.error(s"Error while retrieving E-Service with id $eServiceId")
+        Future.failed[client.model.EService](ex)
+      }
+      .map(eServiceFromCatalogClient)
+  }
+
+  override def updateDescriptorStatus(
+    bearerToken: BearerToken,
+    eServiceId: String,
+    descriptorId: String,
+    status: String
+  ): Future[EService] = ???
 }
