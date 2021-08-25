@@ -101,7 +101,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     val result =
       for {
         bearer   <- tokenFromContext(contexts)
-        response <- catalogManagementService.getEServices(bearer, producerId, consumerId, status)
+        response <- catalogManagementService.listEServices(bearer, producerId, consumerId, status)
       } yield response
 
     onComplete(result) {

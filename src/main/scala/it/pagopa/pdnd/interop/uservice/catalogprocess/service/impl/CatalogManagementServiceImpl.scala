@@ -51,7 +51,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       }
   }
 
-  override def getEServices(
+  override def listEServices(
     bearerToken: BearerToken,
     producerId: Option[String],
     consumerId: Option[String],

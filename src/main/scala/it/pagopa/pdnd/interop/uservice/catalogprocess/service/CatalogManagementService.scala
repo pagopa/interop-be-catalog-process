@@ -7,7 +7,7 @@ import it.pagopa.pdnd.interopuservice.catalogprocess.model.{EService, EServiceSe
 import scala.concurrent.Future
 
 trait CatalogManagementService {
-  def getEServices( // TODO rename to listEServices
+  def listEServices(
     bearerToken: BearerToken,
     producerId: Option[String],
     consumerId: Option[String],
