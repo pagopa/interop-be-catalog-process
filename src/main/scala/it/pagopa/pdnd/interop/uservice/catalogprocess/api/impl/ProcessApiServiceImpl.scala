@@ -3,7 +3,10 @@ package it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl
 import akka.http.scaladsl.marshalling.ToEntityMarshaller
 import akka.http.scaladsl.server.Directives.onComplete
 import akka.http.scaladsl.server.Route
+import cats.implicits.toTraverseOps
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.{ApiError, BearerToken}
+import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.EServiceDescriptorEnums.Status
+import it.pagopa.pdnd.interop.uservice.catalogprocess.model.UpdateDescriptorSeed
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.CatalogManagementService
 import it.pagopa.pdnd.interopuservice.catalogprocess.api.ProcessApiService
 import it.pagopa.pdnd.interopuservice.catalogprocess.model.{EService, EServiceDescriptor, EServiceSeed, Problem}
@@ -122,13 +125,19 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
         currentEService <- catalogManagementService.getEService(bearer, eServiceId)
         // TODO Status should be an enum
         currentActiveDescriptor = currentEService.descriptors.find(_.status == "published") // Must be at most one
-        updatedEService <- catalogManagementService.publishDescriptor(bearer, eServiceId, descriptorId)
+        descriptorToPublishSeed = UpdateDescriptorSeed(description = None, status = Some(Status.Published))
+        updatedEService <- catalogManagementService.updateDescriptor(
+          bearer,
+          eServiceId,
+          descriptorId,
+          descriptorToPublishSeed
+        )
         _ <- currentActiveDescriptor
           .map(oldDescriptor =>
             deprecateDescriptor(oldDescriptor, eServiceId, bearer)
               .recoverWith(_ => resetDescriptorToDraft(eServiceId, descriptorId, bearer))
           )
-          .traverse
+          .sequence
       } yield updatedEService
 
     onComplete(result) {
@@ -180,12 +189,14 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     bearerToken: BearerToken
   ): Future[EService] = {
     val descriptorId = descriptor.id.toString
+    val descriptorSeed =
+      UpdateDescriptorSeed(description = None, status = Some(Status.Deprecated)) // TODO It should be in a library
     catalogManagementService
-      .updateDescriptorStatus(
+      .updateDescriptor(
         bearerToken = bearerToken,
         eServiceId = eServiceId,
         descriptorId = descriptorId,
-        status = "deprecated" // TODO Status should be an enum
+        seed = descriptorSeed
       )
       .recoverWith { case ex =>
         logger.warn(s"Unable to deprecate descriptor $descriptorId on E-Service $eServiceId. Reason: ${ex.getMessage}")
@@ -198,12 +209,14 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     descriptorId: String,
     bearerToken: BearerToken
   ): Future[EService] = {
+    val descriptorSeed =
+      UpdateDescriptorSeed(description = None, status = Some(Status.Draft)) // TODO It should be in a library
     catalogManagementService
-      .updateDescriptorStatus(
+      .updateDescriptor(
         bearerToken = bearerToken,
         eServiceId = eServiceId,
         descriptorId = descriptorId,
-        status = "draft" // TODO Status should be an enum
+        seed = descriptorSeed
       )
       .map { result =>
         logger.info(s"Publication cancelled for descriptor $descriptorId in E-Service $eServiceId")

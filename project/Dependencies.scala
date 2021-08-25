@@ -67,6 +67,11 @@ object Dependencies {
     lazy val classic   = namespace % "logback-classic" % logbackVersion
   }
 
+  private[this] object cats {
+    lazy val namespace = "org.typelevel"
+    lazy val core      = namespace %% "cats-core" % catsVersion
+  }
+
   private[this] object commons {
     lazy val fileUpload = "commons-fileupload" % "commons-fileupload" % commonsFileUploadVersion
   }
@@ -94,6 +99,11 @@ object Dependencies {
   private[this] object scalatest {
     lazy val namespace = "org.scalatest"
     lazy val core      = namespace %% "scalatest" % scalatestVersion
+  }
+
+  private[this] object scalamock {
+    lazy val namespace = "org.scalamock"
+    lazy val core      = namespace %% "scalamock" % scalaMockVersion
   }
 
   private[this] object pagopa {
@@ -134,6 +144,7 @@ object Dependencies {
       akka.http                      % Compile,
       akka.httpJson                  % Compile,
       awssdk.s3                      % Compile,
+      cats.core                      % Compile,
       commons.fileUpload             % Compile,
       mustache.mustache              % Compile,
       logback.classic                % Compile,
@@ -144,7 +155,8 @@ object Dependencies {
       kamon.prometheus               % Compile,
       pagopa.catalogManagementClient % Compile,
       scalaprotobuf.core             % Protobuf,
-      scalatest.core                 % Test
+      scalatest.core                 % Test,
+      scalamock.core                 % Test
     )
     lazy val client: Seq[ModuleID] = Seq(
       akka.stream     % Compile,

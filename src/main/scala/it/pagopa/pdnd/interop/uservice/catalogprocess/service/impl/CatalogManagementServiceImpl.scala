@@ -3,6 +3,7 @@ package it.pagopa.pdnd.interop.uservice.catalogprocess.service.impl
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.api.EServiceApi
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.{ApiRequest, BearerToken}
+import it.pagopa.pdnd.interop.uservice.catalogprocess.model.UpdateDescriptorSeed
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{CatalogManagementInvoker, CatalogManagementService}
 import it.pagopa.pdnd.interopuservice.catalogprocess.model.{EService, EServiceSeed}
 import org.slf4j.{Logger, LoggerFactory}
@@ -74,25 +75,6 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       .map(_.map(eServiceFromCatalogClient))
   }
 
-  override def publishDescriptor(
-    bearerToken: BearerToken,
-    eServiceId: String,
-    descriptorId: String
-  ): Future[EService] = {
-    val request: ApiRequest[client.model.EService] = api.publishDescriptor(eServiceId, descriptorId)(bearerToken)
-    invoker
-      .execute[client.model.EService](request)
-      .map { result =>
-        logger.info(s"Descriptor $descriptorId published for E-Services $eServiceId")
-        result.content
-      }
-      .recoverWith { case ex =>
-        logger.error(s"Error while publishing descriptor $descriptorId for E-Services $eServiceId")
-        Future.failed[client.model.EService](ex)
-      }
-      .map(eServiceFromCatalogClient)
-  }
-
   override def getEService(bearerToken: BearerToken, eServiceId: String): Future[EService] = {
     val request: ApiRequest[client.model.EService] = api.getEService(eServiceId)(bearerToken)
     invoker
@@ -108,10 +90,24 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       .map(eServiceFromCatalogClient)
   }
 
-  override def updateDescriptorStatus(
+  override def updateDescriptor(
     bearerToken: BearerToken,
     eServiceId: String,
     descriptorId: String,
-    status: String
+    seed: UpdateDescriptorSeed
   ): Future[EService] = ???
+//  {
+//    val request: ApiRequest[client.model.EService] = api.publishDescriptor(eServiceId, descriptorId)(bearerToken)
+//    invoker
+//      .execute[client.model.EService](request)
+//      .map { result =>
+//        logger.info(s"Descriptor $descriptorId published for E-Services $eServiceId")
+//        result.content
+//      }
+//      .recoverWith { case ex =>
+//        logger.error(s"Error while publishing descriptor $descriptorId for E-Services $eServiceId")
+//        Future.failed[client.model.EService](ex)
+//      }
+//      .map(eServiceFromCatalogClient)
+//  }
 }

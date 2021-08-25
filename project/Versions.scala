@@ -16,9 +16,10 @@ object Versions {
   lazy val resilience4jVersion            = "1.7.1"
   lazy val scalapbVersion                 = "0.11.1"
   lazy val jacksonVersion                 = "2.11.4"
+  lazy val catsVersion                    = "2.6.1"
   lazy val commonsFileUploadVersion       = "1.4"
   lazy val logbackVersion                 = "1.2.3"
   lazy val scalatestVersion               = "3.2.8"
-  lazy val mockitoVersion                 = "3.9.0"
+  lazy val scalaMockVersion               = "5.1.0"
   lazy val catalogManagementClientVersion = "0.1.0-SNAPSHOT"
 }
