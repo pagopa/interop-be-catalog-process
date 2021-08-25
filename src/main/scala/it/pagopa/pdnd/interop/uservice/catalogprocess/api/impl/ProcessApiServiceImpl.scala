@@ -88,15 +88,24 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
             s"Error while deleting draft descriptor $descriptorId for E-Service $eServiceId"
           )
         )
-      case Failure(_) => ??? // TODO consider 500?
+      case Failure(ex) =>
+        deleteDraft500(
+          Problem(
+            Option(ex.getMessage),
+            500,
+            s"Unexpected error while deleting draft descriptor $descriptorId for E-Service $eServiceId"
+          )
+        )
     }
   }
 
   /** Code: 200, Message: A list of E-Service, DataType: Seq[EService]
+    * Code: 500, Message: Internal Server Error, DataType: Problem
     */
-  override def getEServices(producerId: Option[String], consumerId: Option[String], status: Option[String])(implicit
+  override def listEServices(producerId: Option[String], consumerId: Option[String], status: Option[String])(implicit
     contexts: Seq[(String, String)],
-    toEntityMarshallerEServicearray: ToEntityMarshaller[Seq[EService]]
+    toEntityMarshallerEServicearray: ToEntityMarshaller[Seq[EService]],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
   ): Route = {
     val result =
       for {
@@ -105,8 +114,9 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
       } yield response
 
     onComplete(result) {
-      case Success(response) => getEServices200(response)
-      case Failure(_)        => ??? // TODO consider 500?
+      case Success(response) => listEServices200(response)
+      case Failure(ex) =>
+        listEServices500(Problem(Option(ex.getMessage), 500, s"Unexpected error while retrieving E-Services"))
     }
   }
 
@@ -158,7 +168,14 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
             s"Error while publishing descriptor $descriptorId for E-Service $eServiceId"
           )
         )
-      case Failure(_) => ??? // TODO consider 500?
+      case Failure(ex) =>
+        publishDescriptor500(
+          Problem(
+            Option(ex.getMessage),
+            500,
+            s"Unexpected error while publishing descriptor $descriptorId for E-Service $eServiceId"
+          )
+        )
     }
   }
 
@@ -179,7 +196,8 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
 
     onComplete(result) {
       case Success(response) => getEService200(response)
-      case Failure(_)        => ??? // TODO consider 500?
+      case Failure(ex) =>
+        getEService500(Problem(Option(ex.getMessage), 500, s"Unexpected error retrieving E-Service $eServiceId"))
     }
   }
 

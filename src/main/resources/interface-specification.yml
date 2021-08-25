@@ -34,7 +34,7 @@ paths:
       tags:
         - process
       summary: Retrieve a list of E-Service
-      operationId: getEServices
+      operationId: listEServices
       parameters:
         - in: query
           name: producerId
@@ -56,6 +56,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EServices'
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
     post:
       security:
         - bearerAuth: [ ]
@@ -117,6 +123,12 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /eservices/{eServiceId}/descriptors/{descriptorId}:
     delete:
       security:
@@ -149,6 +161,12 @@ paths:
                 $ref: '#/components/schemas/Problem'
         "404":
           description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "500":
+          description: Internal Server Error
           content:
             application/problem+json:
               schema:
@@ -189,6 +207,12 @@ paths:
                 $ref: '#/components/schemas/Problem'
         "404":
           description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "500":
+          description: Internal Server Error
           content:
             application/problem+json:
               schema:
