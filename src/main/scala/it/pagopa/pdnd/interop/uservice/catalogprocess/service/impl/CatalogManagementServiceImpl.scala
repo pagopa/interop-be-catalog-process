@@ -95,19 +95,19 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
     eServiceId: String,
     descriptorId: String,
     seed: UpdateDescriptorSeed
-  ): Future[EService] = ???
-//  {
-//    val request: ApiRequest[client.model.EService] = api.publishDescriptor(eServiceId, descriptorId)(bearerToken)
-//    invoker
-//      .execute[client.model.EService](request)
-//      .map { result =>
-//        logger.info(s"Descriptor $descriptorId published for E-Services $eServiceId")
-//        result.content
-//      }
-//      .recoverWith { case ex =>
-//        logger.error(s"Error while publishing descriptor $descriptorId for E-Services $eServiceId")
-//        Future.failed[client.model.EService](ex)
-//      }
-//      .map(eServiceFromCatalogClient)
-//  }
+  ): Future[EService] = {
+    val request: ApiRequest[client.model.EService] =
+      api.updateDescriptor(eServiceId, descriptorId, seed.toApi())(bearerToken)
+    invoker
+      .execute[client.model.EService](request)
+      .map { result =>
+        logger.info(s"Descriptor $descriptorId updated for E-Services $eServiceId")
+        result.content
+      }
+      .recoverWith { case ex =>
+        logger.error(s"Error while updating descriptor $descriptorId for E-Services $eServiceId")
+        Future.failed[client.model.EService](ex)
+      }
+      .map(eServiceFromCatalogClient)
+  }
 }

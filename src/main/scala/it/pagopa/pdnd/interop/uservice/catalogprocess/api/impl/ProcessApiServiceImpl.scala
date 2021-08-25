@@ -5,7 +5,7 @@ import akka.http.scaladsl.server.Directives.onComplete
 import akka.http.scaladsl.server.Route
 import cats.implicits.toTraverseOps
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.{ApiError, BearerToken}
-import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.EServiceDescriptorEnums.Status
+import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.EServiceDescriptorSeedEnums.Status
 import it.pagopa.pdnd.interop.uservice.catalogprocess.model.UpdateDescriptorSeed
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.CatalogManagementService
 import it.pagopa.pdnd.interopuservice.catalogprocess.api.ProcessApiService
@@ -50,7 +50,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
         val errorResponse: Problem = Problem(
           Option(ex.getMessage),
           400,
-          s"Error while creating E-Service for producer Id ${eServiceSeed.producerId}"
+          s"Error while creating E-Service for producer Id ${eServiceSeed.producerId.toString}"
         )
         createEService400(errorResponse)
     }
