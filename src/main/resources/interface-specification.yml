@@ -12,6 +12,7 @@ info:
   x-summary: an x-summary
 servers:
   - url: https://gateway.interop.pdnd.dev/pdnd-interop-uservice-catalog-process/0.0.1
+#  - url: http://localhost:8088/pdnd-interop-uservice-catalog-process/wrong-version
     description: This service is the catalog process
 security:
   - bearerAuth: [ ]
@@ -207,6 +208,125 @@ paths:
                 $ref: '#/components/schemas/Problem'
         "404":
           description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /eservices/{eServiceId}/descriptors/{descriptorId}/documents:
+    post:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Add new e-service document
+      operationId: createEServiceDocument
+      parameters:
+        - name: eServiceId
+          in: path
+          description: the eservice id
+          required: true
+          schema:
+            type: string
+        - name: descriptorId
+          in: path
+          description: the descriptor Id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: E-Service document
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - kind
+                - description
+                - doc
+              properties:
+                kind:
+                  type: string
+                  enum: [ "interface", "document" ]
+                description:
+                  type: string
+                doc:
+                  type: string
+                  format: binary
+        required: true
+      responses:
+        "200":
+          description: EService Document created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EService'
+        "400":
+          description: Invalid input
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "404":
+          description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /eservices/{eServiceId}/descriptors/{descriptorId}/documents/{documentId}:
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Get an e-service document
+      operationId: getEServiceDocument
+      parameters:
+        - name: eServiceId
+          in: path
+          description: the eservice id
+          required: true
+          schema:
+            type: string
+        - name: descriptorId
+          in: path
+          description: the descriptor Id
+          required: true
+          schema:
+            type: string
+        - name: documentId
+          in: path
+          description: the document id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: EService document retrieved
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: EService not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "400":
+          description: Bad request
           content:
             application/problem+json:
               schema:

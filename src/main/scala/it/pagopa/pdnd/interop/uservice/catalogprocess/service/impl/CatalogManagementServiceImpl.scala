@@ -1,5 +1,6 @@
 package it.pagopa.pdnd.interop.uservice.catalogprocess.service.impl
 
+import akka.http.scaladsl.server.directives.FileInfo
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.api.EServiceApi
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.{ApiRequest, BearerToken}
@@ -8,6 +9,7 @@ import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{CatalogManagement
 import it.pagopa.pdnd.interopuservice.catalogprocess.model.{EService, EServiceSeed}
 import org.slf4j.{Logger, LoggerFactory}
 
+import java.io.File
 import scala.concurrent.{ExecutionContext, Future}
 
 @SuppressWarnings(Array("org.wartremover.warts.ImplicitParameter", "org.wartremover.warts.StringPlusAny"))
@@ -109,5 +111,51 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         Future.failed[client.model.EService](ex)
       }
       .map(eServiceFromCatalogClient)
+  }
+
+  override def createEServiceDocument(
+    bearerToken: BearerToken,
+    eServiceId: String,
+    descriptorId: String,
+    kind: String,
+    description: String,
+    doc: (FileInfo, File)
+  ): Future[EService] = {
+    val request: ApiRequest[client.model.EService] =
+      api.createEServiceDocument(eServiceId, descriptorId, kind, description, doc._2)(bearerToken)
+    invoker
+      .execute[client.model.EService](request)
+      .map { result =>
+        logger.info(
+          s"Document with description $description created on Descriptor $descriptorId for E-Services $eServiceId"
+        )
+        result.content
+      }
+      .recoverWith { case ex =>
+        logger.error(
+          s"Error while creating document with description $description created on Descriptor $descriptorId for E-Services $eServiceId"
+        )
+        Future.failed[client.model.EService](ex)
+      }
+      .map(eServiceFromCatalogClient)
+  }
+
+  override def getEServiceDocument(
+    bearerToken: BearerToken,
+    eServiceId: String,
+    descriptorId: String,
+    documentId: String
+  ): Future[File] = {
+    val request: ApiRequest[File] = api.getEServiceDocument(eServiceId, descriptorId, documentId)(bearerToken)
+    invoker
+      .execute[File](request)
+      .map { result =>
+        logger.info(s"Document with id $documentId retrieved")
+        result.content
+      }
+      .recoverWith { case ex =>
+        logger.error(s"Error while retrieving document with id $eServiceId")
+        Future.failed[File](ex)
+      }
   }
 }

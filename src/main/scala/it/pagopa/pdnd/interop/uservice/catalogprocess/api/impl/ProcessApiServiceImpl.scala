@@ -3,6 +3,7 @@ package it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl
 import akka.http.scaladsl.marshalling.ToEntityMarshaller
 import akka.http.scaladsl.server.Directives.onComplete
 import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.{ApiError, BearerToken}
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.EServiceDescriptorSeedEnums.Status
@@ -12,6 +13,7 @@ import it.pagopa.pdnd.interopuservice.catalogprocess.api.ProcessApiService
 import it.pagopa.pdnd.interopuservice.catalogprocess.model.{EService, EServiceDescriptor, EServiceSeed, Problem}
 import org.slf4j.{Logger, LoggerFactory}
 
+import java.io.File
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -198,6 +200,107 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
       case Success(response) => getEService200(response)
       case Failure(ex) =>
         getEService500(Problem(Option(ex.getMessage), 500, s"Unexpected error retrieving E-Service $eServiceId"))
+    }
+  }
+
+  /** Code: 200, Message: EService Document created, DataType: EService
+    * Code: 400, Message: Invalid input, DataType: Problem
+    * Code: 404, Message: Not found, DataType: Problem
+    */
+  override def createEServiceDocument(
+    eServiceId: String,
+    descriptorId: String,
+    kind: String,
+    description: String,
+    doc: (FileInfo, File)
+  )(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerEService: ToEntityMarshaller[EService]
+  ): Route = {
+    val result =
+      for {
+        bearer <- tokenFromContext(contexts)
+        response <- catalogManagementService.createEServiceDocument(
+          bearer,
+          eServiceId,
+          descriptorId,
+          kind,
+          description,
+          doc
+        )
+      } yield response
+
+    onComplete(result) {
+      case Success(response) => createEServiceDocument200(response)
+      case Failure(ex: ApiError[_]) if ex.code == 400 =>
+        createEServiceDocument400(
+          Problem(
+            Option(ex.getMessage),
+            400,
+            s"Error creating document for E-Service $eServiceId and descriptor $descriptorId"
+          )
+        )
+      case Failure(ex: ApiError[_]) if ex.code == 404 =>
+        createEServiceDocument404(
+          Problem(
+            Option(ex.getMessage),
+            404,
+            s"Error creating document for E-Service $eServiceId and descriptor $descriptorId"
+          )
+        )
+      case Failure(ex) =>
+        createEServiceDocument500(
+          Problem(
+            Option(ex.getMessage),
+            500,
+            s"Error creating document for E-Service $eServiceId and descriptor $descriptorId"
+          )
+        )
+    }
+  }
+
+  /** Code: 200, Message: EService document retrieved, DataType: File
+    * Code: 404, Message: EService not found, DataType: Problem
+    * Code: 400, Message: Bad request, DataType: Problem
+    */
+  override def getEServiceDocument(eServiceId: String, descriptorId: String, documentId: String)(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerFile: ToEntityMarshaller[File]
+  ): Route = {
+    val result =
+      for {
+        bearer   <- tokenFromContext(contexts)
+        response <- catalogManagementService.getEServiceDocument(bearer, eServiceId, descriptorId, documentId)
+      } yield response
+
+    onComplete(result) {
+      case Success(response) => getEServiceDocument200(response)
+      case Failure(ex: ApiError[_]) if ex.code == 400 =>
+        getEServiceDocument400(
+          Problem(
+            Option(ex.getMessage),
+            400,
+            s"Error retrieving document $documentId for E-Service $eServiceId and descriptor $descriptorId"
+          )
+        )
+      case Failure(ex: ApiError[_]) if ex.code == 404 =>
+        getEServiceDocument404(
+          Problem(
+            Option(ex.getMessage),
+            404,
+            s"Error retrieving document $documentId for E-Service $eServiceId and descriptor $descriptorId"
+          )
+        )
+      case Failure(ex) =>
+        getEServiceDocument500(
+          Problem(
+            Option(ex.getMessage),
+            500,
+            s"Error retrieving document $documentId for E-Service $eServiceId and descriptor $descriptorId"
+          )
+        )
     }
   }
 
