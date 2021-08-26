@@ -21,5 +21,5 @@ object Versions {
   lazy val logbackVersion                 = "1.2.3"
   lazy val scalatestVersion               = "3.2.8"
   lazy val scalaMockVersion               = "5.1.0"
-  lazy val catalogManagementClientVersion = "0.1.0-pin-281-SNAPSHOT"
+  lazy val catalogManagementClientVersion = "0.1.0-SNAPSHOT"
 }
