@@ -63,6 +63,6 @@ object Main extends App with CorsSupport with CatalogManagementAPI {
   val controller: Controller = new Controller(healthApi, processApi)
 
   val bindingFuture: Future[Http.ServerBinding] =
-    Http().newServerAt("0.0.0.0", 8088).bind(corsHandler(controller.routes))
+    Http().newServerAt("0.0.0.0", ApplicationConfiguration.serverPort).bind(corsHandler(controller.routes))
 
 }
