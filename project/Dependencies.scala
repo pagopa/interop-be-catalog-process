@@ -30,6 +30,7 @@ object Dependencies {
       "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % akkaManagementVersion
     lazy val clusterHttp = "com.lightbend.akka.management" %% "akka-management-cluster-http" % akkaManagementVersion
     lazy val slf4j       = namespace                       %% "akka-slf4j"                   % akkaVersion
+    lazy val testkit     = namespace                       %% "akka-actor-testkit-typed"     % akkaVersion
   }
 
   private[this] object postgres {
@@ -155,6 +156,7 @@ object Dependencies {
       kamon.prometheus               % Compile,
       pagopa.catalogManagementClient % Compile,
       scalaprotobuf.core             % Protobuf,
+      akka.testkit                   % Test,
       scalatest.core                 % Test,
       scalamock.core                 % Test
     )
