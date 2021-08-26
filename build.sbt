@@ -20,7 +20,7 @@ val generateCode = taskKey[Unit]("A task for generating the code starting from t
 val packagePrefix = settingKey[String]("The package prefix derived from the uservice name")
 
 packagePrefix := {
-    name.value.replaceFirst("pdnd-", "pdnd.").replaceFirst("uservice-", "uservice.").replaceAll("-", "")
+  name.value.replaceFirst("pdnd-", "pdnd.").replaceFirst("uservice-", "uservice.").replaceAll("-", "")
 }
 
 generateCode := {
@@ -60,9 +60,8 @@ cleanFiles += baseDirectory.value / "client" / "target"
 
 lazy val generated = project
   .in(file("generated"))
-  .settings(
-    scalacOptions := Seq()
-  ).setupBuildInfo
+  .settings(scalacOptions := Seq())
+  .setupBuildInfo
 
 lazy val client = project
   .in(file("client"))
