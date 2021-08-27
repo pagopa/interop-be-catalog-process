@@ -353,30 +353,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-#  /documents:
-#    post:
-#      tags:
-#        - pet
-#      summary: Add a document
-#      operationId: addDocument
-#      requestBody:
-#        description: A document
-#        content:
-#          multipart/form-data:
-#            schema:
-#              type: object
-#              required:
-#                - description
-#                - doc
-#              properties:
-#                description:
-#                  type: string
-#                doc:
-#                  type: string
-#                  format: binary
-#      responses:
-#        200:
-#          description: successful operation
 components:
   schemas:
     EServiceSeed:
