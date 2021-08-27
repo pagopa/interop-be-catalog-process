@@ -1,0 +1,534 @@
+openapi: 3.0.3
+info:
+  title: Catalog Process Micro Service
+  description: This service is the catalog process
+  version: '0.0.1'
+  contact:
+    name: API Support
+    url: http://www.example.com/support
+    email: support@example.com
+  termsOfService: 'http://swagger.io/terms/'
+  x-api-id: an x-api-id
+  x-summary: an x-summary
+servers:
+  - url: https://gateway.interop.pdnd.dev/pdnd-interop-uservice-catalog-process/0.0.1
+#  - url: http://localhost:8088/pdnd-interop-uservice-catalog-process/wrong-version
+    description: This service is the catalog process
+security:
+  - bearerAuth: [ ]
+tags:
+  - name: process
+    description: Implements catalog process
+    externalDocs:
+      description: Find out more
+      url: http://swagger.io
+  - name: health
+    description: Verify service status
+    externalDocs:
+      description: Find out more
+      url: http://swagger.io
+paths:
+  /eservices:
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Retrieve a list of E-Service
+      operationId: listEServices
+      parameters:
+        - in: query
+          name: producerId
+          schema:
+            type: string
+        - in: query
+          name: consumerId
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [ draft, active, suspended ]
+      responses:
+        "200":
+          description: A list of E-Service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EServices'
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    post:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Create a new e-service
+      operationId: createEService
+      requestBody:
+        description: A E-Service seed
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EServiceSeed'
+        required: true
+      responses:
+        "200":
+          description: EService created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EService'
+        "400":
+          description: Invalid input
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /eservices/{eServiceId}:
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Get an e-service
+      operationId: getEService
+      parameters:
+        - name: eServiceId
+          in: path
+          description: The E-Service id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: E-Service retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EService'
+        '404':
+          description: E-Service not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /eservices/{eServiceId}/descriptors/{descriptorId}:
+    delete:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Deletes a draft descriptor
+      operationId: deleteDraft
+      parameters:
+        - name: eServiceId
+          in: path
+          description: The E-Service Id
+          required: true
+          schema:
+            type: string
+        - name: descriptorId
+          in: path
+          description: The Descriptor Id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: E-Service draft Descriptor deleted
+        "400":
+          description: Invalid input
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "404":
+          description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /eservices/{eServiceId}/descriptors/{descriptorId}/publish:
+    post:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Publish the descriptors
+      operationId: publishDescriptor
+      parameters:
+        - name: eServiceId
+          in: path
+          description: the eservice id
+          required: true
+          schema:
+            type: string
+        - name: descriptorId
+          in: path
+          description: the descriptor Id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: E-Service Descriptor published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EService'
+        "400":
+          description: Invalid input
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "404":
+          description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /eservices/{eServiceId}/descriptors/{descriptorId}/documents:
+    post:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Add new e-service document
+      operationId: createEServiceDocument
+      parameters:
+        - name: eServiceId
+          in: path
+          description: the eservice id
+          required: true
+          schema:
+            type: string
+        - name: descriptorId
+          in: path
+          description: the descriptor Id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: E-Service document
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - kind
+                - description
+                - doc
+              properties:
+                kind:
+                  type: string
+                  enum: [ "interface", "document" ]
+                description:
+                  type: string
+                doc:
+                  type: string
+                  format: binary
+        required: true
+      responses:
+        "200":
+          description: EService Document created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EService'
+        "400":
+          description: Invalid input
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "404":
+          description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /eservices/{eServiceId}/descriptors/{descriptorId}/documents/{documentId}:
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Get an e-service document
+      operationId: getEServiceDocument
+      parameters:
+        - name: eServiceId
+          in: path
+          description: the eservice id
+          required: true
+          schema:
+            type: string
+        - name: descriptorId
+          in: path
+          description: the descriptor Id
+          required: true
+          schema:
+            type: string
+        - name: documentId
+          in: path
+          description: the document id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: EService document retrieved
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: EService not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "400":
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /status:
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - health
+      summary: Health status endpoint
+      description: Return ok
+      operationId: getStatus
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+components:
+  schemas:
+    EServiceSeed:
+      type: object
+      required:
+        - producerId
+        - name
+        - description
+        - audience
+        - technology
+        - attributes
+        - voucherLifespan
+      properties:
+        producerId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        audience:
+          type: array
+          items:
+            type: string
+        technology:
+          type: string
+          enum: [ 'REST', 'SOAP' ]
+        voucherLifespan:
+          type: integer
+          format: int32
+        attributes:
+          $ref: '#/components/schemas/Attributes'
+    EService:
+      type: object
+      required:
+        - id
+        - producerId
+        - name
+        - description
+        - audience
+        - technology
+        - voucherLifespan
+        - attributes
+        - descriptors
+      properties:
+        id:
+          type: string
+          format: uuid
+        producerId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        audience:
+          type: array
+          items:
+            type: string
+        technology:
+          type: string
+        voucherLifespan:
+          type: integer
+          format: int32
+        attributes:
+          $ref: '#/components/schemas/Attributes'
+        descriptors:
+          type: array
+          items:
+            $ref: '#/components/schemas/EServiceDescriptor'
+    EServices:
+      type: array
+      items:
+        $ref: '#/components/schemas/EService'
+    EServiceDoc:
+      type: object
+      required:
+        - id
+        - name
+        - contentType
+        - description
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        contentType:
+          type: string
+        description:
+          type: string
+    EServiceDescriptor:
+      type: object
+      required:
+        - id
+        - version
+        - docs
+        - status
+        - creationDate
+      properties:
+        id:
+          type: string
+          format: uuid
+        version:
+          type: string
+        description:
+          type: string
+        interface:
+          $ref: '#/components/schemas/EServiceDoc'
+        docs:
+          type: array
+          items:
+            $ref: '#/components/schemas/EServiceDoc'
+        status:
+          type: string
+          enum: [ 'draft', 'published','deprecated','archived' ]
+    Attribute:
+      type: object
+      properties:
+        simple:
+          type: string
+        group:
+          type: array
+          items:
+            type: string
+    Attributes:
+      properties:
+        certified:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attribute'
+        declared:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attribute'
+        verified:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attribute'
+      required:
+        - certified
+        - declared
+        - verified
+    Problem:
+      properties:
+        detail:
+          description:
+            A human readable explanation specific to this occurrence of the problem.
+          example: Request took too long to complete.
+          maxLength: 4096
+          pattern: '^.{0,1024}$'
+          type: string
+        status:
+          description:
+            The HTTP status code generated by the origin server for this occurrence
+            of the problem.
+          example: 503
+          exclusiveMaximum: true
+          format: int32
+          maximum: 600
+          minimum: 100
+          type: integer
+        title:
+          description:
+            A short, summary of the problem type. Written in english and readable
+          example: Service Unavailable
+          maxLength: 64
+          pattern: '^[ -~]{0,64}$'
+          type: string
+      additionalProperties: false
+      required:
+        - status
+        - title
+  securitySchemes:
+    bearerAuth:
+      type: http
+      description: A bearer token in the format of a JWS and comformed to the specifications included in [RFC8725](https://tools.ietf.org/html/RFC8725).
+      scheme: bearer
+      bearerFormat: JWT
