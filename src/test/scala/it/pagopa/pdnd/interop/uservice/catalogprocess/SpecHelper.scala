@@ -23,6 +23,9 @@ import it.pagopa.pdnd.interopuservice.catalogprocess.server.Controller
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
 
+@SuppressWarnings(
+  Array("org.wartremover.warts.Any", "org.wartremover.warts.OptionPartial", "org.wartremover.warts.Var")
+)
 abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.config) with SpecConfiguration {
 
   var bindServer: Option[Future[Http.ServerBinding]] = None

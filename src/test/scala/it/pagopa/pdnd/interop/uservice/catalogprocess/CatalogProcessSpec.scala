@@ -98,6 +98,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
   }
 }
 
+@SuppressWarnings(Array("org.wartremover.warts.Null"))
 object CatalogProcessSpec extends MockFactory {
   val mockHealthApi: HealthApi                           = mock[HealthApi]
   val catalogManagementService: CatalogManagementService = mock[CatalogManagementService]

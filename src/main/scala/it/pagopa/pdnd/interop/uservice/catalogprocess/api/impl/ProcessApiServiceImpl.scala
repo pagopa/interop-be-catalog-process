@@ -10,7 +10,7 @@ import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.EServiceDe
 import it.pagopa.pdnd.interop.uservice.catalogprocess.model.UpdateDescriptorSeed
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.CatalogManagementService
 import it.pagopa.pdnd.interopuservice.catalogprocess.api.ProcessApiService
-import it.pagopa.pdnd.interopuservice.catalogprocess.model.{EService, EServiceDescriptor, EServiceSeed, Problem}
+import it.pagopa.pdnd.interopuservice.catalogprocess.model.{EService, EServiceSeed, Problem}
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.File
