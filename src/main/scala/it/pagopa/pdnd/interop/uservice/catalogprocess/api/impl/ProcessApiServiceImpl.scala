@@ -146,8 +146,12 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
         )
         _ <- currentActiveDescriptor
           .map(oldDescriptor =>
-            deprecateDescriptor(oldDescriptor, eServiceId, bearer)
-              .recoverWith(_ => resetDescriptorToDraft(eServiceId, descriptorId, bearer))
+            deprecateDescriptorOrCancelPublication(
+              bearer = bearer,
+              eServiceId = eServiceId,
+              descriptorIdToDeprecate = oldDescriptor.id.toString,
+              descriptorIdToCancel = descriptorId
+            )
           )
           .sequence
       } yield updatedEService
@@ -304,12 +308,24 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     }
   }
 
+  private[this] def deprecateDescriptorOrCancelPublication(
+    bearer: BearerToken,
+    eServiceId: String,
+    descriptorIdToDeprecate: String,
+    descriptorIdToCancel: String
+  ): Future[EService] = {
+    deprecateDescriptor(descriptorIdToDeprecate, eServiceId, bearer)
+      .recoverWith(error =>
+        resetDescriptorToDraft(eServiceId, descriptorIdToCancel, bearer)
+          .flatMap(_ => Future.failed(error))
+      )
+  }
+
   private[this] def deprecateDescriptor(
-    descriptor: EServiceDescriptor,
+    descriptorId: String,
     eServiceId: String,
     bearerToken: BearerToken
   ): Future[EService] = {
-    val descriptorId = descriptor.id.toString
     val descriptorSeed =
       UpdateDescriptorSeed(description = None, status = Some(Status.Deprecated)) // TODO It should be in a library
     catalogManagementService
@@ -320,7 +336,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
         seed = descriptorSeed
       )
       .recoverWith { case ex =>
-        logger.warn(s"Unable to deprecate descriptor $descriptorId on E-Service $eServiceId. Reason: ${ex.getMessage}")
+        logger.error(s"Unable to deprecate descriptor $descriptorId on E-Service $eServiceId. Reason: ${ex.getMessage}")
         Future.failed(ex)
       }
   }
