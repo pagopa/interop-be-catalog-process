@@ -63,7 +63,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
           certified = List(Attribute(simple = Some("0001"), group = Some(List("0002")))),
           declared = List(Attribute(simple = Some("0001"), group = Some(List("0002")))),
           verified = List(Attribute(simple = Some("0001"), group = Some(List("0002"))))
-        )
+        ),
+        forcedVerification = false
       )
 
       val expected = EService(
@@ -77,7 +78,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         attributes = seed.attributes,
         descriptors = List(
           EServiceDescriptor(UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824302"), "1", None, None, Nil, "draft")
-        )
+        ),
+        forcedVerification = false
       )
 
       (catalogManagementService.createEService _)

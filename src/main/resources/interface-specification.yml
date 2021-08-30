@@ -364,6 +364,7 @@ components:
         - audience
         - technology
         - attributes
+        - forcedVerification
         - voucherLifespan
       properties:
         producerId:
@@ -385,6 +386,8 @@ components:
           format: int32
         attributes:
           $ref: '#/components/schemas/Attributes'
+        forcedVerification:
+          type: boolean
     EService:
       type: object
       required:
@@ -396,6 +399,7 @@ components:
         - technology
         - voucherLifespan
         - attributes
+        - forcedVerification
         - descriptors
       properties:
         id:
@@ -419,6 +423,8 @@ components:
           format: int32
         attributes:
           $ref: '#/components/schemas/Attributes'
+        forcedVerification:
+          type: boolean
         descriptors:
           type: array
           items:

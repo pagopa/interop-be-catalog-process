@@ -54,6 +54,7 @@ package object impl {
       technology = clientEService.technology,
       voucherLifespan = clientEService.voucherLifespan,
       attributes = attributesFromCatalogClientAttributes(clientEService.attributes),
+      forcedVerification = clientEService.forcedVerification,
       descriptors = clientEService.descriptors.map(descriptorFromCatalogClientDescriptor)
     )
 
@@ -82,7 +83,8 @@ package object impl {
       audience = eServiceSeed.audience,
       technology = seedTechnology,
       voucherLifespan = eServiceSeed.voucherLifespan,
-      attributes = attributesToCatalogClientAttributes(eServiceSeed.attributes)
+      attributes = attributesToCatalogClientAttributes(eServiceSeed.attributes),
+      forcedVerification = eServiceSeed.forcedVerification
     )
   }
 }
