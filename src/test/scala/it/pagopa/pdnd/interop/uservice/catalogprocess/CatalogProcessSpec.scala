@@ -10,11 +10,11 @@ import it.pagopa.pdnd.interopuservice.catalogprocess.server.Controller
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpecLike
+import spray.json._
 
 import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
-import spray.json._
 
 @SuppressWarnings(
   Array(
@@ -60,11 +60,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         technology = "REST",
         voucherLifespan = 1000,
         attributes = Attributes(
-          certified = List(Attribute(simple = Some("0001"), group = Some(List("0002")))),
-          declared = List(Attribute(simple = Some("0001"), group = Some(List("0002")))),
-          verified = List(Attribute(simple = Some("0001"), group = Some(List("0002"))))
-        ),
-        explicitAttributesVerification = false
+          certified =
+            List(Attribute(single = Some(AttributeValue("0001", false)), group = Some(List(AttributeValue("0002", false))))),
+          declared =
+            List(Attribute(single = Some(AttributeValue("0001", false)), group = Some(List(AttributeValue("0002", false))))),
+          verified =
+            List(Attribute(single = Some(AttributeValue("0001", false)), group = Some(List(AttributeValue("0002", false)))))
+        )
       )
 
       val expected = EService(
@@ -78,8 +80,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         attributes = seed.attributes,
         descriptors = List(
           EServiceDescriptor(UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824302"), "1", None, None, Nil, "draft")
-        ),
-        explicitAttributesVerification = false
+        )
       )
 
       (catalogManagementService.createEService _)
