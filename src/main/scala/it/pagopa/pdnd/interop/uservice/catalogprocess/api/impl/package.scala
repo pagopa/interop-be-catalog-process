@@ -3,6 +3,7 @@ package it.pagopa.pdnd.interop.uservice.catalogprocess.api
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import it.pagopa.pdnd.interopuservice.catalogprocess.model.{
   Attribute,
+  AttributeValue,
   Attributes,
   EService,
   EServiceDescriptor,
@@ -33,12 +34,13 @@ package object impl extends SprayJsonSupport with DefaultJsonProtocol {
       }
     }
 
+  implicit val eServiceAttributeValueFormat: RootJsonFormat[AttributeValue] = jsonFormat2(AttributeValue)
   implicit val eServiceAttributeFormat: RootJsonFormat[Attribute]           = jsonFormat2(Attribute)
   implicit val eServiceAttributesFormat: RootJsonFormat[Attributes]         = jsonFormat3(Attributes)
   implicit val eServiceDocFormat: RootJsonFormat[EServiceDoc]               = jsonFormat4(EServiceDoc)
   implicit val eServiceDescriptorFormat: RootJsonFormat[EServiceDescriptor] = jsonFormat6(EServiceDescriptor)
-  implicit val eServiceFormat: RootJsonFormat[EService]                     = jsonFormat10(EService)
-  implicit val eServiceSeedFormat: RootJsonFormat[EServiceSeed]             = jsonFormat8(EServiceSeed)
+  implicit val eServiceFormat: RootJsonFormat[EService]                     = jsonFormat9(EService)
+  implicit val eServiceSeedFormat: RootJsonFormat[EServiceSeed]             = jsonFormat7(EServiceSeed)
   implicit val problemFormat: RootJsonFormat[Problem]                       = jsonFormat3(Problem)
 
 }

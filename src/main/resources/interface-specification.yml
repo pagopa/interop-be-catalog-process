@@ -364,7 +364,6 @@ components:
         - audience
         - technology
         - attributes
-        - explicitAttributesVerification
         - voucherLifespan
       properties:
         producerId:
@@ -386,8 +385,6 @@ components:
           format: int32
         attributes:
           $ref: '#/components/schemas/Attributes'
-        explicitAttributesVerification:
-          type: boolean
     EService:
       type: object
       required:
@@ -399,7 +396,6 @@ components:
         - technology
         - voucherLifespan
         - attributes
-        - explicitAttributesVerification
         - descriptors
       properties:
         id:
@@ -423,8 +419,6 @@ components:
           format: int32
         attributes:
           $ref: '#/components/schemas/Attributes'
-        explicitAttributesVerification:
-          type: boolean
         descriptors:
           type: array
           items:
@@ -475,15 +469,25 @@ components:
         status:
           type: string
           enum: [ 'draft', 'published','deprecated','archived' ]
+    AttributeValue:
+      type: object
+      properties:
+        id:
+          type: string
+        explicitAttributeVerification:
+          type: boolean
+      required:
+        - id
+        - explicitAttributeVerification
     Attribute:
       type: object
       properties:
-        simple:
-          type: string
+        single:
+          $ref: '#/components/schemas/AttributeValue'
         group:
           type: array
           items:
-            type: string
+            $ref: '#/components/schemas/AttributeValue'
     Attributes:
       properties:
         certified:

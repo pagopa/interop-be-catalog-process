@@ -4,6 +4,7 @@ import it.pagopa.pdnd.interop.uservice.catalogmanagement.client
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.EServiceSeedEnums
 import it.pagopa.pdnd.interopuservice.catalogprocess.model.{
   Attribute,
+  AttributeValue,
   Attributes,
   EService,
   EServiceDescriptor,
@@ -23,7 +24,16 @@ package object impl {
     )
 
   def attributeFromCatalogClientAttribute(clientAttribute: client.model.Attribute): Attribute =
-    Attribute(simple = clientAttribute.simple, group = clientAttribute.group)
+    Attribute(
+      single = clientAttribute.single.map(attributeValueFromCatalogClientAttributeValue),
+      group = clientAttribute.group.map(_.map(attributeValueFromCatalogClientAttributeValue))
+    )
+
+  def attributeValueFromCatalogClientAttributeValue(clientAttributeValue: client.model.AttributeValue): AttributeValue =
+    AttributeValue(
+      id = clientAttributeValue.id,
+      explicitAttributeVerification = clientAttributeValue.explicitAttributeVerification
+    )
 
   def docFromCatalogClientDoc(clientDoc: client.model.EServiceDoc): EServiceDoc =
     EServiceDoc(
@@ -54,7 +64,6 @@ package object impl {
       technology = clientEService.technology,
       voucherLifespan = clientEService.voucherLifespan,
       attributes = attributesFromCatalogClientAttributes(clientEService.attributes),
-      explicitAttributesVerification = clientEService.explicitAttributesVerification,
       descriptors = clientEService.descriptors.map(descriptorFromCatalogClientDescriptor)
     )
 
@@ -66,7 +75,16 @@ package object impl {
     )
 
   def attributeToCatalogClientAttribute(attribute: Attribute): client.model.Attribute =
-    client.model.Attribute(simple = attribute.simple, group = attribute.group)
+    client.model.Attribute(
+      single = attribute.single.map(attributeValueToCatalogClientAttributeValue),
+      group = attribute.group.map(_.map(attributeValueToCatalogClientAttributeValue))
+    )
+
+  def attributeValueToCatalogClientAttributeValue(attributeValue: AttributeValue): client.model.AttributeValue =
+    client.model.AttributeValue(
+      id = attributeValue.id,
+      explicitAttributeVerification = attributeValue.explicitAttributeVerification
+    )
 
   @SuppressWarnings(Array("org.wartremover.warts.ToString"))
   def eServiceSeedToCatalogClientSeed(eServiceSeed: EServiceSeed): Either[Throwable, client.model.EServiceSeed] = {
@@ -83,8 +101,7 @@ package object impl {
       audience = eServiceSeed.audience,
       technology = seedTechnology,
       voucherLifespan = eServiceSeed.voucherLifespan,
-      attributes = attributesToCatalogClientAttributes(eServiceSeed.attributes),
-      explicitAttributesVerification = eServiceSeed.explicitAttributesVerification
+      attributes = attributesToCatalogClientAttributes(eServiceSeed.attributes)
     )
   }
 }
