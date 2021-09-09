@@ -5,7 +5,7 @@ import akka.http.scaladsl.marshalling.{Marshaller, ToEntityMarshaller}
 import akka.http.scaladsl.model.ContentTypes
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import it.pagopa.pdnd.interopuservice.catalogprocess.api.ProcessApiMarshaller
-import it.pagopa.pdnd.interopuservice.catalogprocess.model.{EService, EServiceSeed, Problem}
+import it.pagopa.pdnd.interopuservice.catalogprocess.model.{EService, EServiceFlatten, EServiceSeed, Problem}
 import spray.json._
 
 import java.io.File
@@ -26,6 +26,9 @@ final case class ProcessApiMarshallerImpl()
 
   override implicit def toEntityMarshallerEServicearray: ToEntityMarshaller[Seq[EService]] =
     sprayJsonMarshaller[Seq[EService]]
+
+  override implicit def toEntityMarshallerEServiceFlattenarray: ToEntityMarshaller[Seq[EServiceFlatten]] =
+    sprayJsonMarshaller[Seq[EServiceFlatten]]
 
   override implicit def toEntityMarshallerFile: ToEntityMarshaller[File] =
     Marshaller.withFixedContentType(ContentTypes.`application/octet-stream`) { f =>

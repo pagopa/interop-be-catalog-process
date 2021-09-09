@@ -10,7 +10,7 @@ import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.EServiceDe
 import it.pagopa.pdnd.interop.uservice.catalogprocess.model.UpdateDescriptorSeed
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.CatalogManagementService
 import it.pagopa.pdnd.interopuservice.catalogprocess.api.ProcessApiService
-import it.pagopa.pdnd.interopuservice.catalogprocess.model.{EService, EServiceSeed, Problem}
+import it.pagopa.pdnd.interopuservice.catalogprocess.model.{EService, EServiceFlatten, EServiceSeed, Problem}
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.File
@@ -308,6 +308,32 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     }
   }
 
+  /** Code: 200, Message: A list of flatted E-Service, DataType: Seq[EServiceFlatten]
+    * Code: 500, Message: Internal Server Error, DataType: Problem
+    */
+  override def listEServicesFlatten(producerId: Option[String], consumerId: Option[String], status: Option[String])(
+    implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerEServiceFlattenarray: ToEntityMarshaller[Seq[EServiceFlatten]],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+  ): Route = {
+
+    val result: Future[Seq[EService]] =
+      for {
+        bearer   <- tokenFromContext(contexts)
+        response <- catalogManagementService.listEServices(bearer, producerId, consumerId, status)
+      } yield response
+
+    onComplete(result) {
+      case Success(response) => listEServicesFlatten200(response.flatMap(convertToFlattenEservice))
+      case Failure(ex) =>
+        listEServicesFlatten500(
+          Problem(Option(ex.getMessage), 500, s"Unexpected error while retrieving flatted E-Services")
+        )
+    }
+
+  }
+
   private[this] def deprecateDescriptorOrCancelPublication(
     bearer: BearerToken,
     eServiceId: String,
@@ -369,4 +395,16 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
         .toRight(new RuntimeException("Bearer Token not provided"))
         .toTry
     )
+
+  private def convertToFlattenEservice(eservice: EService): Seq[EServiceFlatten] = {
+    eservice.descriptors.map(descriptor =>
+      EServiceFlatten(
+        id = eservice.id,
+        name = eservice.name,
+        version = descriptor.version,
+        status = descriptor.status,
+        descriptorId = descriptor.id.toString
+      )
+    )
+  }
 }

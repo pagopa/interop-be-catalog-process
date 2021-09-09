@@ -90,6 +90,41 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /eservices/versions:
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Retrieve a list of E-Service
+      operationId: listEServicesFlatten
+      parameters:
+        - in: query
+          name: producerId
+          schema:
+            type: string
+        - in: query
+          name: consumerId
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [ draft, active, suspended ]
+      responses:
+        "200":
+          description: A list of flatted E-Service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EServiceSFlatten'
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /eservices/{eServiceId}:
     get:
       security:
@@ -506,6 +541,31 @@ components:
         - certified
         - declared
         - verified
+    EServiceFlatten:
+      type: object
+      required:
+        - id
+        - name
+        - version
+        - status
+        - descriptorId
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        version:
+          type: string
+        status:
+          type: string
+          enum: [ 'draft', 'published','deprecated','archived' ]
+        descriptorId:
+          type: string
+    EServiceSFlatten:
+      type: array
+      items:
+        $ref: '#/components/schemas/EServiceFlatten'
     Problem:
       properties:
         detail:

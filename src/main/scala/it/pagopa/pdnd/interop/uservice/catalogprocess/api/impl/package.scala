@@ -8,6 +8,7 @@ import it.pagopa.pdnd.interopuservice.catalogprocess.model.{
   EService,
   EServiceDescriptor,
   EServiceDoc,
+  EServiceFlatten,
   EServiceSeed,
   Problem
 }
@@ -41,6 +42,7 @@ package object impl extends SprayJsonSupport with DefaultJsonProtocol {
   implicit val eServiceDescriptorFormat: RootJsonFormat[EServiceDescriptor] = jsonFormat6(EServiceDescriptor)
   implicit val eServiceFormat: RootJsonFormat[EService]                     = jsonFormat9(EService)
   implicit val eServiceSeedFormat: RootJsonFormat[EServiceSeed]             = jsonFormat7(EServiceSeed)
+  implicit val eServiceFlattenFormat: RootJsonFormat[EServiceFlatten]       = jsonFormat5(EServiceFlatten)
   implicit val problemFormat: RootJsonFormat[Problem]                       = jsonFormat3(Problem)
 
 }
