@@ -90,13 +90,13 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  /eservices/versions:
+  /flatten/eservices:
     get:
       security:
         - bearerAuth: [ ]
       tags:
         - process
-      summary: Retrieve a list of E-Service
+      summary: Retrieve a flatten list of E-Service
       operationId: listEServicesFlatten
       parameters:
         - in: query
