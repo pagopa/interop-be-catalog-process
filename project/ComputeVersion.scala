@@ -30,6 +30,6 @@ object ComputeVersion {
         s"$major.$minor.${(lastBuildVersion + 1).toString}-SNAPSHOT"
       }
     case _ =>
-      "0.0.0"
+      "0.0.0-SNAPSHOT"
   }
 }
