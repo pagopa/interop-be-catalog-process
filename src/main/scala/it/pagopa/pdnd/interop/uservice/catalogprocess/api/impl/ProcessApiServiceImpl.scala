@@ -10,7 +10,7 @@ import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.EServiceDe
 import it.pagopa.pdnd.interop.uservice.catalogprocess.model.UpdateDescriptorSeed
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.CatalogManagementService
 import it.pagopa.pdnd.interopuservice.catalogprocess.api.ProcessApiService
-import it.pagopa.pdnd.interopuservice.catalogprocess.model.{EService, EServiceFlatten, EServiceSeed, Problem}
+import it.pagopa.pdnd.interopuservice.catalogprocess.model.{EService, EServiceSeed, FlatEService, Problem}
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.File
@@ -104,7 +104,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
   /** Code: 200, Message: A list of E-Service, DataType: Seq[EService]
     * Code: 500, Message: Internal Server Error, DataType: Problem
     */
-  override def listEServices(producerId: Option[String], consumerId: Option[String], status: Option[String])(implicit
+  override def getEServices(producerId: Option[String], consumerId: Option[String], status: Option[String])(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerEServicearray: ToEntityMarshaller[Seq[EService]],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
@@ -116,9 +116,9 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
       } yield response
 
     onComplete(result) {
-      case Success(response) => listEServices200(response)
+      case Success(response) => getEServices200(response)
       case Failure(ex) =>
-        listEServices500(Problem(Option(ex.getMessage), 500, s"Unexpected error while retrieving E-Services"))
+        getEServices500(Problem(Option(ex.getMessage), 500, s"Unexpected error while retrieving E-Services"))
     }
   }
 
@@ -188,8 +188,9 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
   /** Code: 200, Message: E-Service retrieved, DataType: EService
     * Code: 404, Message: E-Service not found, DataType: Problem
     * Code: 400, Message: Bad request, DataType: Problem
+    * Code: 500, Message: Internal Server Error, DataType: Problem
     */
-  override def getEService(eServiceId: String)(implicit
+  override def getEServiceById(eServiceId: String)(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerEService: ToEntityMarshaller[EService]
@@ -201,9 +202,9 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
       } yield response
 
     onComplete(result) {
-      case Success(response) => getEService200(response)
+      case Success(response) => getEServiceById200(response)
       case Failure(ex) =>
-        getEService500(Problem(Option(ex.getMessage), 500, s"Unexpected error retrieving E-Service $eServiceId"))
+        getEServiceById500(Problem(Option(ex.getMessage), 500, s"Unexpected error retrieving E-Service $eServiceId"))
     }
   }
 
@@ -267,8 +268,9 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
   /** Code: 200, Message: EService document retrieved, DataType: File
     * Code: 404, Message: EService not found, DataType: Problem
     * Code: 400, Message: Bad request, DataType: Problem
+    * Code: 500, Message: Internal Server Error, DataType: Problem
     */
-  override def getEServiceDocument(eServiceId: String, descriptorId: String, documentId: String)(implicit
+  override def getEServiceDocumentById(eServiceId: String, descriptorId: String, documentId: String)(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerFile: ToEntityMarshaller[File]
@@ -280,9 +282,9 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
       } yield response
 
     onComplete(result) {
-      case Success(response) => getEServiceDocument200(response)
+      case Success(response) => getEServiceDocumentById200(response)
       case Failure(ex: ApiError[_]) if ex.code == 400 =>
-        getEServiceDocument400(
+        getEServiceDocumentById400(
           Problem(
             Option(ex.getMessage),
             400,
@@ -290,7 +292,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
           )
         )
       case Failure(ex: ApiError[_]) if ex.code == 404 =>
-        getEServiceDocument404(
+        getEServiceDocumentById404(
           Problem(
             Option(ex.getMessage),
             404,
@@ -298,7 +300,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
           )
         )
       case Failure(ex) =>
-        getEServiceDocument500(
+        getEServiceDocumentById500(
           Problem(
             Option(ex.getMessage),
             500,
@@ -308,13 +310,12 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     }
   }
 
-  /** Code: 200, Message: A list of flatted E-Service, DataType: Seq[EServiceFlatten]
+  /** Code: 200, Message: A list of flattened E-Services, DataType: Seq[FlatEService]
     * Code: 500, Message: Internal Server Error, DataType: Problem
     */
-  override def listEServicesFlatten(producerId: Option[String], consumerId: Option[String], status: Option[String])(
-    implicit
+  override def getFlatEServices(producerId: Option[String], consumerId: Option[String], status: Option[String])(implicit
     contexts: Seq[(String, String)],
-    toEntityMarshallerEServiceFlattenarray: ToEntityMarshaller[Seq[EServiceFlatten]],
+    toEntityMarshallerFlatEServicearray: ToEntityMarshaller[Seq[FlatEService]],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
   ): Route = {
 
@@ -325,9 +326,9 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
       } yield response
 
     onComplete(result) {
-      case Success(response) => listEServicesFlatten200(response.flatMap(convertToFlattenEservice))
+      case Success(response) => getFlatEServices200(response.flatMap(convertToFlattenEservice))
       case Failure(ex) =>
-        listEServicesFlatten500(
+        getFlatEServices500(
           Problem(Option(ex.getMessage), 500, s"Unexpected error while retrieving flatted E-Services")
         )
     }
@@ -396,9 +397,9 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
         .toTry
     )
 
-  private def convertToFlattenEservice(eservice: EService): Seq[EServiceFlatten] = {
+  private def convertToFlattenEservice(eservice: EService): Seq[FlatEService] = {
     eservice.descriptors.map(descriptor =>
-      EServiceFlatten(
+      FlatEService(
         id = eservice.id,
         name = eservice.name,
         version = descriptor.version,

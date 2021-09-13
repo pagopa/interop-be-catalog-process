@@ -35,7 +35,7 @@ paths:
       tags:
         - process
       summary: Retrieve a list of E-Service
-      operationId: listEServices
+      operationId: getEServices
       parameters:
         - in: query
           name: producerId
@@ -97,7 +97,7 @@ paths:
       tags:
         - process
       summary: Retrieve a flatten list of E-Service
-      operationId: listEServicesFlatten
+      operationId: getFlatEServices
       parameters:
         - in: query
           name: producerId
@@ -114,11 +114,11 @@ paths:
             enum: [ draft, active, suspended ]
       responses:
         "200":
-          description: A list of flatted E-Service
+          description: A list of flattened E-Services
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EServiceSFlatten'
+                $ref: '#/components/schemas/FlatEServices'
         "500":
           description: Internal Server Error
           content:
@@ -132,7 +132,7 @@ paths:
       tags:
         - process
       summary: Get an e-service
-      operationId: getEService
+      operationId: getEServiceById
       parameters:
         - name: eServiceId
           in: path
@@ -326,7 +326,7 @@ paths:
       tags:
         - process
       summary: Get an e-service document
-      operationId: getEServiceDocument
+      operationId: getEServiceDocumentById
       parameters:
         - name: eServiceId
           in: path
@@ -541,7 +541,7 @@ components:
         - certified
         - declared
         - verified
-    EServiceFlatten:
+    FlatEService:
       type: object
       required:
         - id
@@ -562,10 +562,10 @@ components:
           enum: [ 'draft', 'published','deprecated','archived' ]
         descriptorId:
           type: string
-    EServiceSFlatten:
+    FlatEServices:
       type: array
       items:
-        $ref: '#/components/schemas/EServiceFlatten'
+        $ref: '#/components/schemas/FlatEService'
     Problem:
       properties:
         detail:
