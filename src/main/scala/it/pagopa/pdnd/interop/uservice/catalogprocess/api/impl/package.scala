@@ -1,16 +1,7 @@
 package it.pagopa.pdnd.interop.uservice.catalogprocess.api
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import it.pagopa.pdnd.interopuservice.catalogprocess.model.{
-  Attribute,
-  AttributeValue,
-  Attributes,
-  EService,
-  EServiceDescriptor,
-  EServiceDoc,
-  EServiceSeed,
-  Problem
-}
+import it.pagopa.pdnd.interopuservice.catalogprocess.model._
 import spray.json.{DefaultJsonProtocol, JsString, JsValue, JsonFormat, RootJsonFormat, deserializationError}
 
 import java.util.UUID
@@ -41,6 +32,7 @@ package object impl extends SprayJsonSupport with DefaultJsonProtocol {
   implicit val eServiceDescriptorFormat: RootJsonFormat[EServiceDescriptor] = jsonFormat6(EServiceDescriptor)
   implicit val eServiceFormat: RootJsonFormat[EService]                     = jsonFormat9(EService)
   implicit val eServiceSeedFormat: RootJsonFormat[EServiceSeed]             = jsonFormat7(EServiceSeed)
+  implicit val flatEServiceFormat: RootJsonFormat[FlatEService]             = jsonFormat5(FlatEService)
   implicit val problemFormat: RootJsonFormat[Problem]                       = jsonFormat3(Problem)
 
 }
