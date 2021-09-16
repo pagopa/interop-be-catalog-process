@@ -58,6 +58,8 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     }
   }
 
+  def getApiEservice(EService: EService)
+
   /** Code: 204, Message: E-Service draft Descriptor deleted
     * Code: 400, Message: Invalid input, DataType: Problem
     * Code: 404, Message: Not found, DataType: Problem

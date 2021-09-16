@@ -12,7 +12,7 @@ info:
   x-summary: an x-summary
 servers:
   - url: https://gateway.interop.pdnd.dev/pdnd-interop-uservice-catalog-process/wrong-version
-#  - url: http://localhost:8088/pdnd-interop-uservice-catalog-process/wrong-version
+    #  - url: http://localhost:8088/pdnd-interop-uservice-catalog-process/wrong-version
     description: This service is the catalog process
 security:
   - bearerAuth: [ ]
@@ -420,11 +420,22 @@ components:
           format: int32
         attributes:
           $ref: '#/components/schemas/Attributes'
+    Organization:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
     EService:
       type: object
       required:
         - id
-        - producerId
+        - producer
         - name
         - description
         - audience
@@ -436,9 +447,8 @@ components:
         id:
           type: string
           format: uuid
-        producerId:
-          type: string
-          format: uuid
+        producer:
+          $ref: '#/components/schemas/Organization'
         name:
           type: string
         description:
@@ -508,6 +518,8 @@ components:
       type: object
       properties:
         id:
+          type: string
+        description:
           type: string
         explicitAttributeVerification:
           type: boolean

@@ -32,6 +32,7 @@ package object impl {
   def attributeValueFromCatalogClientAttributeValue(clientAttributeValue: client.model.AttributeValue): AttributeValue =
     AttributeValue(
       id = clientAttributeValue.id,
+      description = clientAttributeValue.,
       explicitAttributeVerification = clientAttributeValue.explicitAttributeVerification
     )
 
@@ -57,7 +58,7 @@ package object impl {
   def eServiceFromCatalogClient(clientEService: client.model.EService): EService =
     EService(
       id = clientEService.id,
-      producerId = clientEService.producerId,
+      producer = clientEService.producerId,
       name = clientEService.name,
       description = clientEService.description,
       audience = clientEService.audience,

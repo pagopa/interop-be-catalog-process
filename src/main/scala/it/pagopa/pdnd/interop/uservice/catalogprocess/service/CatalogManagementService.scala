@@ -3,7 +3,8 @@ package it.pagopa.pdnd.interop.uservice.catalogprocess.service
 import akka.http.scaladsl.server.directives.FileInfo
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.BearerToken
 import it.pagopa.pdnd.interop.uservice.catalogprocess.model.UpdateDescriptorSeed
-import it.pagopa.pdnd.interopuservice.catalogprocess.model.{EService, EServiceSeed}
+import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.EService
+import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.EServiceSeed
 
 import java.io.File
 import scala.concurrent.Future
