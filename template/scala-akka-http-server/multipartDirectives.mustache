@@ -10,6 +10,8 @@ import akka.http.scaladsl.server.directives._
 import akka.stream.Materializer
 import akka.stream.scaladsl._
 
+import org.apache.commons.io.FilenameUtils
+
 import scala.collection.immutable
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
@@ -63,9 +65,11 @@ trait MultipartDirectives {
 }
 
 object MultipartDirectives extends MultipartDirectives with FileUploadDirectives {
-  val tempFileFromFileInfo: FileInfo => File = {
-    (file: FileInfo) => File.createTempFile(file.fileName, ".tmp")
-  }
+    val tempFileFromFileInfo: FileInfo => File = { (file: FileInfo) =>
+        val temporaryDir: String = System.getProperty("java.io.tmpdir")
+        val temporaryFilePath = s"$temporaryDir${file.fileName}"
+        new File(temporaryFilePath)
+    }
 }
 
 final case class FileField(fieldName: String, fileNameF: FileInfo => File = MultipartDirectives.tempFileFromFileInfo)
