@@ -60,12 +60,15 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         technology = "REST",
         voucherLifespan = 1000,
         attributes = Attributes(
-          certified =
-            List(Attribute(single = Some(AttributeValue("0001", false)), group = Some(List(AttributeValue("0002", false))))),
-          declared =
-            List(Attribute(single = Some(AttributeValue("0001", false)), group = Some(List(AttributeValue("0002", false))))),
-          verified =
-            List(Attribute(single = Some(AttributeValue("0001", false)), group = Some(List(AttributeValue("0002", false)))))
+          certified = List(
+            Attribute(single = Some(AttributeValue("0001", false)), group = Some(List(AttributeValue("0002", false))))
+          ),
+          declared = List(
+            Attribute(single = Some(AttributeValue("0001", false)), group = Some(List(AttributeValue("0002", false))))
+          ),
+          verified = List(
+            Attribute(single = Some(AttributeValue("0001", false)), group = Some(List(AttributeValue("0002", false))))
+          )
         )
       )
 
@@ -74,12 +77,19 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         producerId = seed.producerId,
         name = seed.name,
         description = seed.description,
-        audience = seed.audience,
         technology = seed.technology,
-        voucherLifespan = seed.voucherLifespan,
         attributes = seed.attributes,
         descriptors = List(
-          EServiceDescriptor(UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824302"), "1", None, None, Nil, "draft")
+          EServiceDescriptor(
+            id = UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824302"),
+            version = "1",
+            description = None,
+            interface = None,
+            docs = Nil,
+            status = "draft",
+            audience = seed.audience,
+            voucherLifespan = seed.voucherLifespan
+          )
         )
       )
 

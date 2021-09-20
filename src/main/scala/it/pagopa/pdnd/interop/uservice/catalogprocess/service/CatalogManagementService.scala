@@ -2,8 +2,16 @@ package it.pagopa.pdnd.interop.uservice.catalogprocess.service
 
 import akka.http.scaladsl.server.directives.FileInfo
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.BearerToken
-import it.pagopa.pdnd.interop.uservice.catalogprocess.model.UpdateDescriptorSeed
-import it.pagopa.pdnd.interopuservice.catalogprocess.model.{EService, EServiceSeed}
+import it.pagopa.pdnd.interopuservice.catalogprocess.model.{
+  EService,
+  EServiceDescriptor,
+  EServiceDescriptorSeed,
+  EServiceDoc,
+  EServiceSeed,
+  UpdateEServiceDescriptorDocumentSeed,
+  UpdateEServiceDescriptorSeed,
+  UpdateEServiceSeed
+}
 
 import java.io.File
 import scala.concurrent.Future
@@ -19,12 +27,9 @@ trait CatalogManagementService {
   def createEService(bearerToken: BearerToken, eServiceSeed: EServiceSeed): Future[EService]
   def deleteDraft(bearerToken: BearerToken, eServiceId: String, descriptorId: String): Future[Unit]
 
-  def updateDescriptor(
-    bearerToken: BearerToken,
-    eServiceId: String,
-    descriptorId: String,
-    seed: UpdateDescriptorSeed
-  ): Future[EService]
+  def updateDraftDescriptor(
+    bearerToken: BearerToken
+  )(eServiceId: String, descriptorId: String, seed: UpdateEServiceDescriptorSeed): Future[EService]
 
   def createEServiceDocument(
     bearerToken: BearerToken,
@@ -41,5 +46,31 @@ trait CatalogManagementService {
     descriptorId: String,
     documentId: String
   ): Future[File]
+
+  def deprecateDescriptor(bearerToken: BearerToken)(eServiceId: String, descriptorId: String): Future[Unit]
+
+  def archiveDescriptor(bearerToken: BearerToken)(eServiceId: String, descriptorId: String): Future[Unit]
+
+  def publishDescriptor(bearerToken: BearerToken)(eServiceId: String, descriptorId: String): Future[Unit]
+
+  def draftDescriptor(bearerToken: BearerToken)(eServiceId: String, descriptorId: String): Future[Unit]
+
+  def hasNotDraftDescriptor(eService: EService): Future[Boolean]
+
+  def deleteEServiceDocument(
+    bearer: BearerToken
+  )(eServiceId: String, descriptorId: String, documentId: String): Future[Unit]
+
+  def createDescriptor(
+    bearer: BearerToken
+  )(eServiceId: String, eServiceDescriptorSeed: EServiceDescriptorSeed): Future[EServiceDescriptor]
+
+  def updateEservice(bearer: BearerToken)(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed): Future[EService]
+  def updateEServiceDocument(bearer: BearerToken)(
+    eServiceId: String,
+    descriptorId: String,
+    documentId: String,
+    updateEServiceDescriptorDocumentSeed: UpdateEServiceDescriptorDocumentSeed
+  ): Future[EServiceDoc]
 
 }

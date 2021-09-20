@@ -1,16 +1,15 @@
 package it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl
 
 import akka.http.scaladsl.marshalling.ToEntityMarshaller
-import akka.http.scaladsl.server.Directives.onComplete
+import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.{ApiError, BearerToken}
-import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.EServiceDescriptorSeedEnums.Status
-import it.pagopa.pdnd.interop.uservice.catalogprocess.model.UpdateDescriptorSeed
+import it.pagopa.pdnd.interop.uservice.catalogprocess.errors.{DescriptorNotFound, NotValidDescriptor}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.CatalogManagementService
 import it.pagopa.pdnd.interopuservice.catalogprocess.api.ProcessApiService
-import it.pagopa.pdnd.interopuservice.catalogprocess.model.{EService, EServiceSeed, FlatEService, Problem}
+import it.pagopa.pdnd.interopuservice.catalogprocess.model._
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.File
@@ -128,22 +127,17 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     */
   override def publishDescriptor(eServiceId: String, descriptorId: String)(implicit
     contexts: Seq[(String, String)],
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
-    toEntityMarshallerEService: ToEntityMarshaller[EService]
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
   ): Route = {
+
     val result =
       for {
         bearer          <- tokenFromContext(contexts)
         currentEService <- catalogManagementService.getEService(bearer, eServiceId)
+        _               <- isDraftDescriptor(currentEService.descriptors.find(_.id.toString == descriptorId))
         // TODO Status should be an enum
-        currentActiveDescriptor = currentEService.descriptors.find(_.status == "published") // Must be at most one
-        descriptorToPublishSeed = UpdateDescriptorSeed(description = None, status = Some(Status.Published))
-        updatedEService <- catalogManagementService.updateDescriptor(
-          bearer,
-          eServiceId,
-          descriptorId,
-          descriptorToPublishSeed
-        )
+        currentActiveDescriptor = currentEService.descriptors.find(d => d.status == "published") // Must be at most one
+        _ <- catalogManagementService.publishDescriptor(bearer)(eServiceId, descriptorId)
         _ <- currentActiveDescriptor
           .map(oldDescriptor =>
             deprecateDescriptorOrCancelPublication(
@@ -154,10 +148,10 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
             )
           )
           .sequence
-      } yield updatedEService
+      } yield ()
 
     onComplete(result) {
-      case Success(response) => publishDescriptor200(response)
+      case Success(_) => publishDescriptor204
       case Failure(ex: ApiError[_]) if ex.code == 400 =>
         publishDescriptor400(
           Problem(
@@ -332,7 +326,95 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
           Problem(Option(ex.getMessage), 500, s"Unexpected error while retrieving flatted E-Services")
         )
     }
+  }
 
+  /** Code: 200, Message: EService Descriptor created., DataType: EServiceDescriptor
+    * Code: 400, Message: Invalid input, DataType: Problem
+    * Code: 404, Message: Not found, DataType: Problem
+    * Code: 500, Message: Not found, DataType: Problem
+    */
+  override def createDescriptor(eServiceId: String, eServiceDescriptorSeed: EServiceDescriptorSeed)(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerEServiceDescriptor: ToEntityMarshaller[EServiceDescriptor],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+  ): Route = {
+    val result =
+      for {
+        bearer          <- tokenFromContext(contexts)
+        currentEService <- catalogManagementService.getEService(bearer, eServiceId)
+        _               <- catalogManagementService.hasNotDraftDescriptor(currentEService)
+        createdEServiceDescriptor <- catalogManagementService.createDescriptor(bearer)(
+          eServiceId,
+          eServiceDescriptorSeed
+        )
+      } yield createdEServiceDescriptor
+
+    onComplete(result) {
+      case Success(res) => createDescriptor200(res)
+      case Failure(ex) =>
+        val errorResponse: Problem =
+          Problem(Option(ex.getMessage), 400, s"Error while creating Descriptor for e-service Id ${eServiceId}")
+        createDescriptor400(errorResponse)
+    }
+  }
+
+  /** Code: 200, Message: EService Descriptor published, DataType: EService
+    * Code: 400, Message: Invalid input, DataType: Problem
+    * Code: 404, Message: Not found, DataType: Problem
+    * Code: 500, Message: Not found, DataType: Problem
+    */
+  override def updateDraftDescriptor(
+    eServiceId: String,
+    descriptorId: String,
+    updateEServiceDescriptorSeed: UpdateEServiceDescriptorSeed
+  )(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerEService: ToEntityMarshaller[EService]
+  ): Route = {
+    val result =
+      for {
+        bearer          <- tokenFromContext(contexts)
+        currentEService <- catalogManagementService.getEService(bearer, eServiceId)
+        _               <- isDraftDescriptor(currentEService.descriptors.find(_.id.toString == descriptorId))
+        updatedDescriptor <- catalogManagementService.updateDraftDescriptor(bearer)(
+          eServiceId,
+          descriptorId,
+          updateEServiceDescriptorSeed
+        )
+      } yield updatedDescriptor
+
+    onComplete(result) {
+      case Success(res) => updateDraftDescriptor200(res)
+      case Failure(ex) =>
+        val errorResponse: Problem =
+          Problem(Option(ex.getMessage), 400, s"Error while updating draft Descriptor for e-service Id ${eServiceId}")
+        updateDraftDescriptor400(errorResponse)
+    }
+  }
+
+  /** Code: 200, Message: E-Service updated, DataType: EService
+    * Code: 404, Message: E-Service not found, DataType: Problem
+    * Code: 400, Message: Bad request, DataType: Problem
+    */
+  override def updateEServiceById(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed)(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerEService: ToEntityMarshaller[EService]
+  ): Route = {
+    val result =
+      for {
+        bearer          <- tokenFromContext(contexts)
+        updatedEservice <- catalogManagementService.updateEservice(bearer)(eServiceId, updateEServiceSeed)
+      } yield updatedEservice
+
+    onComplete(result) {
+      case Success(res) => updateEServiceById200(res)
+      case Failure(ex) =>
+        val errorResponse: Problem =
+          Problem(Option(ex.getMessage), 400, s"Error while creating Descriptor for e-service Id ${eServiceId}")
+        createDescriptor400(errorResponse)
+    }
   }
 
   private[this] def deprecateDescriptorOrCancelPublication(
@@ -340,7 +422,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     eServiceId: String,
     descriptorIdToDeprecate: String,
     descriptorIdToCancel: String
-  ): Future[EService] = {
+  ): Future[Unit] = {
     deprecateDescriptor(descriptorIdToDeprecate, eServiceId, bearer)
       .recoverWith(error =>
         resetDescriptorToDraft(eServiceId, descriptorIdToCancel, bearer)
@@ -352,16 +434,9 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     descriptorId: String,
     eServiceId: String,
     bearerToken: BearerToken
-  ): Future[EService] = {
-    val descriptorSeed =
-      UpdateDescriptorSeed(description = None, status = Some(Status.Deprecated)) // TODO It should be in a library
+  ): Future[Unit] = {
     catalogManagementService
-      .updateDescriptor(
-        bearerToken = bearerToken,
-        eServiceId = eServiceId,
-        descriptorId = descriptorId,
-        seed = descriptorSeed
-      )
+      .deprecateDescriptor(bearerToken)(eServiceId = eServiceId, descriptorId = descriptorId)
       .recoverWith { case ex =>
         logger.error(s"Unable to deprecate descriptor $descriptorId on E-Service $eServiceId. Reason: ${ex.getMessage}")
         Future.failed(ex)
@@ -372,16 +447,10 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     eServiceId: String,
     descriptorId: String,
     bearerToken: BearerToken
-  ): Future[EService] = {
-    val descriptorSeed =
-      UpdateDescriptorSeed(description = None, status = Some(Status.Draft)) // TODO It should be in a library
+  ): Future[Unit] = {
+
     catalogManagementService
-      .updateDescriptor(
-        bearerToken = bearerToken,
-        eServiceId = eServiceId,
-        descriptorId = descriptorId,
-        seed = descriptorSeed
-      )
+      .draftDescriptor(bearerToken)(eServiceId = eServiceId, descriptorId = descriptorId)
       .map { result =>
         logger.info(s"Publication cancelled for descriptor $descriptorId in E-Service $eServiceId")
         result
@@ -407,5 +476,112 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
         descriptorId = descriptor.id.toString
       )
     )
+  }
+
+  private def isDraftDescriptor(optDescriptor: Option[EServiceDescriptor]): Future[EServiceDescriptor] = {
+    optDescriptor.fold(Future.failed[EServiceDescriptor](DescriptorNotFound(""))) { descriptor =>
+      descriptor.status match {
+        case "draft" => Future.successful(descriptor)
+        case _ =>
+          Future.failed(NotValidDescriptor(s"Descriptor ${descriptor.id.toString} has status ${descriptor.status}"))
+      }
+    }
+  }
+
+  /** Code: 204, Message: Document deleted.
+    * Code: 404, Message: E-Service descriptor document not found, DataType: Problem
+    * Code: 400, Message: Bad request, DataType: Problem
+    */
+  override def deleteEServiceDocumentById(eServiceId: String, descriptorId: String, documentId: String)(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+  ): Route = {
+    val result =
+      for {
+        bearer <- tokenFromContext(contexts)
+        _      <- catalogManagementService.deleteEServiceDocument(bearer)(eServiceId, descriptorId, documentId)
+      } yield ()
+
+    onComplete(result) {
+      case Success(_) => deleteEServiceDocumentById204
+      case Failure(ex: ApiError[_]) if ex.code == 400 =>
+        deleteEServiceDocumentById400(
+          Problem(
+            Option(ex.getMessage),
+            400,
+            s"Error deleting document $documentId for E-Service $eServiceId and descriptor $descriptorId"
+          )
+        )
+      case Failure(ex: ApiError[_]) if ex.code == 404 =>
+        deleteEServiceDocumentById404(
+          Problem(
+            Option(ex.getMessage),
+            404,
+            s"Error deleting document $documentId for E-Service $eServiceId and descriptor $descriptorId"
+          )
+        )
+      case Failure(ex) =>
+        complete(
+          Problem(
+            Option(ex.getMessage),
+            500,
+            s"Error deleting document $documentId for E-Service $eServiceId and descriptor $descriptorId"
+          )
+        )
+    }
+  }
+
+  /** Code: 200, Message: EService Descriptor updated., DataType: EServiceDoc
+    * Code: 404, Message: EService not found, DataType: Problem
+    * Code: 400, Message: Bad request, DataType: Problem
+    */
+  override def updateEServiceDocumentById(
+    eServiceId: String,
+    descriptorId: String,
+    documentId: String,
+    updateEServiceDescriptorDocumentSeed: UpdateEServiceDescriptorDocumentSeed
+  )(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerEServiceDoc: ToEntityMarshaller[EServiceDoc],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+  ): Route = {
+    val result =
+      for {
+        bearer <- tokenFromContext(contexts)
+        updatedDocument <- catalogManagementService.updateEServiceDocument(bearer)(
+          eServiceId,
+          descriptorId,
+          documentId,
+          updateEServiceDescriptorDocumentSeed
+        )
+      } yield updatedDocument
+
+    onComplete(result) {
+      case Success(updatedDocument) => updateEServiceDocumentById200(updatedDocument)
+      case Failure(ex: ApiError[_]) if ex.code == 400 =>
+        updateEServiceDocumentById400(
+          Problem(
+            Option(ex.getMessage),
+            400,
+            s"Error updating document $documentId for E-Service $eServiceId and descriptor $descriptorId"
+          )
+        )
+      case Failure(ex: ApiError[_]) if ex.code == 404 =>
+        updateEServiceDocumentById404(
+          Problem(
+            Option(ex.getMessage),
+            404,
+            s"Error updating document $documentId for E-Service $eServiceId and descriptor $descriptorId"
+          )
+        )
+      case Failure(ex) =>
+        complete(
+          Problem(
+            Option(ex.getMessage),
+            500,
+            s"Error updating document $documentId for E-Service $eServiceId and descriptor $descriptorId"
+          )
+        )
+    }
   }
 }

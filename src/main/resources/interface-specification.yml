@@ -165,6 +165,87 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+    put:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Updates e-service general information
+      operationId: updateEServiceById
+      parameters:
+        - name: eServiceId
+          in: path
+          description: The E-Service id to update
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: A E-Service update seed containing the possible updatable fields
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEServiceSeed'
+      responses:
+        "200":
+          description: E-Service updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EService'
+        '404':
+          description: E-Service not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /eservices/{eServiceId}/descriptors:
+    post:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Adds a descriptor to the specified e-service
+      operationId: createDescriptor
+      parameters:
+        - name: eServiceId
+          in: path
+          description: The E-Service id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: A E-Service Descriptor seed
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EServiceDescriptorSeed'
+        required: true
+      responses:
+        "200":
+          description: EService Descriptor created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EServiceDescriptor'
+        "400":
+          description: Invalid input
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "404":
+          description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /eservices/{eServiceId}/descriptors/{descriptorId}:
     delete:
       security:
@@ -207,6 +288,52 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+    put:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Updates a draft descriptor
+      operationId: updateDraftDescriptor
+      parameters:
+        - name: eServiceId
+          in: path
+          description: The E-Service id
+          required: true
+          schema:
+            type: string
+        - name: descriptorId
+          in: path
+          description: The Descriptor Id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: A E-Service Descriptor seed
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEServiceDescriptorSeed'
+        required: true
+      responses:
+        "200":
+          description: EService with draft descriptor updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EService'
+        "400":
+          description: Invalid input
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        "404":
+          description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /eservices/{eServiceId}/descriptors/{descriptorId}/publish:
     post:
       security:
@@ -229,12 +356,8 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        "204":
           description: E-Service Descriptor published
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EService'
         "400":
           description: Invalid input
           content:
@@ -372,6 +495,100 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+    delete:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Deletes an e-service document
+      operationId: deleteEServiceDocumentById
+      parameters:
+        - name: eServiceId
+          in: path
+          description: the eservice id
+          required: true
+          schema:
+            type: string
+        - name: descriptorId
+          in: path
+          description: the descriptor Id
+          required: true
+          schema:
+            type: string
+        - name: documentId
+          in: path
+          description: the document id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Document deleted.
+        '404':
+          description: E-Service descriptor document not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /eservices/{eServiceId}/descriptors/{descriptorId}/documents/{documentId}/update:
+    post:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Updates an e-service document
+      operationId: updateEServiceDocumentById
+      parameters:
+        - name: eServiceId
+          in: path
+          description: the eservice id
+          required: true
+          schema:
+            type: string
+        - name: descriptorId
+          in: path
+          description: the descriptor Id
+          required: true
+          schema:
+            type: string
+        - name: documentId
+          in: path
+          description: the document id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: A payload containing the possible document updatable fields
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEServiceDescriptorDocumentSeed'
+      responses:
+        "200":
+          description: EService Descriptor updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EServiceDoc'
+        '404':
+          description: EService not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /status:
     get:
       security:
@@ -427,9 +644,7 @@ components:
         - producerId
         - name
         - description
-        - audience
         - technology
-        - voucherLifespan
         - attributes
         - descriptors
       properties:
@@ -443,15 +658,8 @@ components:
           type: string
         description:
           type: string
-        audience:
-          type: array
-          items:
-            type: string
         technology:
           type: string
-        voucherLifespan:
-          type: integer
-          format: int32
         attributes:
           $ref: '#/components/schemas/Attributes'
         descriptors:
@@ -487,6 +695,8 @@ components:
         - docs
         - status
         - creationDate
+        - audience
+        - voucherLifespan
       properties:
         id:
           type: string
@@ -504,6 +714,51 @@ components:
         status:
           type: string
           enum: [ 'draft', 'published','deprecated','archived' ]
+        audience:
+          type: array
+          items:
+            type: string
+        voucherLifespan:
+          type: integer
+          format: int32
+    EServiceDescriptorSeed:
+      required:
+        - audience
+        - voucherLifespan
+      type: object
+      properties:
+        description:
+          type: string
+        audience:
+          type: array
+          items:
+            type: string
+        voucherLifespan:
+          type: integer
+          format: int32
+    UpdateEServiceDescriptorSeed:
+     required:
+       - status
+       - audience
+       - voucherLifespan
+     type: object
+     properties:
+       description:
+         type: string
+       audience:
+         type: array
+         items:
+           type: string
+       voucherLifespan:
+         type: integer
+         format: int32
+    UpdateEServiceDescriptorDocumentSeed:
+      required:
+        - description
+      type: object
+      properties:
+        description:
+          type: string
     AttributeValue:
       type: object
       properties:
@@ -566,6 +821,23 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/FlatEService'
+    UpdateEServiceSeed:
+      type: object
+      required:
+        - name
+        - description
+        - technology
+        - attributes
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        technology:
+          type: string
+          enum: [ 'REST', 'SOAP' ]
+        attributes:
+          $ref: '#/components/schemas/Attributes'
     Problem:
       properties:
         detail:
