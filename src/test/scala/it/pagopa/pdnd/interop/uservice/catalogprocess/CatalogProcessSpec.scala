@@ -60,9 +60,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         producerId = UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824300"),
         name = "MyService",
         description = "My Service",
-        audience = List("aud1"),
         technology = "REST",
-        voucherLifespan = 1000,
         attributes = Attributes(
           certified = List(
             Attribute(single = Some(AttributeValue("0001", false)), group = Some(List(AttributeValue("0002", false))))
@@ -91,8 +89,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
             interface = None,
             docs = Nil,
             status = "draft",
-            audience = seed.audience,
-            voucherLifespan = seed.voucherLifespan
+            audience = List("aud1"),
+            voucherLifespan = 1000
           )
         )
       )
