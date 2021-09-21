@@ -1,15 +1,18 @@
 package it.pagopa.pdnd.interop.uservice.catalogprocess.service
 
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client
-import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.EServiceSeedEnums
-import it.pagopa.pdnd.interopuservice.catalogprocess.model.{
+import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.{EServiceSeedEnums, UpdateEServiceSeedEnums}
+import it.pagopa.pdnd.interop.uservice.catalogprocess.model.{
   Attribute,
   AttributeValue,
   Attributes,
   EService,
   EServiceDescriptor,
+  EServiceDescriptorSeed,
   EServiceDoc,
-  EServiceSeed
+  EServiceSeed,
+  UpdateEServiceDescriptorDocumentSeed,
+  UpdateEServiceSeed
 }
 
 import scala.util.Try
@@ -32,7 +35,7 @@ package object impl {
   def attributeValueFromCatalogClientAttributeValue(clientAttributeValue: client.model.AttributeValue): AttributeValue =
     AttributeValue(
       id = clientAttributeValue.id,
-      description = clientAttributeValue.,
+      name = clientAttributeValue.,
       explicitAttributeVerification = clientAttributeValue.explicitAttributeVerification
     )
 
@@ -52,7 +55,9 @@ package object impl {
       description = clientDescriptor.description,
       interface = clientDescriptor.interface.map(docFromCatalogClientDoc),
       docs = clientDescriptor.docs.map(docFromCatalogClientDoc),
-      status = clientDescriptor.status.toString
+      status = clientDescriptor.status.toString,
+      audience = clientDescriptor.audience,
+      voucherLifespan = clientDescriptor.voucherLifespan
     )
 
   def eServiceFromCatalogClient(clientEService: client.model.EService): EService =
@@ -61,9 +66,7 @@ package object impl {
       producer = clientEService.producerId,
       name = clientEService.name,
       description = clientEService.description,
-      audience = clientEService.audience,
       technology = clientEService.technology,
-      voucherLifespan = clientEService.voucherLifespan,
       attributes = attributesFromCatalogClientAttributes(clientEService.attributes),
       descriptors = clientEService.descriptors.map(descriptorFromCatalogClientDescriptor)
     )
@@ -99,10 +102,46 @@ package object impl {
       producerId = eServiceSeed.producerId,
       name = eServiceSeed.name,
       description = eServiceSeed.description,
-      audience = eServiceSeed.audience,
       technology = seedTechnology,
-      voucherLifespan = eServiceSeed.voucherLifespan,
       attributes = attributesToCatalogClientAttributes(eServiceSeed.attributes)
     )
+  }
+
+  @SuppressWarnings(Array("org.wartremover.warts.ToString"))
+  def eServiceDescriptorSeedToCatalogClientSeed(
+    descriptor: EServiceDescriptorSeed
+  ): Either[Throwable, client.model.EServiceDescriptorSeed] = {
+    Right[Throwable, client.model.EServiceDescriptorSeed](
+      client.model.EServiceDescriptorSeed(
+        description = descriptor.description,
+        audience = descriptor.audience,
+        voucherLifespan = descriptor.voucherLifespan
+      )
+    )
+  }
+
+  @SuppressWarnings(Array("org.wartremover.warts.ToString"))
+  def updateEServiceSeedToCatalogClientSeed(
+    eServiceSeed: UpdateEServiceSeed
+  ): Either[Throwable, client.model.UpdateEServiceSeed] = {
+    for {
+      seedTechnology <- Try(UpdateEServiceSeedEnums.Technology.withName(eServiceSeed.technology)).toEither.left.map(_ =>
+        new RuntimeException(
+          s"Unknown Technology ${eServiceSeed.technology}. Allowed values: [${UpdateEServiceSeedEnums.Technology.values.map(_.toString).mkString(",")}]"
+        )
+      )
+    } yield client.model.UpdateEServiceSeed(
+      name = eServiceSeed.name,
+      description = eServiceSeed.description,
+      technology = seedTechnology,
+      attributes = attributesToCatalogClientAttributes(eServiceSeed.attributes)
+    )
+  }
+
+  @SuppressWarnings(Array("org.wartremover.warts.ToString"))
+  def updateEServiceDescriptorDocumentSeedToCatalogClientSeed(
+    seed: UpdateEServiceDescriptorDocumentSeed
+  ): client.model.UpdateEServiceDescriptorDocumentSeed = {
+    client.model.UpdateEServiceDescriptorDocumentSeed(description = seed.description)
   }
 }

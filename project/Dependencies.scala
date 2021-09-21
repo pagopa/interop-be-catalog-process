@@ -85,6 +85,12 @@ object Dependencies {
     lazy val catalogManagementClient =
       namespace %% "pdnd-interop-uservice-catalog-management-client" % catalogManagementClientVersion
 
+    lazy val agreementManagementClient =
+      namespace %% "pdnd-interop-uservice-agreement-management-client" % agreementManagementClientVersion
+
+    lazy val partyManagementClient =
+      namespace %% "pdnd-interop-uservice-party-management-client" % agreementManagementClientVersion
+
     lazy val attributeRegistryManagementClient =
       namespace %% "pdnd-interop-uservice-attribute-registry-management-client" % attributeRegistryManagementVersion
 
@@ -112,6 +118,8 @@ object Dependencies {
       kamon.bundle                             % Compile,
       kamon.prometheus                         % Compile,
       pagopa.catalogManagementClient           % Compile,
+      pagopa.agreementManagementClient         % Compile,
+      pagopa.partyManagementClient             % Compile,
       pagopa.attributeRegistryManagementClient % Compile,
       scalaprotobuf.core                       % Protobuf,
       akka.testkit                             % Test,

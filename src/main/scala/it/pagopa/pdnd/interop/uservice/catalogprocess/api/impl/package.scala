@@ -1,7 +1,7 @@
 package it.pagopa.pdnd.interop.uservice.catalogprocess.api
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import it.pagopa.pdnd.interopuservice.catalogprocess.model._
+import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
 import spray.json.{DefaultJsonProtocol, JsString, JsValue, JsonFormat, RootJsonFormat, deserializationError}
 
 import java.util.UUID
@@ -30,10 +30,20 @@ package object impl extends SprayJsonSupport with DefaultJsonProtocol {
   implicit val eServiceAttributesFormat: RootJsonFormat[Attributes]         = jsonFormat3(Attributes)
   implicit val organizationFormat: RootJsonFormat[Organization]             = jsonFormat2(Organization)
   implicit val eServiceDocFormat: RootJsonFormat[EServiceDoc]               = jsonFormat4(EServiceDoc)
-  implicit val eServiceDescriptorFormat: RootJsonFormat[EServiceDescriptor] = jsonFormat6(EServiceDescriptor)
-  implicit val eServiceFormat: RootJsonFormat[EService]                     = jsonFormat9(EService)
+  implicit val eServiceDescriptorFormat: RootJsonFormat[EServiceDescriptor] = jsonFormat8(EServiceDescriptor)
+  implicit val eServiceDescriptorSeedFormat: RootJsonFormat[EServiceDescriptorSeed] = jsonFormat3(
+    EServiceDescriptorSeed
+  )
+  implicit val eServiceFormat: RootJsonFormat[EService]                     = jsonFormat7(EService)
   implicit val eServiceSeedFormat: RootJsonFormat[EServiceSeed]             = jsonFormat7(EServiceSeed)
-  implicit val flatEServiceFormat: RootJsonFormat[FlatEService]             = jsonFormat5(FlatEService)
-  implicit val problemFormat: RootJsonFormat[Problem]                       = jsonFormat3(Problem)
+  implicit val updateEServiceSeedFormat: RootJsonFormat[UpdateEServiceSeed] = jsonFormat4(UpdateEServiceSeed)
+  implicit val updateEServiceDescriptorSeedFormat: RootJsonFormat[UpdateEServiceDescriptorSeed] = jsonFormat3(
+    UpdateEServiceDescriptorSeed
+  )
+  implicit val updateEServiceDescriptorDocumentSeedFormat: RootJsonFormat[UpdateEServiceDescriptorDocumentSeed] =
+    jsonFormat1(UpdateEServiceDescriptorDocumentSeed)
+
+  implicit val flatEServiceFormat: RootJsonFormat[FlatEService] = jsonFormat5(FlatEService)
+  implicit val problemFormat: RootJsonFormat[Problem]           = jsonFormat3(Problem)
 
 }

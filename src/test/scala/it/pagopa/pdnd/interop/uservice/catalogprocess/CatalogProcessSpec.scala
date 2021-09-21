@@ -3,10 +3,10 @@ package it.pagopa.pdnd.interop.uservice.catalogprocess
 import akka.http.scaladsl.model.{HttpMethods, StatusCodes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl._
-import it.pagopa.pdnd.interop.uservice.catalogprocess.service.CatalogManagementService
-import it.pagopa.pdnd.interopuservice.catalogprocess.api.{HealthApi, ProcessApi, ProcessApiMarshaller}
-import it.pagopa.pdnd.interopuservice.catalogprocess.model._
-import it.pagopa.pdnd.interopuservice.catalogprocess.server.Controller
+import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{AgreementManagementService, CatalogManagementService}
+import it.pagopa.pdnd.interop.uservice.catalogprocess.api.{HealthApi, ProcessApi, ProcessApiMarshaller}
+import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
+import it.pagopa.pdnd.interop.uservice.catalogprocess.server.Controller
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -36,7 +36,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
   override def beforeAll(): Unit = {
 
     val processApi =
-      new ProcessApi(ProcessApiServiceImpl(catalogManagementService), processApiMarshaller, wrappingDirective)
+      new ProcessApi(
+        ProcessApiServiceImpl(catalogManagementService, agreementManagementService),
+        processApiMarshaller,
+        wrappingDirective
+      )
 
     controller = Some(new Controller(mockHealthApi, processApi))
 
@@ -60,12 +64,15 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         technology = "REST",
         voucherLifespan = 1000,
         attributes = Attributes(
-          certified =
-            List(Attribute(single = Some(AttributeValue("0001", false)), group = Some(List(AttributeValue("0002", false))))),
-          declared =
-            List(Attribute(single = Some(AttributeValue("0001", false)), group = Some(List(AttributeValue("0002", false))))),
-          verified =
-            List(Attribute(single = Some(AttributeValue("0001", false)), group = Some(List(AttributeValue("0002", false)))))
+          certified = List(
+            Attribute(single = Some(AttributeValue("0001", false)), group = Some(List(AttributeValue("0002", false))))
+          ),
+          declared = List(
+            Attribute(single = Some(AttributeValue("0001", false)), group = Some(List(AttributeValue("0002", false))))
+          ),
+          verified = List(
+            Attribute(single = Some(AttributeValue("0001", false)), group = Some(List(AttributeValue("0002", false))))
+          )
         )
       )
 
@@ -74,16 +81,24 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         producerId = seed.producerId,
         name = seed.name,
         description = seed.description,
-        audience = seed.audience,
         technology = seed.technology,
-        voucherLifespan = seed.voucherLifespan,
         attributes = seed.attributes,
         descriptors = List(
-          EServiceDescriptor(UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824302"), "1", None, None, Nil, "draft")
+          EServiceDescriptor(
+            id = UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824302"),
+            version = "1",
+            description = None,
+            interface = None,
+            docs = Nil,
+            status = "draft",
+            audience = seed.audience,
+            voucherLifespan = seed.voucherLifespan
+          )
         )
       )
 
-      (catalogManagementService.createEService _)
+      (catalogManagementService
+        .createEService(_: String)(_: EServiceSeed))
         .expects(bearerToken, seed)
         .returning(Future.successful(expected))
         .once()
@@ -101,8 +116,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
   }
 }
 
-@SuppressWarnings(Array("org.wartremover.warts.Null"))
+@SuppressWarnings(Array("org.wartremover.warts.Null", "org.wartremover.warts.ImplicitParameter"))
 object CatalogProcessSpec extends MockFactory {
-  val mockHealthApi: HealthApi                           = mock[HealthApi]
-  val catalogManagementService: CatalogManagementService = mock[CatalogManagementService]
+  val mockHealthApi: HealthApi                               = mock[HealthApi]
+  val catalogManagementService: CatalogManagementService     = mock[CatalogManagementService]
+  val agreementManagementService: AgreementManagementService = mock[AgreementManagementService]
 }

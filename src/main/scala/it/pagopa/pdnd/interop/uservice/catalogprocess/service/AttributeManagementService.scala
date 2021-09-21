@@ -8,4 +8,6 @@ trait AttributeManagementService {
 
   def getAttribute(attributeId: String): Future[Attribute]
 
+  def getAttributes(attributeIds: Seq[String]): Future[Seq[Attribute]]
+
 }

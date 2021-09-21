@@ -30,6 +30,11 @@ final case class AttributeManagementServiceImpl(invoker: AttributeRegistryManage
     attribute <- attributeByUUID(uuid)
   } yield attribute
 
+
+  override def getAttributes(attributeIds: Seq[String]): Future[Seq[Attribute]] = {
+
+  }
+
   private def attributeByUUID(attributeId: UUID): Future[Attribute] = {
     val request = api.getAttributeById(attributeId) // TODO maybe a batch request is better
     invoker
