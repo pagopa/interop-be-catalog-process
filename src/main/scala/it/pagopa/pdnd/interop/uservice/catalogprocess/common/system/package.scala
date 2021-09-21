@@ -9,8 +9,9 @@ import akka.{actor => classic}
 import akka.actor.typed.scaladsl.adapter.TypedActorSystemOps
 import akka.http.scaladsl.server.directives.Credentials.{Missing, Provided}
 
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.concurrent.duration.DurationInt
+import scala.util.Try
 
 package object system {
 
@@ -31,5 +32,13 @@ package object system {
         case Missing              => None
       }
     }
+  }
+
+  implicit class TryOps[A](val tryOp: Try[A]) extends AnyVal {
+    def toFuture: Future[A] = tryOp.fold(e => Future.failed[A](e), a => Future.successful[A](a))
+  }
+
+  implicit class EitherOps[A](val either: Either[Throwable, A]) extends AnyVal {
+    def toFuture: Future[A] = either.fold(e => Future.failed[A](e), a => Future.successful[A](a))
   }
 }

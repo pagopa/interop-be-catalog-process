@@ -5,7 +5,18 @@ import akka.http.scaladsl.marshalling.{Marshaller, ToEntityMarshaller}
 import akka.http.scaladsl.model.ContentTypes
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import it.pagopa.pdnd.interopuservice.catalogprocess.api.ProcessApiMarshaller
-import it.pagopa.pdnd.interopuservice.catalogprocess.model.{EService, EServiceSeed, FlatEService, Problem}
+import it.pagopa.pdnd.interopuservice.catalogprocess.model.{
+  EService,
+  EServiceDescriptor,
+  EServiceDescriptorSeed,
+  EServiceDoc,
+  EServiceSeed,
+  FlatEService,
+  Problem,
+  UpdateEServiceDescriptorDocumentSeed,
+  UpdateEServiceDescriptorSeed,
+  UpdateEServiceSeed
+}
 import spray.json._
 
 import java.io.File
@@ -37,4 +48,23 @@ final case class ProcessApiMarshallerImpl()
       source.close()
       out.getBytes(StandardCharsets.UTF_8.name)
     }
+
+  override implicit def fromEntityUnmarshallerUpdateEServiceSeed: FromEntityUnmarshaller[UpdateEServiceSeed] =
+    sprayJsonUnmarshaller[UpdateEServiceSeed]
+
+  override implicit def fromEntityUnmarshallerEServiceDescriptorSeed: FromEntityUnmarshaller[EServiceDescriptorSeed] =
+    sprayJsonUnmarshaller[EServiceDescriptorSeed]
+
+  override implicit def fromEntityUnmarshallerUpdateEServiceDescriptorSeed
+    : FromEntityUnmarshaller[UpdateEServiceDescriptorSeed] = sprayJsonUnmarshaller[UpdateEServiceDescriptorSeed]
+
+  override implicit def toEntityMarshallerEServiceDescriptor: ToEntityMarshaller[EServiceDescriptor] =
+    sprayJsonMarshaller[EServiceDescriptor]
+
+  override implicit def fromEntityUnmarshallerUpdateEServiceDescriptorDocumentSeed
+    : FromEntityUnmarshaller[UpdateEServiceDescriptorDocumentSeed] =
+    sprayJsonUnmarshaller[UpdateEServiceDescriptorDocumentSeed]
+
+  override implicit def toEntityMarshallerEServiceDoc: ToEntityMarshaller[EServiceDoc] =
+    sprayJsonMarshaller[EServiceDoc]
 }
