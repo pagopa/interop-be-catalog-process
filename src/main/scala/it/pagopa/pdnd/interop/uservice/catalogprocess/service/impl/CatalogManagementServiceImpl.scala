@@ -18,10 +18,10 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
 ) extends CatalogManagementService {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  override def createEService(bearerToken: BearerToken, eServiceSeed: EServiceSeed): Future[EService] = {
+  override def createEService(bearerToken: String, eServiceSeed: EServiceSeed): Future[EService] = {
     for {
       clientSeed <- Future.fromTry(eServiceSeedToCatalogClientSeed(eServiceSeed).toTry)
-      request: ApiRequest[client.model.EService] = api.createEService(clientSeed)(bearerToken)
+      request: ApiRequest[client.model.EService] = api.createEService(clientSeed)(BearerToken(bearerToken))
       result <- invoker
         .execute[client.model.EService](request)
         .map { result =>
@@ -37,8 +37,8 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
 
   }
 
-  override def deleteDraft(bearerToken: BearerToken, eServiceId: String, descriptorId: String): Future[Unit] = {
-    val request: ApiRequest[Unit] = api.deleteDraft(eServiceId, descriptorId)(bearerToken)
+  override def deleteDraft(bearerToken: String, eServiceId: String, descriptorId: String): Future[Unit] = {
+    val request: ApiRequest[Unit] = api.deleteDraft(eServiceId, descriptorId)(BearerToken(bearerToken))
     invoker
       .execute[Unit](request)
       .map { result =>
@@ -54,31 +54,27 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   }
 
   override def listEServices(
-    bearerToken: BearerToken,
+    bearerToken: String,
     producerId: Option[String],
-    consumerId: Option[String],
     status: Option[String]
   ): Future[Seq[EService]] = {
-    val request: ApiRequest[Seq[client.model.EService]] = api.getEServices(producerId, consumerId, status)(bearerToken)
+    val request: ApiRequest[Seq[client.model.EService]] =
+      api.getEServices(producerId = producerId, status = status)(BearerToken(bearerToken))
     invoker
       .execute[Seq[client.model.EService]](request)
       .map { result =>
-        logger.info(
-          s"E-Services list retrieved for filters: producerId = $producerId, consumerId = $consumerId, status = $status"
-        )
+        logger.info(s"E-Services list retrieved for filters: producerId = $producerId, status = $status")
         result.content
       }
       .recoverWith { case ex =>
-        logger.error(
-          s"Error while retrieving E-Services for filters: producerId = $producerId, consumerId = $consumerId, status = $status"
-        )
+        logger.error(s"Error while retrieving E-Services for filters: producerId = $producerId, status = $status")
         Future.failed[Seq[client.model.EService]](ex)
       }
       .map(_.map(eServiceFromCatalogClient))
   }
 
-  override def getEService(bearerToken: BearerToken, eServiceId: String): Future[EService] = {
-    val request: ApiRequest[client.model.EService] = api.getEService(eServiceId)(bearerToken)
+  override def getEService(bearerToken: String, eServiceId: String): Future[EService] = {
+    val request: ApiRequest[client.model.EService] = api.getEService(eServiceId)(BearerToken(bearerToken))
     invoker
       .execute[client.model.EService](request)
       .map { result =>
@@ -93,13 +89,13 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   }
 
   override def updateDescriptor(
-    bearerToken: BearerToken,
+    bearerToken: String,
     eServiceId: String,
     descriptorId: String,
     seed: UpdateDescriptorSeed
   ): Future[EService] = {
     val request: ApiRequest[client.model.EService] =
-      api.updateDescriptor(eServiceId, descriptorId, seed.toApi())(bearerToken)
+      api.updateDescriptor(eServiceId, descriptorId, seed.toApi())(BearerToken(bearerToken))
     invoker
       .execute[client.model.EService](request)
       .map { result =>
@@ -114,7 +110,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   }
 
   override def createEServiceDocument(
-    bearerToken: BearerToken,
+    bearerToken: String,
     eServiceId: String,
     descriptorId: String,
     kind: String,
@@ -122,7 +118,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
     doc: (FileInfo, File)
   ): Future[EService] = {
     val request: ApiRequest[client.model.EService] =
-      api.createEServiceDocument(eServiceId, descriptorId, kind, description, doc._2)(bearerToken)
+      api.createEServiceDocument(eServiceId, descriptorId, kind, description, doc._2)(BearerToken(bearerToken))
     invoker
       .execute[client.model.EService](request)
       .map { result =>
@@ -141,12 +137,13 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   }
 
   override def getEServiceDocument(
-    bearerToken: BearerToken,
+    bearerToken: String,
     eServiceId: String,
     descriptorId: String,
     documentId: String
   ): Future[File] = {
-    val request: ApiRequest[File] = api.getEServiceDocument(eServiceId, descriptorId, documentId)(bearerToken)
+    val request: ApiRequest[File] =
+      api.getEServiceDocument(eServiceId, descriptorId, documentId)(BearerToken(bearerToken))
     invoker
       .execute[File](request)
       .map { result =>

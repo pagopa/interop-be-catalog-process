@@ -5,23 +5,14 @@ import akka.actor.testkit.typed.scaladsl.{ActorTestKit, ScalaTestWithActorTestKi
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.Behaviors
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{
-  ContentTypes,
-  HttpEntity,
-  HttpMethod,
-  HttpRequest,
-  HttpResponse,
-  RequestEntity,
-  headers
-}
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, SecurityDirectives}
-import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.BearerToken
 import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system.Authenticator
 import it.pagopa.pdnd.interopuservice.catalogprocess.server.Controller
 
-import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 
 @SuppressWarnings(
   Array("org.wartremover.warts.Any", "org.wartremover.warts.OptionPartial", "org.wartremover.warts.Var")
@@ -30,8 +21,8 @@ abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.co
 
   var bindServer: Option[Future[Http.ServerBinding]] = None
 
-  val bearerToken: BearerToken          = BearerToken("token")
-  val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(bearerToken.token)))
+  val bearerToken: String               = "token"
+  val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(bearerToken)))
 
   val httpSystem: ActorSystem[Any] =
     ActorSystem(Behaviors.ignore[Any], name = system.name, config = system.settings.config)
