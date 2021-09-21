@@ -74,5 +74,34 @@ pipeline {
         }
       }
     }
+
+    stage('Check deployment') {
+      agent { label 'sbt-template' }
+      environment {
+        ENDPOINT = "https://gateway.interop.pdnd.dev/${env.JOB_BASE_NAME}/build-info"
+      }
+      options {
+        retry(20)
+      }
+      steps {
+        script {
+          echo "Waiting few seconds before checking deployment..."
+          sleep time: 10, unit: 'SECONDS'
+          curlResponse      = sh(script: "curl --insecure ${ENDPOINT} --header 'Accept: application/json'", returnStdout: true)
+          echo "$curlResponse"
+          parsedResponse    = new JsonSlurper().parseText(curlResponse)
+          ciBuildNumber     = parsedResponse.ciBuildNumber
+          interfaceVersion  = parsedResponse.interfaceVersion
+          // unset response because it's not serializable and Jenkins throws NotSerializableException.
+          parsedResponse    = null
+          if (ciBuildNumber != "${env.BUILD_NUMBER}") {
+            echo "Service error with response = ${ciBuildNumber} when calling ${ENDPOINT}"
+            error("Build number not valid!")
+          } else {
+            echo "Service deployed and running with interface version ${interfaceVersion}"
+          }
+        }
+      }
+    }
   }
 }

@@ -340,7 +340,7 @@ paths:
         - bearerAuth: [ ]
       tags:
         - process
-      summary: Publish the descriptors
+      summary: Publish the selected descriptor.
       operationId: publishDescriptor
       parameters:
         - name: eServiceId

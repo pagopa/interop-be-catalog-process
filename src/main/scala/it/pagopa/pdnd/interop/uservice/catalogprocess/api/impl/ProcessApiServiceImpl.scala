@@ -42,7 +42,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     val result =
       for {
         bearer          <- tokenFromContext(contexts)
-        createdEService <- catalogManagementService.createEService(bearer, eServiceSeed)
+        createdEService <- catalogManagementService.createEService(bearer)(eServiceSeed)
       } yield createdEService
 
     onComplete(result) {
@@ -68,7 +68,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     val result =
       for {
         bearer <- tokenFromContext(contexts)
-        _      <- catalogManagementService.deleteDraft(bearer, eServiceId, descriptorId)
+        _      <- catalogManagementService.deleteDraft(bearer)(eServiceId, descriptorId)
       } yield ()
 
     onComplete(result) {
@@ -111,7 +111,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     val result =
       for {
         bearer   <- tokenFromContext(contexts)
-        response <- catalogManagementService.listEServices(bearer, producerId, consumerId, status)
+        response <- catalogManagementService.listEServices(bearer)(producerId, consumerId, status)
       } yield response
 
     onComplete(result) {
@@ -133,7 +133,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     val result =
       for {
         bearer          <- tokenFromContext(contexts)
-        currentEService <- catalogManagementService.getEService(bearer, eServiceId)
+        currentEService <- catalogManagementService.getEService(bearer)(eServiceId)
         _               <- isDraftDescriptor(currentEService.descriptors.find(_.id.toString == descriptorId))
         // TODO Status should be an enum
         currentActiveDescriptor = currentEService.descriptors.find(d => d.status == "published") // Must be at most one
@@ -192,7 +192,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     val result =
       for {
         bearer   <- tokenFromContext(contexts)
-        response <- catalogManagementService.getEService(bearer, eServiceId)
+        response <- catalogManagementService.getEService(bearer)(eServiceId)
       } yield response
 
     onComplete(result) {
@@ -220,8 +220,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     val result =
       for {
         bearer <- tokenFromContext(contexts)
-        response <- catalogManagementService.createEServiceDocument(
-          bearer,
+        response <- catalogManagementService.createEServiceDocument(bearer)(
           eServiceId,
           descriptorId,
           kind,
@@ -272,7 +271,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     val result =
       for {
         bearer   <- tokenFromContext(contexts)
-        response <- catalogManagementService.getEServiceDocument(bearer, eServiceId, descriptorId, documentId)
+        response <- catalogManagementService.getEServiceDocument(bearer)(eServiceId, descriptorId, documentId)
       } yield response
 
     onComplete(result) {
@@ -316,7 +315,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     val result: Future[Seq[EService]] =
       for {
         bearer   <- tokenFromContext(contexts)
-        response <- catalogManagementService.listEServices(bearer, producerId, consumerId, status)
+        response <- catalogManagementService.listEServices(bearer)(producerId, consumerId, status)
       } yield response
 
     onComplete(result) {
@@ -341,7 +340,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     val result =
       for {
         bearer          <- tokenFromContext(contexts)
-        currentEService <- catalogManagementService.getEService(bearer, eServiceId)
+        currentEService <- catalogManagementService.getEService(bearer)(eServiceId)
         _               <- catalogManagementService.hasNotDraftDescriptor(currentEService)
         createdEServiceDescriptor <- catalogManagementService.createDescriptor(bearer)(
           eServiceId,
@@ -375,7 +374,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     val result =
       for {
         bearer          <- tokenFromContext(contexts)
-        currentEService <- catalogManagementService.getEService(bearer, eServiceId)
+        currentEService <- catalogManagementService.getEService(bearer)(eServiceId)
         _               <- isDraftDescriptor(currentEService.descriptors.find(_.id.toString == descriptorId))
         updatedDescriptor <- catalogManagementService.updateDraftDescriptor(bearer)(
           eServiceId,

@@ -27,7 +27,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
     extends CatalogManagementService {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  override def createEService(bearerToken: BearerToken, eServiceSeed: EServiceSeed): Future[EService] = {
+  override def createEService(bearerToken: BearerToken)(eServiceSeed: EServiceSeed): Future[EService] = {
     for {
       clientSeed <- Future.fromTry(eServiceSeedToCatalogClientSeed(eServiceSeed).toTry)
       request: ApiRequest[client.model.EService] = api.createEService(clientSeed)(bearerToken)
@@ -46,7 +46,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
 
   }
 
-  override def deleteDraft(bearerToken: BearerToken, eServiceId: String, descriptorId: String): Future[Unit] = {
+  override def deleteDraft(bearerToken: BearerToken)(eServiceId: String, descriptorId: String): Future[Unit] = {
     val request: ApiRequest[Unit] = api.deleteDraft(eServiceId, descriptorId)(bearerToken)
     invoker
       .execute[Unit](request)
@@ -63,11 +63,8 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   }
 
   override def listEServices(
-    bearerToken: BearerToken,
-    producerId: Option[String],
-    consumerId: Option[String],
-    status: Option[String]
-  ): Future[Seq[EService]] = {
+    bearerToken: BearerToken
+  )(producerId: Option[String], consumerId: Option[String], status: Option[String]): Future[Seq[EService]] = {
     val request: ApiRequest[Seq[client.model.EService]] = api.getEServices(producerId, consumerId, status)(bearerToken)
     invoker
       .execute[Seq[client.model.EService]](request)
@@ -86,7 +83,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       .map(_.map(eServiceFromCatalogClient))
   }
 
-  override def getEService(bearerToken: BearerToken, eServiceId: String): Future[EService] = {
+  override def getEService(bearerToken: BearerToken)(eServiceId: String): Future[EService] = {
     val request: ApiRequest[client.model.EService] = api.getEService(eServiceId)(bearerToken)
     invoker
       .execute[client.model.EService](request)
@@ -127,59 +124,13 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       .map(eServiceFromCatalogClient)
   }
 
-  override def createEServiceDocument(
-    bearerToken: BearerToken,
-    eServiceId: String,
-    descriptorId: String,
-    kind: String,
-    description: String,
-    doc: (FileInfo, File)
-  ): Future[EService] = {
-    val request: ApiRequest[client.model.EService] =
-      api.createEServiceDocument(eServiceId, descriptorId, kind, description, doc._2)(bearerToken)
-    invoker
-      .execute[client.model.EService](request)
-      .map { result =>
-        logger.info(
-          s"Document with description $description created on Descriptor $descriptorId for E-Services $eServiceId"
-        )
-        result.content
-      }
-      .recoverWith { case ex =>
-        logger.error(
-          s"Error while creating document with description $description created on Descriptor $descriptorId for E-Services $eServiceId"
-        )
-        Future.failed[client.model.EService](ex)
-      }
-      .map(eServiceFromCatalogClient)
-  }
-
-  override def getEServiceDocument(
-    bearerToken: BearerToken,
-    eServiceId: String,
-    descriptorId: String,
-    documentId: String
-  ): Future[File] = {
-    val request: ApiRequest[File] = api.getEServiceDocument(eServiceId, descriptorId, documentId)(bearerToken)
-    invoker
-      .execute[File](request)
-      .map { result =>
-        logger.info(s"Document with id $documentId retrieved")
-        result.content
-      }
-      .recoverWith { case ex =>
-        logger.error(s"Error while retrieving document with id $eServiceId")
-        Future.failed[File](ex)
-      }
-  }
-
   override def updateEservice(
     bearer: BearerToken
   )(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed): Future[EService] = {
     for {
-      eservice          <- getEService(bearer, eServiceId)
-      updatableEService <- updatableEservice(eservice)
-      updatedService    <- updateEServiceById(bearer)(updatableEService.id.toString, updateEServiceSeed)
+      eservice          <- this.getEService(bearer)(eServiceId)
+      updatableEService <- this.updatableEservice(eservice)
+      updatedService    <- this.updateEServiceById(bearer)(updatableEService.id.toString, updateEServiceSeed)
     } yield updatedService
   }
 
@@ -262,7 +213,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   private def updatableEservice(eService: EService): Future[EService] = {
     Either
       .cond(
-        eService.descriptors.length == 1,
+        eService.descriptors.length <= 1,
         eService,
         ForbiddenOperation(s"E-service ${eService.id} cannot be updated since it has more than one versions.")
       )
@@ -297,6 +248,48 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         }
         .map(descriptorFromCatalogClientDescriptor)
     } yield result
+  }
+
+  override def createEServiceDocument(bearerToken: BearerToken)(
+    eServiceId: String,
+    descriptorId: String,
+    kind: String,
+    description: String,
+    doc: (FileInfo, File)
+  ): Future[EService] = {
+    val request: ApiRequest[client.model.EService] =
+      api.createEServiceDocument(eServiceId, descriptorId, kind, description, doc._2)(bearerToken)
+    invoker
+      .execute[client.model.EService](request)
+      .map { result =>
+        logger.info(
+          s"Document with description $description created on Descriptor $descriptorId for E-Services $eServiceId"
+        )
+        result.content
+      }
+      .recoverWith { case ex =>
+        logger.error(
+          s"Error while creating document with description $description created on Descriptor $descriptorId for E-Services $eServiceId"
+        )
+        Future.failed[client.model.EService](ex)
+      }
+      .map(eServiceFromCatalogClient)
+  }
+
+  override def getEServiceDocument(
+    bearerToken: BearerToken
+  )(eServiceId: String, descriptorId: String, documentId: String): Future[File] = {
+    val request: ApiRequest[File] = api.getEServiceDocument(eServiceId, descriptorId, documentId)(bearerToken)
+    invoker
+      .execute[File](request)
+      .map { result =>
+        logger.info(s"Document with id $documentId retrieved")
+        result.content
+      }
+      .recoverWith { case ex =>
+        logger.error(s"Error while retrieving document with id $eServiceId")
+        Future.failed[File](ex)
+      }
   }
 
   override def deleteEServiceDocument(
