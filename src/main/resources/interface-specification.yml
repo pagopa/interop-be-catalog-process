@@ -71,7 +71,7 @@ paths:
       summary: Create a new e-service
       operationId: createEService
       requestBody:
-        description: A E-Service seed
+        description: An E-Service seed
         content:
           application/json:
             schema:
@@ -180,7 +180,7 @@ paths:
           schema:
             type: string
       requestBody:
-        description: A E-Service update seed containing the possible updatable fields
+        description: An E-Service update seed containing the possible updatable fields
         required: true
         content:
           application/json:
@@ -221,7 +221,7 @@ paths:
           schema:
             type: string
       requestBody:
-        description: A E-Service Descriptor seed
+        description: An E-Service Descriptor seed
         content:
           application/json:
             schema:
@@ -309,7 +309,7 @@ paths:
           schema:
             type: string
       requestBody:
-        description: A E-Service Descriptor seed
+        description: An E-Service Descriptor seed
         content:
           application/json:
             schema:
