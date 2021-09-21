@@ -1,7 +1,7 @@
 package it.pagopa.pdnd.interop.uservice.catalogprocess.api
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import it.pagopa.pdnd.interopuservice.catalogprocess.model._
+import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
 import spray.json.{DefaultJsonProtocol, JsString, JsValue, JsonFormat, RootJsonFormat, deserializationError}
 
 import java.util.UUID

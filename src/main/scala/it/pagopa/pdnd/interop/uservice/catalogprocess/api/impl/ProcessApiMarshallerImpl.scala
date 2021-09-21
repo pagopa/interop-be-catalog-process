@@ -4,8 +4,8 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.marshalling.{Marshaller, ToEntityMarshaller}
 import akka.http.scaladsl.model.ContentTypes
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
-import it.pagopa.pdnd.interopuservice.catalogprocess.api.ProcessApiMarshaller
-import it.pagopa.pdnd.interopuservice.catalogprocess.model.{
+import it.pagopa.pdnd.interop.uservice.catalogprocess.api.ProcessApiMarshaller
+import it.pagopa.pdnd.interop.uservice.catalogprocess.model.{
   EService,
   EServiceDescriptor,
   EServiceDescriptorSeed,

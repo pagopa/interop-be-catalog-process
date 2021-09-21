@@ -84,6 +84,8 @@ object Dependencies {
 
     lazy val catalogManagementClient =
       namespace %% "pdnd-interop-uservice-catalog-management-client" % catalogManagementClientVersion
+    lazy val agreementManagementClient =
+      namespace %% "pdnd-interop-uservice-agreement-management-client" % catalogManagementClientVersion
 
   }
 
@@ -94,25 +96,26 @@ object Dependencies {
       // For making Java 12 happy
       "javax.annotation" % "javax.annotation-api" % "1.3.2" % "compile",
       //
-      akka.actorTyped                % Compile,
-      akka.management                % Compile,
-      akka.stream                    % Compile,
-      akka.http                      % Compile,
-      akka.httpJson                  % Compile,
-      cats.core                      % Compile,
-      commons.fileUpload             % Compile,
-      mustache.mustache              % Compile,
-      logback.classic                % Compile,
-      akka.slf4j                     % Compile,
-      openapi4j.operationValidator   % Compile,
-      resilience4j.rateLimiter       % Compile,
-      kamon.bundle                   % Compile,
-      kamon.prometheus               % Compile,
-      pagopa.catalogManagementClient % Compile,
-      scalaprotobuf.core             % Protobuf,
-      akka.testkit                   % Test,
-      scalatest.core                 % Test,
-      scalamock.core                 % Test
+      akka.actorTyped                  % Compile,
+      akka.management                  % Compile,
+      akka.stream                      % Compile,
+      akka.http                        % Compile,
+      akka.httpJson                    % Compile,
+      cats.core                        % Compile,
+      commons.fileUpload               % Compile,
+      mustache.mustache                % Compile,
+      logback.classic                  % Compile,
+      akka.slf4j                       % Compile,
+      openapi4j.operationValidator     % Compile,
+      resilience4j.rateLimiter         % Compile,
+      kamon.bundle                     % Compile,
+      kamon.prometheus                 % Compile,
+      pagopa.catalogManagementClient   % Compile,
+      pagopa.agreementManagementClient % Compile,
+      scalaprotobuf.core               % Protobuf,
+      akka.testkit                     % Test,
+      scalatest.core                   % Test,
+      scalamock.core                   % Test
     )
     lazy val client: Seq[ModuleID] = Seq(
       akka.stream     % Compile,

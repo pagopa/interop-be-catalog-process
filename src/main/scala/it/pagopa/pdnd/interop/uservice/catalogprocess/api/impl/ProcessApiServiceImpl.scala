@@ -5,11 +5,11 @@ import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
-import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.{ApiError, BearerToken}
+import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.ApiError
 import it.pagopa.pdnd.interop.uservice.catalogprocess.errors.{DescriptorNotFound, NotValidDescriptor}
-import it.pagopa.pdnd.interop.uservice.catalogprocess.service.CatalogManagementService
-import it.pagopa.pdnd.interopuservice.catalogprocess.api.ProcessApiService
-import it.pagopa.pdnd.interopuservice.catalogprocess.model._
+import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{AgreementManagementService, CatalogManagementService}
+import it.pagopa.pdnd.interop.uservice.catalogprocess.api.ProcessApiService
+import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.File
@@ -25,9 +25,11 @@ import scala.util.{Failure, Success}
     "org.wartremover.warts.Recursion"
   )
 )
-final case class ProcessApiServiceImpl(catalogManagementService: CatalogManagementService)(implicit
-  ec: ExecutionContext
-) extends ProcessApiService {
+final case class ProcessApiServiceImpl(
+  catalogManagementService: CatalogManagementService,
+  agreementManagementService: AgreementManagementService
+)(implicit ec: ExecutionContext)
+    extends ProcessApiService {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
@@ -110,9 +112,9 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
   ): Route = {
     val result =
       for {
-        bearer   <- tokenFromContext(contexts)
-        response <- catalogManagementService.listEServices(bearer)(producerId, consumerId, status)
-      } yield response
+        bearer    <- tokenFromContext(contexts)
+        eservices <- retrieveEservices(bearer, producerId, consumerId, status)
+      } yield eservices
 
     onComplete(result) {
       case Success(response) => getEServices200(response)
@@ -315,7 +317,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
     val result: Future[Seq[EService]] =
       for {
         bearer   <- tokenFromContext(contexts)
-        response <- catalogManagementService.listEServices(bearer)(producerId, consumerId, status)
+        response <- retrieveEservices(bearer, producerId, consumerId, status)
       } yield response
 
     onComplete(result) {
@@ -352,7 +354,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
       case Success(res) => createDescriptor200(res)
       case Failure(ex) =>
         val errorResponse: Problem =
-          Problem(Option(ex.getMessage), 400, s"Error while creating Descriptor for e-service Id ${eServiceId}")
+          Problem(Option(ex.getMessage), 400, s"Error while creating Descriptor for e-service Id $eServiceId")
         createDescriptor400(errorResponse)
     }
   }
@@ -387,7 +389,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
       case Success(res) => updateDraftDescriptor200(res)
       case Failure(ex) =>
         val errorResponse: Problem =
-          Problem(Option(ex.getMessage), 400, s"Error while updating draft Descriptor for e-service Id ${eServiceId}")
+          Problem(Option(ex.getMessage), 400, s"Error while updating draft Descriptor for e-service Id $eServiceId")
         updateDraftDescriptor400(errorResponse)
     }
   }
@@ -411,13 +413,30 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
       case Success(res) => updateEServiceById200(res)
       case Failure(ex) =>
         val errorResponse: Problem =
-          Problem(Option(ex.getMessage), 400, s"Error while creating Descriptor for e-service Id ${eServiceId}")
+          Problem(Option(ex.getMessage), 400, s"Error while creating Descriptor for e-service Id $eServiceId")
         createDescriptor400(errorResponse)
     }
   }
 
+  private def retrieveEservices(
+    bearer: String,
+    producerId: Option[String],
+    consumerId: Option[String],
+    status: Option[String]
+  ): Future[Seq[EService]] = {
+    if (consumerId.isEmpty) catalogManagementService.listEServices(bearer)(producerId, status)
+    else
+      for {
+        agreements <- agreementManagementService.getAgreements(bearer, consumerId, producerId, None)
+        eservices <- agreements.flatTraverse(agreement =>
+          catalogManagementService
+            .listEServices(bearer)(producerId = Some(agreement.producerId.toString), status = status)
+        )
+      } yield eservices
+  }
+
   private[this] def deprecateDescriptorOrCancelPublication(
-    bearer: BearerToken,
+    bearer: String,
     eServiceId: String,
     descriptorIdToDeprecate: String,
     descriptorIdToCancel: String
@@ -429,11 +448,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
       )
   }
 
-  private[this] def deprecateDescriptor(
-    descriptorId: String,
-    eServiceId: String,
-    bearerToken: BearerToken
-  ): Future[Unit] = {
+  private[this] def deprecateDescriptor(descriptorId: String, eServiceId: String, bearerToken: String): Future[Unit] = {
     catalogManagementService
       .deprecateDescriptor(bearerToken)(eServiceId = eServiceId, descriptorId = descriptorId)
       .recoverWith { case ex =>
@@ -445,7 +460,7 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
   private[this] def resetDescriptorToDraft(
     eServiceId: String,
     descriptorId: String,
-    bearerToken: BearerToken
+    bearerToken: String
   ): Future[Unit] = {
 
     catalogManagementService
@@ -456,11 +471,11 @@ final case class ProcessApiServiceImpl(catalogManagementService: CatalogManageme
       }
   }
 
-  private[this] def tokenFromContext(context: Seq[(String, String)]): Future[BearerToken] =
+  private[this] def tokenFromContext(context: Seq[(String, String)]): Future[String] =
     Future.fromTry(
       context
         .find(_._1 == "bearer")
-        .map(header => BearerToken(header._2))
+        .map(header => header._2)
         .toRight(new RuntimeException("Bearer Token not provided"))
         .toTry
     )
