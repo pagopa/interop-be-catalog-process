@@ -28,8 +28,8 @@ import it.pagopa.pdnd.interop.uservice.catalogprocess.service.impl.{
   AgreementManagementServiceImpl,
   CatalogManagementServiceImpl
 }
-import it.pagopa.pdnd.interopuservice.catalogprocess.api.{HealthApi, ProcessApi}
-import it.pagopa.pdnd.interopuservice.catalogprocess.server.Controller
+import it.pagopa.pdnd.interop.uservice.catalogprocess.api.{HealthApi, ProcessApi}
+import it.pagopa.pdnd.interop.uservice.catalogprocess.server.Controller
 import kamon.Kamon
 
 import scala.concurrent.Future

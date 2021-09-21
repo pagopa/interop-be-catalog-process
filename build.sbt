@@ -21,7 +21,11 @@ val generateCode = taskKey[Unit]("A task for generating the code starting from t
 val packagePrefix = settingKey[String]("The package prefix derived from the uservice name")
 
 packagePrefix := {
-  name.value.replaceFirst("pdnd-", "pdnd.").replaceFirst("uservice-", "uservice.").replaceAll("-", "")
+  name.value
+    .replaceFirst("pdnd-", "pdnd.")
+    .replaceFirst("interop-", "interop.")
+    .replaceFirst("uservice-", "uservice.")
+    .replaceAll("-", "")
 }
 
 generateCode := {
