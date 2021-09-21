@@ -484,6 +484,7 @@ final case class ProcessApiServiceImpl(
     eservice.descriptors.map(descriptor =>
       FlatEService(
         id = eservice.id,
+        producerId = eservice.producerId,
         name = eservice.name,
         version = descriptor.version,
         status = descriptor.status,

@@ -800,12 +800,16 @@ components:
       type: object
       required:
         - id
+        - producerId
         - name
         - version
         - status
         - descriptorId
       properties:
         id:
+          type: string
+          format: uuid
+        producerId:
           type: string
           format: uuid
         name:
