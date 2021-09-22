@@ -6,6 +6,7 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.ApiError
+import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement
 import it.pagopa.pdnd.interop.uservice.catalogmanagement
 import it.pagopa.pdnd.interop.uservice.catalogprocess.errors.{DescriptorNotFound, NotValidDescriptor}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{
@@ -19,6 +20,7 @@ import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.File
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -70,7 +72,7 @@ final case class ProcessApiServiceImpl(
   def getApiEservice(eservice: catalogmanagement.client.model.EService): Future[EService] = {
     for {
       organization <- partyManagementService.getOrganization(eservice.producerId)
-      attrs        <- Future.traverse(eservice.attributes)(attribute => att)
+      attributes   <- attributeManagementService.getAttributesBulk(extractIdsFromAttributes(eservice.attributes))
     } yield EService(
       id = eservice.id,
       producer = Organization(id = eservice.producerId, name = organization.description),
@@ -82,17 +84,24 @@ final case class ProcessApiServiceImpl(
     )
   }
 
-  def getAttributes(attributes: catalogmanagement.client.model.Attributes) = {
-    for {
-      c <- Future.traverse(attributes.declared) { attr =>
-        for {
-          single <- attr.single.traverse(value => attributeManagementService.getAttribute(value.id))
-          group <- attr.group.toSeq.flatTraverse(values =>
-            values.traverse(value => attributeManagementService.getAttribute(value.id))
-          )
-        } yield ()
-      }
-    } yield c
+  private def extractIdsFromAttributes(attributes: catalogmanagement.client.model.Attributes): Seq[String] = {
+    attributes.certified.flatMap(extractIdsFromAttribute) ++
+      attributes.declared.flatMap(extractIdsFromAttribute) ++
+      attributes.verified.flatMap(extractIdsFromAttribute)
+  }
+
+  private def extractIdsFromAttribute(attribute: catalogmanagement.client.model.Attribute): Seq[String] = {
+    val fromSingle: Seq[String] = attribute.single.toSeq.map(_.id)
+    val fromGroup: Seq[String]  = attribute.group.toSeq.flatMap(_.map(_.id))
+
+    fromSingle ++ fromGroup
+  }
+
+  def getApiAttributes(
+    currentAttributes: Attributes,
+    attributes: Seq[attributeregistrymanagement.client.model.Attribute]
+  ) = {
+
   }
 
   /** Code: 204, Message: E-Service draft Descriptor deleted
@@ -520,6 +529,7 @@ final case class ProcessApiServiceImpl(
     eservice.descriptors.map(descriptor =>
       FlatEService(
         id = eservice.id,
+        producerId = eservice.producerId,
         name = eservice.name,
         version = descriptor.version,
         status = descriptor.status,

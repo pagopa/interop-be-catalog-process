@@ -613,10 +613,8 @@ components:
         - producerId
         - name
         - description
-        - audience
         - technology
         - attributes
-        - voucherLifespan
       properties:
         producerId:
           type: string
@@ -625,16 +623,9 @@ components:
           type: string
         description:
           type: string
-        audience:
-          type: array
-          items:
-            type: string
         technology:
           type: string
           enum: [ 'REST', 'SOAP' ]
-        voucherLifespan:
-          type: integer
-          format: int32
         attributes:
           $ref: '#/components/schemas/Attributes'
     Organization:
@@ -812,12 +803,16 @@ components:
       type: object
       required:
         - id
+        - producerId
         - name
         - version
         - status
         - descriptorId
       properties:
         id:
+          type: string
+          format: uuid
+        producerId:
           type: string
           format: uuid
         name:
