@@ -38,7 +38,27 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         logger.error(s"Error while creating E-Service ${ex.getMessage}")
         Future.failed[client.model.EService](ex)
       }
+  }
 
+  override def cloneEservice(bearer: String)(eServiceId: String, descriptorId: String): Future[EService] = {
+    for {
+      eServiceUUID   <- eServiceId.parseUUID.toFuture
+      descriptorUUID <- descriptorId.parseUUID.toFuture
+      request: ApiRequest[client.model.EService] = api.cloneEServiceByDescriptor(
+        eServiceId = eServiceUUID,
+        descriptorId = descriptorUUID
+      )(BearerToken(bearer))
+      result <- invoker
+        .execute[client.model.EService](request)
+        .map { result =>
+          logger.info(s"E-Service cloned with id ${result.content.id.toString}")
+          result.content
+        }
+        .recoverWith { case ex =>
+          logger.error(s"Error while cloning E-Service ${ex.getMessage}")
+          Future.failed[client.model.EService](ex)
+        }
+    } yield result
   }
 
   override def deleteDraft(bearerToken: String)(eServiceId: String, descriptorId: String): Future[Unit] = {
@@ -53,6 +73,20 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         logger.error(
           s"Error while deleting E-Service with Id $eServiceId and descriptor Id $descriptorId. Error: ${ex.getMessage}"
         )
+        Future.failed[Unit](ex)
+      }
+  }
+
+  override def deleteEService(bearer: String)(eServiceId: String): Future[Unit] = {
+    val request: ApiRequest[Unit] = api.deleteEService(eServiceId)(BearerToken(bearer))
+    invoker
+      .execute[Unit](request)
+      .map { result =>
+        logger.info(s"E-Service deleted. E-Service Id: $eServiceId")
+        result.content
+      }
+      .recoverWith { case ex =>
+        logger.error(s"Error while deleting E-Service with Id $eServiceId. Error: ${ex.getMessage}")
         Future.failed[Unit](ex)
       }
   }
