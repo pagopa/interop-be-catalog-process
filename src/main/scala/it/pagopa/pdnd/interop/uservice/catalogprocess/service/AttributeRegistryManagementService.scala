@@ -4,7 +4,7 @@ import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.
 
 import scala.concurrent.Future
 
-trait AttributeManagementService {
+trait AttributeRegistryManagementService {
 
   def getAttribute(attributeId: String): Future[Attribute]
 

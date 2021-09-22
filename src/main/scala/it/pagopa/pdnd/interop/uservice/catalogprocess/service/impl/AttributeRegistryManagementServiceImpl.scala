@@ -8,7 +8,7 @@ import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.
   BulkedAttributesRequest
 }
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{
-  AttributeManagementService,
+  AttributeRegistryManagementService,
   AttributeRegistryManagementInvoker
 }
 import org.slf4j.{Logger, LoggerFactory}
@@ -24,9 +24,9 @@ import scala.util.Try
     "org.wartremover.warts.ToString"
   )
 )
-final case class AttributeManagementServiceImpl(invoker: AttributeRegistryManagementInvoker, api: AttributeApi)(implicit
-  ec: ExecutionContext
-) extends AttributeManagementService {
+final case class AttributeRegistryManagementServiceImpl(invoker: AttributeRegistryManagementInvoker, api: AttributeApi)(
+  implicit ec: ExecutionContext
+) extends AttributeRegistryManagementService {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 

@@ -4,11 +4,10 @@ import akka.http.scaladsl.server.directives.FileInfo
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.api.EServiceApi
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.{ApiRequest, BearerToken}
-import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.UpdateEServiceDescriptorSeedEnums
+import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model._
 import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system._
 import it.pagopa.pdnd.interop.uservice.catalogprocess.errors.ForbiddenOperation
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{CatalogManagementInvoker, CatalogManagementService}
-import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.File
@@ -28,21 +27,17 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
   override def createEService(bearerToken: String)(eServiceSeed: EServiceSeed): Future[EService] = {
-    for {
-      clientSeed <- Future.fromTry(eServiceSeedToCatalogClientSeed(eServiceSeed).toTry)
-      request: ApiRequest[client.model.EService] = api.createEService(clientSeed)(BearerToken(bearerToken))
-      result <- invoker
-        .execute[client.model.EService](request)
-        .map { result =>
-          logger.info(s"E-Service created with id ${result.content.id.toString}")
-          result.content
-        }
-        .recoverWith { case ex =>
-          logger.error(s"Error while creating E-Service ${ex.getMessage}")
-          Future.failed[client.model.EService](ex)
-        }
-        .map(eServiceFromCatalogClient)
-    } yield result
+    val request: ApiRequest[client.model.EService] = api.createEService(eServiceSeed)(BearerToken(bearerToken))
+    invoker
+      .execute[client.model.EService](request)
+      .map { result =>
+        logger.info(s"E-Service created with id ${result.content.id.toString}")
+        result.content
+      }
+      .recoverWith { case ex =>
+        logger.error(s"Error while creating E-Service ${ex.getMessage}")
+        Future.failed[client.model.EService](ex)
+      }
 
   }
 
@@ -77,7 +72,6 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         logger.error(s"Error while retrieving E-Services for filters: producerId = $producerId, status = $status")
         Future.failed[Seq[client.model.EService]](ex)
       }
-      .map(_.map(eServiceFromCatalogClient))
   }
 
   override def getEService(bearerToken: String)(eServiceId: String): Future[EService] = {
@@ -92,22 +86,15 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         logger.error(s"Error while retrieving E-Service with id $eServiceId")
         Future.failed[client.model.EService](ex)
       }
-      .map(eServiceFromCatalogClient)
   }
 
   override def updateDraftDescriptor(
     bearerToken: String
   )(eServiceId: String, descriptorId: String, seed: UpdateEServiceDescriptorSeed): Future[EService] = {
 
-    val clientSeed = client.model.UpdateEServiceDescriptorSeed(
-      description = seed.description,
-      audience = seed.audience,
-      voucherLifespan = seed.voucherLifespan,
-      status = UpdateEServiceDescriptorSeedEnums.Status.Draft
-    )
-
     val request: ApiRequest[client.model.EService] =
-      api.updateDescriptor(eServiceId, descriptorId, clientSeed)(BearerToken(bearerToken))
+      api.updateDescriptor(eServiceId, descriptorId, seed)(BearerToken(bearerToken))
+
     invoker
       .execute[client.model.EService](request)
       .map { result =>
@@ -118,39 +105,34 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         logger.error(s"Error while updating descriptor $descriptorId for E-Services $eServiceId")
         Future.failed[client.model.EService](ex)
       }
-      .map(eServiceFromCatalogClient)
   }
 
   override def updateEservice(
     bearerToken: String
   )(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed): Future[EService] = {
     for {
-      eservice          <- this.getEService(bearerToken)(eServiceId)
-      updatableEService <- this.updatableEservice(eservice)
-      updatedService    <- this.updateEServiceById(bearerToken)(updatableEService.id.toString, updateEServiceSeed)
+      eservice          <- getEService(bearerToken)(eServiceId)
+      updatableEService <- updatableEservice(eservice)
+      updatedService    <- updateEServiceById(bearerToken)(updatableEService.id.toString, updateEServiceSeed)
     } yield updatedService
   }
 
   private def updateEServiceById(
     bearerToken: String
   )(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed): Future[EService] = {
-    for {
-      clientSeed <- Future.fromTry(updateEServiceSeedToCatalogClientSeed(updateEServiceSeed).toTry)
-      request: ApiRequest[client.model.EService] = api.updateEServiceById(eServiceId, clientSeed)(
-        BearerToken(bearerToken)
-      )
-      result <- invoker
-        .execute[client.model.EService](request)
-        .map { result =>
-          logger.info(s"E-Service $eServiceId updated.")
-          result.content
-        }
-        .recoverWith { case ex =>
-          logger.error(s"Error while updating E-Service $eServiceId: ${ex.getMessage}")
-          Future.failed[client.model.EService](ex)
-        }
-        .map(eServiceFromCatalogClient)
-    } yield result
+    val request: ApiRequest[client.model.EService] =
+      api.updateEServiceById(eServiceId, updateEServiceSeed)(BearerToken(bearerToken))
+    invoker
+      .execute[client.model.EService](request)
+      .map { result =>
+        logger.info(s"E-Service $eServiceId updated.")
+        result.content
+      }
+      .recoverWith { case ex =>
+        logger.error(s"Error while updating E-Service $eServiceId: ${ex.getMessage}")
+        Future.failed[client.model.EService](ex)
+      }
+
   }
 
   def deprecateDescriptor(bearerToken: String)(eServiceId: String, descriptorId: String): Future[Unit] = {
@@ -222,7 +204,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   override def hasNotDraftDescriptor(eService: EService): Future[Boolean] = {
     Either
       .cond(
-        eService.descriptors.count(_.status == "draft") < 1,
+        eService.descriptors.count(_.status == EServiceDescriptorEnums.Status.Draft) < 1,
         true,
         ForbiddenOperation(s"E-service ${eService.id} already has a draft version.")
       )
@@ -232,23 +214,20 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   def createDescriptor(
     bearerToken: String
   )(eServiceId: String, eServiceDescriptorSeed: EServiceDescriptorSeed): Future[EServiceDescriptor] = {
-    for {
-      clientSeed <- Future.fromTry(eServiceDescriptorSeedToCatalogClientSeed(eServiceDescriptorSeed).toTry)
-      request: ApiRequest[client.model.EServiceDescriptor] = api.createDescriptor(eServiceId, clientSeed)(
-        BearerToken(bearerToken)
-      )
-      result <- invoker
-        .execute[client.model.EServiceDescriptor](request)
-        .map { result =>
-          logger.info(s"Descriptor created with id ${result.content.id.toString}")
-          result.content
-        }
-        .recoverWith { case ex =>
-          logger.error(s"Error while creating Descrriptor ${ex.getMessage}")
-          Future.failed[client.model.EServiceDescriptor](ex)
-        }
-        .map(descriptorFromCatalogClientDescriptor)
-    } yield result
+
+    val request: ApiRequest[client.model.EServiceDescriptor] =
+      api.createDescriptor(eServiceId, eServiceDescriptorSeed)(BearerToken(bearerToken))
+    invoker
+      .execute[client.model.EServiceDescriptor](request)
+      .map { result =>
+        logger.info(s"Descriptor created with id ${result.content.id.toString}")
+        result.content
+      }
+      .recoverWith { case ex =>
+        logger.error(s"Error while creating Descrriptor ${ex.getMessage}")
+        Future.failed[client.model.EServiceDescriptor](ex)
+      }
+
   }
 
   override def createEServiceDocument(bearerToken: String)(
@@ -274,7 +253,6 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         )
         Future.failed[client.model.EService](ex)
       }
-      .map(eServiceFromCatalogClient)
   }
 
   override def getEServiceDocument(
@@ -327,7 +305,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         eServiceId = eServiceId,
         descriptorId = descriptorId,
         documentId = documentId,
-        updateEServiceDescriptorDocumentSeed = updateEServiceDescriptorDocumentSeedToCatalogClientSeed(seed)
+        updateEServiceDescriptorDocumentSeed = seed
       )(BearerToken(bearerToken))
     invoker
       .execute[client.model.EServiceDoc](request)
@@ -341,6 +319,5 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         )
         Future.failed[client.model.EServiceDoc](ex)
       }
-      .map(docFromCatalogClientDoc)
   }
 }

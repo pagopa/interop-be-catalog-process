@@ -4,6 +4,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.directives.SecurityDirectives
 import akka.management.scaladsl.AkkaManagement
 import it.pagopa.pdnd.interop.uservice.agreementmanagement.client.api.AgreementApi
+import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.api.AttributeApi
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.api.EServiceApi
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl.{
   HealthApiMarshallerImpl,
@@ -11,6 +12,7 @@ import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl.{
   ProcessApiMarshallerImpl,
   ProcessApiServiceImpl
 }
+import it.pagopa.pdnd.interop.uservice.catalogprocess.api.{HealthApi, ProcessApi}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system.{
   ApplicationConfiguration,
   Authenticator,
@@ -18,18 +20,24 @@ import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system.{
   classicActorSystem,
   executionContext
 }
+import it.pagopa.pdnd.interop.uservice.catalogprocess.server.Controller
+import it.pagopa.pdnd.interop.uservice.catalogprocess.service.impl.{
+  AgreementManagementServiceImpl,
+  AttributeRegistryManagementServiceImpl,
+  CatalogManagementServiceImpl,
+  PartyManagementServiceImpl
+}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{
   AgreementManagementInvoker,
   AgreementManagementService,
+  AttributeRegistryManagementService,
+  AttributeRegistryManagementInvoker,
   CatalogManagementInvoker,
-  CatalogManagementService
+  CatalogManagementService,
+  PartyManagementInvoker,
+  PartyManagementService
 }
-import it.pagopa.pdnd.interop.uservice.catalogprocess.service.impl.{
-  AgreementManagementServiceImpl,
-  CatalogManagementServiceImpl
-}
-import it.pagopa.pdnd.interop.uservice.catalogprocess.api.{HealthApi, ProcessApi}
-import it.pagopa.pdnd.interop.uservice.catalogprocess.server.Controller
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import kamon.Kamon
 
 import scala.concurrent.Future
@@ -41,11 +49,26 @@ trait AgreementManagementAPI {
     AgreementManagementServiceImpl(agreementManagementInvoker, agreementApi)
 }
 
+trait AttributeRegistryManagementAPI {
+  private final val attributeRegistryManagementInvoker: AttributeRegistryManagementInvoker =
+    AttributeRegistryManagementInvoker()
+  private final val attributeApi: AttributeApi = AttributeApi(ApplicationConfiguration.attributeRegistryManagementUrl)
+  val attributeRegistryManagementService: AttributeRegistryManagementService =
+    AttributeRegistryManagementServiceImpl(attributeRegistryManagementInvoker, attributeApi)
+}
+
 trait CatalogManagementAPI {
   private final val catalogManagementInvoker: CatalogManagementInvoker = CatalogManagementInvoker()
   private final val catalogApi: EServiceApi                            = EServiceApi(ApplicationConfiguration.catalogManagementUrl)
   val catalogManagementService: CatalogManagementService =
     CatalogManagementServiceImpl(catalogManagementInvoker, catalogApi)
+}
+
+trait PartyManagementAPI {
+  private final val partyManagementInvoker: PartyManagementInvoker = PartyManagementInvoker()
+  private final val partyApi: PartyApi                             = PartyApi(ApplicationConfiguration.partyManagementUrl)
+  val partyManagementService: PartyManagementService =
+    PartyManagementServiceImpl(partyManagementInvoker, partyApi)
 }
 
 @SuppressWarnings(
@@ -56,12 +79,23 @@ trait CatalogManagementAPI {
     "org.wartremover.warts.NonUnitStatements"
   )
 )
-object Main extends App with CorsSupport with AgreementManagementAPI with CatalogManagementAPI {
+object Main
+    extends App
+    with CorsSupport
+    with AgreementManagementAPI
+    with AttributeRegistryManagementAPI
+    with PartyManagementAPI
+    with CatalogManagementAPI {
 
   Kamon.init()
 
   val processApi: ProcessApi = new ProcessApi(
-    ProcessApiServiceImpl(catalogManagementService, agreementManagementService),
+    ProcessApiServiceImpl(
+      catalogManagementService = catalogManagementService,
+      partyManagementService = partyManagementService,
+      attributeRegistryManagementService = attributeRegistryManagementService,
+      agreementManagementService = agreementManagementService
+    ),
     ProcessApiMarshallerImpl(),
     SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
   )
