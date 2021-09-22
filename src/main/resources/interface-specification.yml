@@ -805,9 +805,6 @@ components:
         - id
         - producerId
         - name
-        - version
-        - status
-        - descriptorId
       properties:
         id:
           type: string
