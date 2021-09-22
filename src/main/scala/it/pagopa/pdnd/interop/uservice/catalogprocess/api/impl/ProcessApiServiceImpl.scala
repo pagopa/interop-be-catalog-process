@@ -481,16 +481,27 @@ final case class ProcessApiServiceImpl(
     )
 
   private def convertToFlattenEservice(eservice: EService): Seq[FlatEService] = {
-    eservice.descriptors.map(descriptor =>
-      FlatEService(
-        id = eservice.id,
-        producerId = eservice.producerId,
-        name = eservice.name,
-        version = descriptor.version,
-        status = descriptor.status,
-        descriptorId = descriptor.id.toString
-      )
+
+    val flatEServiceZero: FlatEService = FlatEService(
+      id = eservice.id,
+      producerId = eservice.producerId,
+      name = eservice.name,
+      version = None,
+      status = None,
+      descriptorId = None
     )
+
+    val flatEServices: Seq[FlatEService] = eservice.descriptors.map { descriptor =>
+      flatEServiceZero.copy(
+        version = Some(descriptor.version),
+        status = Some(descriptor.status),
+        descriptorId = Some(descriptor.id.toString)
+      )
+
+    }
+
+    Option(flatEServices).filter(_.nonEmpty).getOrElse(Seq(flatEServiceZero))
+
   }
 
   private def isDraftDescriptor(optDescriptor: Option[EServiceDescriptor]): Future[EServiceDescriptor] = {
