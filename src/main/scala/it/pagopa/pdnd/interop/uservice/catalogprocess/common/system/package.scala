@@ -9,6 +9,7 @@ import akka.{actor => classic}
 import akka.actor.typed.scaladsl.adapter.TypedActorSystemOps
 import akka.http.scaladsl.server.directives.Credentials.{Missing, Provided}
 
+import java.util.UUID
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.concurrent.duration.DurationInt
 import scala.util.Try
@@ -40,5 +41,9 @@ package object system {
 
   implicit class EitherOps[A](val either: Either[Throwable, A]) extends AnyVal {
     def toFuture: Future[A] = either.fold(e => Future.failed[A](e), a => Future.successful[A](a))
+  }
+
+  implicit class StringOps(val str: String) extends AnyVal {
+    def parseUUID: Either[Throwable, UUID] = Try { UUID.fromString(str) }.toEither
   }
 }
