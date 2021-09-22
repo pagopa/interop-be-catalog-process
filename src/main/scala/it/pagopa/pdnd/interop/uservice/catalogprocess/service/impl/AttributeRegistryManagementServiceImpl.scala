@@ -30,11 +30,6 @@ final case class AttributeRegistryManagementServiceImpl(invoker: AttributeRegist
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  override def getAttribute(attributeId: String): Future[Attribute] = for {
-    uuid      <- Future.fromTry(Try(UUID.fromString(attributeId)))
-    attribute <- attributeByUUID(uuid)
-  } yield attribute
-
   override def getAttributesBulk(attributeIds: Seq[String]): Future[Seq[Attribute]] = {
     val request: ApiRequest[AttributesResponse] = api.getBulkedAttributes(BulkedAttributesRequest(attributeIds))
     invoker
