@@ -1,7 +1,12 @@
 package it.pagopa.pdnd.interop.uservice.catalogprocess.service.impl
 
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.api.AttributeApi
-import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.Attribute
+import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.invoker.ApiRequest
+import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{
+  Attribute,
+  AttributesResponse,
+  BulkedAttributesRequest
+}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{
   AttributeManagementService,
   AttributeRegistryManagementInvoker
@@ -30,9 +35,18 @@ final case class AttributeManagementServiceImpl(invoker: AttributeRegistryManage
     attribute <- attributeByUUID(uuid)
   } yield attribute
 
-
-  override def getAttributes(attributeIds: Seq[String]): Future[Seq[Attribute]] = {
-
+  override def getAttributesBulk(attributeIds: Seq[String]): Future[Seq[Attribute]] = {
+    val request: ApiRequest[AttributesResponse] = api.getBulkedAttributes(BulkedAttributesRequest(attributeIds))
+    invoker
+      .execute(request)
+      .map { x =>
+        logger.info(s"Retrieving attributes using bulked request ${x.code} > ${x.content}")
+        x.content.attributes
+      }
+      .recoverWith { case ex =>
+        logger.error(s"Retrieving attributes using bulked request FAILED: ${ex.getMessage}")
+        Future.failed[Seq[Attribute]](ex)
+      }
   }
 
   private def attributeByUUID(attributeId: UUID): Future[Attribute] = {
