@@ -610,4 +610,32 @@ final case class ProcessApiServiceImpl(
         )
     }
   }
+
+  /** Code: 200, Message: Cloned EService with a new draft descriptor updated., DataType: EService
+    * Code: 400, Message: Invalid input, DataType: Problem
+    * Code: 404, Message: Not found, DataType: Problem
+    * Code: 500, Message: Internal Server Error, DataType: Problem
+    */
+  override def cloneEServiceByDescriptor(eServiceId: String, descriptorId: String)(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerEService: ToEntityMarshaller[EService]
+  ): Route = {
+    val result =
+      for {
+        bearer         <- tokenFromContext(contexts)
+        clonedEService <- catalogManagementService.cloneEservice(bearer)(eServiceId, descriptorId)
+      } yield clonedEService
+
+    onComplete(result) {
+      case Success(res) => cloneEServiceByDescriptor200(res)
+      case Failure(ex) =>
+        val errorResponse: Problem = Problem(
+          Option(ex.getMessage),
+          400,
+          s"Error while cloning descriptor ${descriptorId} for E-service ${eServiceId}"
+        )
+        cloneEServiceByDescriptor400(errorResponse)
+    }
+  }
 }
