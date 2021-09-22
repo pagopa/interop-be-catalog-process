@@ -83,6 +83,20 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       }
   }
 
+  def deleteEService(bearer: String)(eServiceId: String): Future[Unit] = {
+    val request: ApiRequest[Unit] = api.deleteEService(eServiceId)(BearerToken(bearer))
+    invoker
+      .execute[Unit](request)
+      .map { result =>
+        logger.info(s"E-Service deleted. E-Service Id: $eServiceId")
+        result.content
+      }
+      .recoverWith { case ex =>
+        logger.error(s"Error while deleting E-Service with Id $eServiceId. Error: ${ex.getMessage}")
+        Future.failed[Unit](ex)
+      }
+  }
+
   override def listEServices(
     bearerToken: String
   )(producerId: Option[String], status: Option[String]): Future[Seq[EService]] = {

@@ -638,4 +638,24 @@ final case class ProcessApiServiceImpl(
         cloneEServiceByDescriptor400(errorResponse)
     }
   }
+
+  /** Code: 204, Message: EService deleted
+    * Code: 400, Message: Invalid input, DataType: Problem
+    * Code: 404, Message: Not found, DataType: Problem
+    */
+  override def deleteEService(
+    eServiceId: String
+  )(implicit contexts: Seq[(String, String)], toEntityMarshallerProblem: ToEntityMarshaller[Problem]): Route = {
+    val result =
+      for {
+        bearer <- tokenFromContext(contexts)
+        _      <- catalogManagementService.deleteEService(bearer)(eServiceId)
+      } yield ()
+
+    onComplete(result) {
+      case Success(_) => deleteEService204
+      case Failure(ex) =>
+        complete(500, Problem(Option(ex.getMessage), 500, s"Error while deleting E-service ${eServiceId}"))
+    }
+  }
 }

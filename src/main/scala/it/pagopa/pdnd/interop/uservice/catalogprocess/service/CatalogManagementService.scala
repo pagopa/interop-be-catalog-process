@@ -13,6 +13,7 @@ trait CatalogManagementService {
   def deleteDraft(bearerToken: String)(eServiceId: String, descriptorId: String): Future[Unit]
   def updateEservice(bearerToken: String)(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed): Future[EService]
   def cloneEservice(bearer: String)(eServiceId: String, descriptorId: String): Future[EService]
+  def deleteEService(bearer: String)(eServiceId: String): Future[Unit]
 
   def createDescriptor(
     bearerToken: String
