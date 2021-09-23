@@ -2,11 +2,7 @@ package it.pagopa.pdnd.interop.uservice.catalogprocess.service.impl
 
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.api.AttributeApi
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.invoker.ApiRequest
-import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{
-  Attribute,
-  AttributesResponse,
-  BulkedAttributesRequest
-}
+import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{Attribute, AttributesResponse}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{
   AttributeRegistryManagementInvoker,
   AttributeRegistryManagementService
@@ -29,7 +25,7 @@ final case class AttributeRegistryManagementServiceImpl(invoker: AttributeRegist
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
   override def getAttributesBulk(attributeIds: Seq[String]): Future[Seq[Attribute]] = {
-    val request: ApiRequest[AttributesResponse] = api.getBulkedAttributes(BulkedAttributesRequest(attributeIds))
+    val request: ApiRequest[AttributesResponse] = api.getBulkedAttributes(Some(attributeIds.mkString(",")))
     invoker
       .execute(request)
       .map { x =>
