@@ -8,14 +8,12 @@ import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.
   BulkedAttributesRequest
 }
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{
-  AttributeRegistryManagementService,
-  AttributeRegistryManagementInvoker
+  AttributeRegistryManagementInvoker,
+  AttributeRegistryManagementService
 }
 import org.slf4j.{Logger, LoggerFactory}
 
-import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
 
 @SuppressWarnings(
   Array(
@@ -41,20 +39,6 @@ final case class AttributeRegistryManagementServiceImpl(invoker: AttributeRegist
       .recoverWith { case ex =>
         logger.error(s"Retrieving attributes using bulked request FAILED: ${ex.getMessage}")
         Future.failed[Seq[Attribute]](ex)
-      }
-  }
-
-  private def attributeByUUID(attributeId: UUID): Future[Attribute] = {
-    val request = api.getAttributeById(attributeId) // TODO maybe a batch request is better
-    invoker
-      .execute(request)
-      .map { x =>
-        logger.info(s"Retrieving attribute ${x.code} > ${x.content}")
-        x.content
-      }
-      .recoverWith { case ex =>
-        logger.error(s"Retrieving attribute by UUID FAILED: ${ex.getMessage}")
-        Future.failed[Attribute](ex)
       }
   }
 

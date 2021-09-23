@@ -135,31 +135,35 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         attributes = Seq.empty[String]
       )
 
+      val attributeId1: String = "0001"
+      val attributeId2: String = "0002"
+      val attributeId3: String = "0003"
+
       val attribute1 = attributeregistrymanagement.client.model.Attribute(
-        id = "0001",
+        id = attributeId1,
         code = None,
         certified = true,
-        description = "0001-description",
+        description = s"$attributeId1-description",
         origin = None,
-        name = "0001-name",
+        name = s"$attributeId1-name",
         creationTime = OffsetDateTime.now()
       )
       val attribute2 = attributeregistrymanagement.client.model.Attribute(
-        id = "0002",
+        id = attributeId2,
         code = None,
         certified = false,
-        description = "0002-description",
+        description = s"$attributeId2-description",
         origin = None,
-        name = "0002-name",
+        name = s"$attributeId2-name",
         creationTime = OffsetDateTime.now()
       )
       val attribute3 = attributeregistrymanagement.client.model.Attribute(
-        id = "0003",
+        id = attributeId3,
         code = None,
         certified = false,
-        description = "0003-description",
+        description = s"$attributeId3-description",
         origin = None,
-        name = "0003-name",
+        name = s"$attributeId3-name",
         creationTime = OffsetDateTime.now()
       )
 
@@ -175,7 +179,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       (attributeRegistryManagementService.getAttributesBulk _)
-        .expects(Seq("0001", "0002", "0003"))
+        .expects(Seq(attributeId1, attributeId2, attributeId3))
         .returning(Future.successful(Seq(attribute1, attribute2, attribute3)))
         .once()
 
@@ -223,7 +227,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
           certified = Seq(
             Attribute(
               single = Some(
-                AttributeValue(id = attribute1.id, name = Some(attribute1.name), explicitAttributeVerification = false)
+                AttributeValue(
+                  id = attributeId1,
+                  name = Some(s"$attributeId1-name"),
+                  explicitAttributeVerification = false
+                )
               ),
               group = None
             )
@@ -234,8 +242,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
               group = Some(
                 Seq(
                   AttributeValue(
-                    id = attribute2.id,
-                    name = Some(attribute2.name),
+                    id = attributeId2,
+                    name = Some(s"$attributeId2-name"),
                     explicitAttributeVerification = false
                   )
                 )
@@ -245,7 +253,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
           verified = Seq(
             Attribute(
               single = Some(
-                AttributeValue(id = attribute3.id, name = Some(attribute3.name), explicitAttributeVerification = true)
+                AttributeValue(
+                  id = attributeId3,
+                  name = Some(s"$attributeId3-name"),
+                  explicitAttributeVerification = true
+                )
               ),
               group = None
             )
