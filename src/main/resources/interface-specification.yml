@@ -700,11 +700,22 @@ components:
           enum: [ 'REST', 'SOAP' ]
         attributes:
           $ref: '#/components/schemas/Attributes'
+    Organization:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
     EService:
       type: object
       required:
         - id
-        - producerId
+        - producer
         - name
         - description
         - technology
@@ -714,9 +725,8 @@ components:
         id:
           type: string
           format: uuid
-        producerId:
-          type: string
-          format: uuid
+        producer:
+          $ref: '#/components/schemas/Organization'
         name:
           type: string
         description:
@@ -826,6 +836,8 @@ components:
       type: object
       properties:
         id:
+          type: string
+        name:
           type: string
         explicitAttributeVerification:
           type: boolean

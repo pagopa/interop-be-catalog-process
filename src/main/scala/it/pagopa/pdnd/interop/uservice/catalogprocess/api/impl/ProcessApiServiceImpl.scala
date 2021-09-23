@@ -5,11 +5,19 @@ import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
+import it.pagopa.pdnd.interop.uservice.catalogmanagement
+import it.pagopa.pdnd.interop.uservice.catalogmanagement.client
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.ApiError
-import it.pagopa.pdnd.interop.uservice.catalogprocess.errors.{DescriptorNotFound, NotValidDescriptor}
-import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{AgreementManagementService, CatalogManagementService}
+import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.EServiceDescriptorEnums
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.ProcessApiService
+import it.pagopa.pdnd.interop.uservice.catalogprocess.errors.{DescriptorNotFound, NotValidDescriptor}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
+import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{
+  AgreementManagementService,
+  AttributeRegistryManagementService,
+  CatalogManagementService,
+  PartyManagementService
+}
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.File
@@ -22,11 +30,15 @@ import scala.util.{Failure, Success}
     "org.wartremover.warts.Any",
     "org.wartremover.warts.Equals",
     "org.wartremover.warts.Nothing",
+    "org.wartremover.warts.ToString",
+    "org.wartremover.warts.Option2Iterable",
     "org.wartremover.warts.Recursion"
   )
 )
 final case class ProcessApiServiceImpl(
   catalogManagementService: CatalogManagementService,
+  partyManagementService: PartyManagementService,
+  attributeRegistryManagementService: AttributeRegistryManagementService,
   agreementManagementService: AgreementManagementService
 )(implicit ec: ExecutionContext)
     extends ProcessApiService {
@@ -44,8 +56,10 @@ final case class ProcessApiServiceImpl(
     val result =
       for {
         bearer          <- tokenFromContext(contexts)
-        createdEService <- catalogManagementService.createEService(bearer)(eServiceSeed)
-      } yield createdEService
+        clientSeed      <- Converter.convertToClientEServiceSeed(eServiceSeed)
+        createdEService <- catalogManagementService.createEService(bearer)(clientSeed)
+        apiEservice     <- convertToApiEservice(createdEService)
+      } yield apiEservice
 
     onComplete(result) {
       case Success(res) => createEService200(res)
@@ -112,9 +126,10 @@ final case class ProcessApiServiceImpl(
   ): Route = {
     val result =
       for {
-        bearer    <- tokenFromContext(contexts)
-        eservices <- retrieveEservices(bearer, producerId, consumerId, status)
-      } yield eservices
+        bearer       <- tokenFromContext(contexts)
+        eservices    <- retrieveEservices(bearer, producerId, consumerId, status)
+        apiEservices <- eservices.traverse(convertToApiEservice)
+      } yield apiEservices
 
     onComplete(result) {
       case Success(response) => getEServices200(response)
@@ -137,8 +152,9 @@ final case class ProcessApiServiceImpl(
         bearer          <- tokenFromContext(contexts)
         currentEService <- catalogManagementService.getEService(bearer)(eServiceId)
         _               <- isDraftDescriptor(currentEService.descriptors.find(_.id.toString == descriptorId))
-        // TODO Status should be an enum
-        currentActiveDescriptor = currentEService.descriptors.find(d => d.status == "published") // Must be at most one
+        currentActiveDescriptor = currentEService.descriptors.find(d =>
+          d.status == EServiceDescriptorEnums.Status.Published
+        ) // Must be at most one
         _ <- catalogManagementService.publishDescriptor(bearer)(eServiceId, descriptorId)
         _ <- currentActiveDescriptor
           .map(oldDescriptor =>
@@ -193,9 +209,10 @@ final case class ProcessApiServiceImpl(
   ): Route = {
     val result =
       for {
-        bearer   <- tokenFromContext(contexts)
-        response <- catalogManagementService.getEService(bearer)(eServiceId)
-      } yield response
+        bearer      <- tokenFromContext(contexts)
+        eservice    <- catalogManagementService.getEService(bearer)(eServiceId)
+        apiEservice <- convertToApiEservice(eservice)
+      } yield apiEservice
 
     onComplete(result) {
       case Success(response) => getEServiceById200(response)
@@ -222,14 +239,15 @@ final case class ProcessApiServiceImpl(
     val result =
       for {
         bearer <- tokenFromContext(contexts)
-        response <- catalogManagementService.createEServiceDocument(bearer)(
+        eservice <- catalogManagementService.createEServiceDocument(bearer)(
           eServiceId,
           descriptorId,
           kind,
           description,
           doc
         )
-      } yield response
+        apiEservice <- convertToApiEservice(eservice)
+      } yield apiEservice
 
     onComplete(result) {
       case Success(response) => createEServiceDocument200(response)
@@ -314,11 +332,11 @@ final case class ProcessApiServiceImpl(
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
   ): Route = {
 
-    val result: Future[Seq[EService]] =
+    val result =
       for {
-        bearer   <- tokenFromContext(contexts)
-        response <- retrieveEservices(bearer, producerId, consumerId, status)
-      } yield response
+        bearer    <- tokenFromContext(contexts)
+        eservices <- retrieveEservices(bearer, producerId, consumerId, status)
+      } yield eservices
 
     onComplete(result) {
       case Success(response) => getFlatEServices200(response.flatMap(convertToFlattenEservice))
@@ -341,14 +359,12 @@ final case class ProcessApiServiceImpl(
   ): Route = {
     val result =
       for {
-        bearer          <- tokenFromContext(contexts)
-        currentEService <- catalogManagementService.getEService(bearer)(eServiceId)
-        _               <- catalogManagementService.hasNotDraftDescriptor(currentEService)
-        createdEServiceDescriptor <- catalogManagementService.createDescriptor(bearer)(
-          eServiceId,
-          eServiceDescriptorSeed
-        )
-      } yield createdEServiceDescriptor
+        bearer                    <- tokenFromContext(contexts)
+        currentEService           <- catalogManagementService.getEService(bearer)(eServiceId)
+        _                         <- catalogManagementService.hasNotDraftDescriptor(currentEService)
+        clientSeed                <- Converter.convertToClientEServiceDescriptorSeed(eServiceDescriptorSeed)
+        createdEServiceDescriptor <- catalogManagementService.createDescriptor(bearer)(eServiceId, clientSeed)
+      } yield Converter.convertToApiDescriptor(createdEServiceDescriptor)
 
     onComplete(result) {
       case Success(res) => createDescriptor200(res)
@@ -373,17 +389,16 @@ final case class ProcessApiServiceImpl(
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerEService: ToEntityMarshaller[EService]
   ): Route = {
-    val result =
+
+    val result: Future[EService] =
       for {
         bearer          <- tokenFromContext(contexts)
         currentEService <- catalogManagementService.getEService(bearer)(eServiceId)
         _               <- isDraftDescriptor(currentEService.descriptors.find(_.id.toString == descriptorId))
-        updatedDescriptor <- catalogManagementService.updateDraftDescriptor(bearer)(
-          eServiceId,
-          descriptorId,
-          updateEServiceDescriptorSeed
-        )
-      } yield updatedDescriptor
+        clientSeed      <- Converter.convertToClientUpdateEServiceDescriptorSeed(updateEServiceDescriptorSeed)
+        updatedEservice <- catalogManagementService.updateDraftDescriptor(bearer)(eServiceId, descriptorId, clientSeed)
+        apiEservice     <- convertToApiEservice(updatedEservice)
+      } yield apiEservice
 
     onComplete(result) {
       case Success(res) => updateDraftDescriptor200(res)
@@ -406,8 +421,10 @@ final case class ProcessApiServiceImpl(
     val result =
       for {
         bearer          <- tokenFromContext(contexts)
-        updatedEservice <- catalogManagementService.updateEservice(bearer)(eServiceId, updateEServiceSeed)
-      } yield updatedEservice
+        clientSeed      <- Converter.convertToClientUpdateEServiceSeed(updateEServiceSeed)
+        updatedEservice <- catalogManagementService.updateEservice(bearer)(eServiceId, clientSeed)
+        apiEservice     <- convertToApiEservice(updatedEservice)
+      } yield apiEservice
 
     onComplete(result) {
       case Success(res) => updateEServiceById200(res)
@@ -418,12 +435,32 @@ final case class ProcessApiServiceImpl(
     }
   }
 
+  private def convertToApiEservice(eservice: catalogmanagement.client.model.EService): Future[EService] = {
+    for {
+      organization <- partyManagementService.getOrganization(eservice.producerId)
+      attributes   <- attributeRegistryManagementService.getAttributesBulk(extractIdsFromAttributes(eservice.attributes))
+    } yield Converter.convertToApiEservice(eservice, organization, attributes)
+  }
+
+  private def extractIdsFromAttributes(attributes: catalogmanagement.client.model.Attributes): Seq[String] = {
+    attributes.certified.flatMap(extractIdsFromAttribute) ++
+      attributes.declared.flatMap(extractIdsFromAttribute) ++
+      attributes.verified.flatMap(extractIdsFromAttribute)
+  }
+
+  private def extractIdsFromAttribute(attribute: catalogmanagement.client.model.Attribute): Seq[String] = {
+    val fromSingle: Seq[String] = attribute.single.toSeq.map(_.id)
+    val fromGroup: Seq[String]  = attribute.group.toSeq.flatMap(_.map(_.id))
+
+    fromSingle ++ fromGroup
+  }
+
   private def retrieveEservices(
     bearer: String,
     producerId: Option[String],
     consumerId: Option[String],
     status: Option[String]
-  ): Future[Seq[EService]] = {
+  ): Future[Seq[catalogmanagement.client.model.EService]] = {
     if (consumerId.isEmpty) catalogManagementService.listEServices(bearer)(producerId, status)
     else
       for {
@@ -480,11 +517,11 @@ final case class ProcessApiServiceImpl(
         .toTry
     )
 
-  private def convertToFlattenEservice(eservice: EService): Seq[FlatEService] = {
+  private def convertToFlattenEservice(eservice: client.model.EService): Seq[FlatEService] = {
 
     val flatEServiceZero: FlatEService = FlatEService(
       id = eservice.id,
-      producerId = eservice.producerId,
+      producerId = eservice.id,
       name = eservice.name,
       version = None,
       status = None,
@@ -494,7 +531,7 @@ final case class ProcessApiServiceImpl(
     val flatEServices: Seq[FlatEService] = eservice.descriptors.map { descriptor =>
       flatEServiceZero.copy(
         version = Some(descriptor.version),
-        status = Some(descriptor.status),
+        status = Some(descriptor.status.toString),
         descriptorId = Some(descriptor.id.toString)
       )
 
@@ -504,13 +541,18 @@ final case class ProcessApiServiceImpl(
 
   }
 
-  private def isDraftDescriptor(optDescriptor: Option[EServiceDescriptor]): Future[EServiceDescriptor] = {
-    optDescriptor.fold(Future.failed[EServiceDescriptor](DescriptorNotFound(""))) { descriptor =>
-      descriptor.status match {
-        case "draft" => Future.successful(descriptor)
-        case _ =>
-          Future.failed(NotValidDescriptor(s"Descriptor ${descriptor.id.toString} has status ${descriptor.status}"))
-      }
+  private def isDraftDescriptor(
+    optDescriptor: Option[catalogmanagement.client.model.EServiceDescriptor]
+  ): Future[catalogmanagement.client.model.EServiceDescriptor] = {
+    optDescriptor.fold(Future.failed[catalogmanagement.client.model.EServiceDescriptor](DescriptorNotFound(""))) {
+      descriptor =>
+        descriptor.status match {
+          case EServiceDescriptorEnums.Status.Draft => Future.successful(descriptor)
+          case _ =>
+            Future.failed(
+              NotValidDescriptor(s"Descriptor ${descriptor.id.toString} has status ${descriptor.status.toString}")
+            )
+        }
     }
   }
 
@@ -571,16 +613,19 @@ final case class ProcessApiServiceImpl(
     toEntityMarshallerEServiceDoc: ToEntityMarshaller[EServiceDoc],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
   ): Route = {
+
     val result =
       for {
         bearer <- tokenFromContext(contexts)
+        clientSeed <-
+          Converter.convertToClientEServiceDescriptorDocumentSeed(updateEServiceDescriptorDocumentSeed)
         updatedDocument <- catalogManagementService.updateEServiceDocument(bearer)(
           eServiceId,
           descriptorId,
           documentId,
-          updateEServiceDescriptorDocumentSeed
+          clientSeed
         )
-      } yield updatedDocument
+      } yield Converter.convertToApiEserviceDoc(updatedDocument)
 
     onComplete(result) {
       case Success(updatedDocument) => updateEServiceDocumentById200(updatedDocument)
@@ -625,16 +670,14 @@ final case class ProcessApiServiceImpl(
       for {
         bearer         <- tokenFromContext(contexts)
         clonedEService <- catalogManagementService.cloneEservice(bearer)(eServiceId, descriptorId)
-      } yield clonedEService
+        apiEservice    <- convertToApiEservice(clonedEService)
+      } yield apiEservice
 
     onComplete(result) {
       case Success(res) => cloneEServiceByDescriptor200(res)
       case Failure(ex) =>
-        val errorResponse: Problem = Problem(
-          Option(ex.getMessage),
-          400,
-          s"Error while cloning descriptor ${descriptorId} for E-service ${eServiceId}"
-        )
+        val errorResponse: Problem =
+          Problem(Option(ex.getMessage), 400, s"Error while cloning descriptor $descriptorId for E-service $eServiceId")
         cloneEServiceByDescriptor400(errorResponse)
     }
   }
@@ -655,7 +698,7 @@ final case class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_) => deleteEService204
       case Failure(ex) =>
-        complete(500, Problem(Option(ex.getMessage), 500, s"Error while deleting E-service ${eServiceId}"))
+        complete(500, Problem(Option(ex.getMessage), 500, s"Error while deleting E-service $eServiceId"))
     }
   }
 }
