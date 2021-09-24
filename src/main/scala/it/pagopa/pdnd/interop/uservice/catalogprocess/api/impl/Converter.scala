@@ -15,7 +15,7 @@ import scala.util.{Failure, Try}
 @SuppressWarnings(Array("org.wartremover.warts.ToString"))
 object Converter {
 
-  private final case class AttributeDescription(name: String, description: String)
+  private final case class AttributeDetails(name: String, description: String)
 
   def convertToApiEservice(
     eservice: catalogmanagement.client.model.EService,
@@ -59,8 +59,8 @@ object Converter {
     attributes: Seq[attributeregistrymanagement.client.model.Attribute]
   ): Attributes = {
 
-    val attributeNames: Map[String, AttributeDescription] =
-      attributes.map(attr => attr.id -> AttributeDescription(attr.name, attr.description)).toMap
+    val attributeNames: Map[String, AttributeDetails] =
+      attributes.map(attr => attr.id -> AttributeDetails(attr.name, attr.description)).toMap
 
     Attributes(
       certified = currentAttributes.certified.map(convertToApiAttribute(attributeNames)),
@@ -71,7 +71,7 @@ object Converter {
   }
 
   private def convertToApiAttribute(
-    attributeNames: Map[String, AttributeDescription]
+    attributeNames: Map[String, AttributeDetails]
   )(attribute: catalogmanagement.client.model.Attribute): Attribute = {
     Attribute(
       single = attribute.single.map(convertToApiAttributeValue(attributeNames)),
@@ -80,7 +80,7 @@ object Converter {
   }
 
   private def convertToApiAttributeValue(
-    attributeNames: Map[String, AttributeDescription]
+    attributeNames: Map[String, AttributeDetails]
   )(value: client.model.AttributeValue) =
     AttributeValue(
       id = value.id,
