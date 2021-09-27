@@ -229,7 +229,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
               single = Some(
                 AttributeValue(
                   id = attributeId1,
-                  name = Some(s"$attributeId1-name"),
+                  name = s"$attributeId1-name",
+                  description = s"$attributeId1-description",
                   explicitAttributeVerification = false
                 )
               ),
@@ -243,7 +244,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
                 Seq(
                   AttributeValue(
                     id = attributeId2,
-                    name = Some(s"$attributeId2-name"),
+                    name = s"$attributeId2-name",
+                    description = s"$attributeId2-description",
                     explicitAttributeVerification = false
                   )
                 )
@@ -255,7 +257,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
               single = Some(
                 AttributeValue(
                   id = attributeId3,
-                  name = Some(s"$attributeId3-name"),
+                  name = s"$attributeId3-name",
+                  description = s"$attributeId3-description",
                   explicitAttributeVerification = true
                 )
               ),

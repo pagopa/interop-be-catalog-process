@@ -699,7 +699,99 @@ components:
           type: string
           enum: [ 'REST', 'SOAP' ]
         attributes:
-          $ref: '#/components/schemas/Attributes'
+          $ref: '#/components/schemas/AttributesSeed'
+    UpdateEServiceSeed:
+      type: object
+      required:
+        - name
+        - description
+        - technology
+        - attributes
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        technology:
+          type: string
+          enum: [ 'REST', 'SOAP' ]
+        attributes:
+          $ref: '#/components/schemas/AttributesSeed'
+    EServiceDescriptorSeed:
+      required:
+        - audience
+        - voucherLifespan
+      type: object
+      properties:
+        description:
+          type: string
+        audience:
+          type: array
+          items:
+            type: string
+        voucherLifespan:
+          type: integer
+          format: int32
+    UpdateEServiceDescriptorSeed:
+      required:
+        - status
+        - audience
+        - voucherLifespan
+      type: object
+      properties:
+        description:
+          type: string
+        audience:
+          type: array
+          items:
+            type: string
+        voucherLifespan:
+          type: integer
+          format: int32
+    UpdateEServiceDescriptorDocumentSeed:
+      required:
+        - description
+      type: object
+      properties:
+        description:
+          type: string
+    AttributesSeed:
+      properties:
+        certified:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttributeSeed'
+        declared:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttributeSeed'
+        verified:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttributeSeed'
+      required:
+        - certified
+        - declared
+        - verified
+    AttributeSeed:
+      type: object
+      properties:
+        single:
+          $ref: '#/components/schemas/AttributeValueSeed'
+        group:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttributeValueSeed'
+    AttributeValueSeed:
+      type: object
+      properties:
+        id:
+          type: string
+        explicitAttributeVerification:
+          type: boolean
+      required:
+        - id
+        - explicitAttributeVerification
     Organization:
       type: object
       required:
@@ -794,44 +886,6 @@ components:
         voucherLifespan:
           type: integer
           format: int32
-    EServiceDescriptorSeed:
-      required:
-        - audience
-        - voucherLifespan
-      type: object
-      properties:
-        description:
-          type: string
-        audience:
-          type: array
-          items:
-            type: string
-        voucherLifespan:
-          type: integer
-          format: int32
-    UpdateEServiceDescriptorSeed:
-     required:
-       - status
-       - audience
-       - voucherLifespan
-     type: object
-     properties:
-       description:
-         type: string
-       audience:
-         type: array
-         items:
-           type: string
-       voucherLifespan:
-         type: integer
-         format: int32
-    UpdateEServiceDescriptorDocumentSeed:
-      required:
-        - description
-      type: object
-      properties:
-        description:
-          type: string
     AttributeValue:
       type: object
       properties:
@@ -839,10 +893,14 @@ components:
           type: string
         name:
           type: string
+        description:
+          type: string
         explicitAttributeVerification:
           type: boolean
       required:
         - id
+        - name
+        - description
         - explicitAttributeVerification
     Attribute:
       type: object
@@ -897,23 +955,6 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/FlatEService'
-    UpdateEServiceSeed:
-      type: object
-      required:
-        - name
-        - description
-        - technology
-        - attributes
-      properties:
-        name:
-          type: string
-        description:
-          type: string
-        technology:
-          type: string
-          enum: [ 'REST', 'SOAP' ]
-        attributes:
-          $ref: '#/components/schemas/Attributes'
     Problem:
       properties:
         detail:
