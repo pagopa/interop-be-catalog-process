@@ -15,6 +15,8 @@ import scala.util.{Failure, Try}
 @SuppressWarnings(Array("org.wartremover.warts.ToString"))
 object Converter {
 
+  private final case class AttributeDetails(name: String, description: String)
+
   def convertToApiEservice(
     eservice: catalogmanagement.client.model.EService,
     organization: partymanagement.client.model.Organization,
@@ -57,7 +59,8 @@ object Converter {
     attributes: Seq[attributeregistrymanagement.client.model.Attribute]
   ): Attributes = {
 
-    val attributeNames: Map[String, String] = attributes.map(attr => attr.id -> attr.name).toMap
+    val attributeNames: Map[String, AttributeDetails] =
+      attributes.map(attr => attr.id -> AttributeDetails(attr.name, attr.description)).toMap
 
     Attributes(
       certified = currentAttributes.certified.map(convertToApiAttribute(attributeNames)),
@@ -68,27 +71,26 @@ object Converter {
   }
 
   private def convertToApiAttribute(
-    attributeNames: Map[String, String]
+    attributeNames: Map[String, AttributeDetails]
   )(attribute: catalogmanagement.client.model.Attribute): Attribute = {
     Attribute(
-      single = attribute.single.map(value =>
-        AttributeValue(
-          id = value.id,
-          name = attributeNames.get(value.id),
-          explicitAttributeVerification = value.explicitAttributeVerification
-        )
-      ),
-      group = attribute.group.map(values =>
-        values.map(value =>
-          AttributeValue(
-            id = value.id,
-            name = attributeNames.get(value.id),
-            explicitAttributeVerification = value.explicitAttributeVerification
-          )
-        )
-      )
+      single = attribute.single.map(convertToApiAttributeValue(attributeNames)),
+      group = attribute.group.map(values => values.map(convertToApiAttributeValue(attributeNames)))
     )
   }
+
+  private def convertToApiAttributeValue(
+    attributeNames: Map[String, AttributeDetails]
+  )(value: client.model.AttributeValue) =
+    AttributeValue(
+      id = value.id,
+      // TODO how to manage this case? Raise an error/Default/Flat option values
+      // TODO for now default value "Unknown"
+      name = attributeNames.get(value.id).map(_.name).getOrElse("Unknown"),
+      // TODO same here
+      description = attributeNames.get(value.id).map(_.description).getOrElse("Unknown"),
+      explicitAttributeVerification = value.explicitAttributeVerification
+    )
 
   def convertToClientEServiceSeed(eServiceSeed: EServiceSeed): Future[client.model.EServiceSeed] = {
     val converted: Try[EServiceSeedEnums.Technology.Value] = Try(
@@ -174,22 +176,19 @@ object Converter {
     )
   }
 
-  private def convertToCatalogClientAttributes(attributes: Attributes): client.model.Attributes =
+  private def convertToCatalogClientAttributes(seed: AttributesSeed): client.model.Attributes =
     client.model.Attributes(
-      certified = attributes.certified.map(convertToCatalogClientAttribute),
-      declared = attributes.declared.map(convertToCatalogClientAttribute),
-      verified = attributes.verified.map(convertToCatalogClientAttribute)
+      certified = seed.certified.map(convertToCatalogClientAttribute),
+      declared = seed.declared.map(convertToCatalogClientAttribute),
+      verified = seed.verified.map(convertToCatalogClientAttribute)
     )
 
-  private def convertToCatalogClientAttribute(attribute: Attribute): client.model.Attribute =
+  private def convertToCatalogClientAttribute(seed: AttributeSeed): client.model.Attribute =
     client.model.Attribute(
-      single = attribute.single.map(convertToCatalogClientAttributeValue),
-      group = attribute.group.map(_.map(convertToCatalogClientAttributeValue))
+      single = seed.single.map(convertToCatalogClientAttributeValue),
+      group = seed.group.map(_.map(convertToCatalogClientAttributeValue))
     )
 
-  private def convertToCatalogClientAttributeValue(attributeValue: AttributeValue): client.model.AttributeValue =
-    client.model.AttributeValue(
-      id = attributeValue.id,
-      explicitAttributeVerification = attributeValue.explicitAttributeVerification
-    )
+  private def convertToCatalogClientAttributeValue(seed: AttributeValueSeed): client.model.AttributeValue =
+    client.model.AttributeValue(id = seed.id, explicitAttributeVerification = seed.explicitAttributeVerification)
 }
