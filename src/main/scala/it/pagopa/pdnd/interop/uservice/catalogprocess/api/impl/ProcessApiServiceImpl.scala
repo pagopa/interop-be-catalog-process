@@ -336,10 +336,12 @@ final case class ProcessApiServiceImpl(
       for {
         bearer    <- tokenFromContext(contexts)
         eservices <- retrieveEservices(bearer, producerId, consumerId, status)
-      } yield eservices
+        flattenServices     = eservices.flatMap(convertToFlattenEservice)
+        filteredDescriptors = flattenServices.filter(item => status.forall(item.status.contains))
+      } yield filteredDescriptors
 
     onComplete(result) {
-      case Success(response) => getFlatEServices200(response.flatMap(convertToFlattenEservice))
+      case Success(response) => getFlatEServices200(response)
       case Failure(ex) =>
         getFlatEServices500(
           Problem(Option(ex.getMessage), 500, s"Unexpected error while retrieving flatted E-Services")
@@ -469,9 +471,9 @@ final case class ProcessApiServiceImpl(
           catalogManagementService
             .getEService(bearer)(eServiceId = agreement.eserviceId.toString)
         )
-      } yield eservices.filter(eService => producerId.forall(_ == eService.producerId.toString)
-      // EService status is not actually implemented
-//          status.forall(s => eService.descriptors.exists(_.status.toString == s))
+      } yield eservices.filter(eService =>
+        producerId.forall(_ == eService.producerId.toString) &&
+          status.forall(s => eService.descriptors.exists(_.status.toString == s))
       )
   }
 
