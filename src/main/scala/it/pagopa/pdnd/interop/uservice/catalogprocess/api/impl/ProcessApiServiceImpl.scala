@@ -465,11 +465,14 @@ final case class ProcessApiServiceImpl(
     else
       for {
         agreements <- agreementManagementService.getAgreements(bearer, consumerId, producerId, None)
-        eservices <- agreements.flatTraverse(agreement =>
+        eservices <- agreements.traverse(agreement =>
           catalogManagementService
-            .listEServices(bearer)(producerId = Some(agreement.producerId.toString), status = status)
+            .getEService(bearer)(eServiceId = agreement.eserviceId.toString)
         )
-      } yield eservices
+      } yield eservices.filter(eService => producerId.forall(_ == eService.producerId.toString)
+      // EService status is not actually implemented
+//          status.forall(s => eService.descriptors.exists(_.status.toString == s))
+      )
   }
 
   private[this] def deprecateDescriptorOrCancelPublication(
