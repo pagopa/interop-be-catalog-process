@@ -524,7 +524,7 @@ final case class ProcessApiServiceImpl(
 
     val flatEServiceZero: FlatEService = FlatEService(
       id = eservice.id,
-      producerId = eservice.id,
+      producerId = eservice.producerId,
       name = eservice.name,
       version = None,
       status = None,
