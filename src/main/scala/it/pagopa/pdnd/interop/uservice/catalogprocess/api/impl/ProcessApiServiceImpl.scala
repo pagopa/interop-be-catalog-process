@@ -21,6 +21,7 @@ import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.File
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -326,7 +327,12 @@ final case class ProcessApiServiceImpl(
   /** Code: 200, Message: A list of flattened E-Services, DataType: Seq[FlatEService]
     * Code: 500, Message: Internal Server Error, DataType: Problem
     */
-  override def getFlatEServices(producerId: Option[String], consumerId: Option[String], status: Option[String])(implicit
+  override def getFlatEServices(
+    callerId: String,
+    producerId: Option[String],
+    consumerId: Option[String],
+    status: Option[String]
+  )(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerFlatEServicearray: ToEntityMarshaller[Seq[FlatEService]],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
@@ -334,9 +340,10 @@ final case class ProcessApiServiceImpl(
 
     val result =
       for {
-        bearer    <- tokenFromContext(contexts)
-        eservices <- retrieveEservices(bearer, producerId, consumerId, status)
-        flattenServices     = eservices.flatMap(convertToFlattenEservice)
+        bearer                    <- tokenFromContext(contexts)
+        callerSubscribedEservices <- agreementManagementService.getEServiceIdentifiersOfAgreements(bearer)(callerId)
+        eservices                 <- retrieveEservices(bearer, producerId, consumerId, status)
+        flattenServices     = eservices.flatMap(service => convertToFlattenEservice(service, callerSubscribedEservices))
         filteredDescriptors = flattenServices.filter(item => status.forall(item.status.contains))
       } yield filteredDescriptors
 
@@ -522,7 +529,10 @@ final case class ProcessApiServiceImpl(
         .toTry
     )
 
-  private def convertToFlattenEservice(eservice: client.model.EService): Seq[FlatEService] = {
+  private def convertToFlattenEservice(
+    eservice: client.model.EService,
+    agreementSubscribedEservices: Seq[UUID]
+  ): Seq[FlatEService] = {
 
     val flatEServiceZero: FlatEService = FlatEService(
       id = eservice.id,
@@ -530,7 +540,8 @@ final case class ProcessApiServiceImpl(
       name = eservice.name,
       version = None,
       status = None,
-      descriptorId = None
+      descriptorId = None,
+      callerSubscribed = agreementSubscribedEservices.contains(eservice.id)
     )
 
     val flatEServices: Seq[FlatEService] = eservice.descriptors.map { descriptor =>
