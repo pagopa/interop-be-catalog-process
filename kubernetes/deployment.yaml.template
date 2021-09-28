@@ -72,6 +72,16 @@ spec:
                 secretKeyRef:
                   name: cassandra
                   key: CASSANDRA_PWD
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws
+                  key: AWS_ACCESS_KEY_ID
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
