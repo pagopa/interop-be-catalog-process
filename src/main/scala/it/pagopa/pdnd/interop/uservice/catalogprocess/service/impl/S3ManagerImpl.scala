@@ -1,5 +1,6 @@
 package it.pagopa.pdnd.interop.uservice.catalogprocess.service.impl
 
+import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system.ApplicationConfiguration.bucketName
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.FileManager
 import software.amazon.awssdk.core.ResponseBytes
 import software.amazon.awssdk.core.sync.ResponseTransformer
@@ -10,7 +11,7 @@ import java.io.{ByteArrayOutputStream, InputStream}
 import scala.concurrent.Future
 import scala.util.Try
 
-final case class FileManagerImpl(s3Client: S3Client) extends FileManager{
+final case class S3ManagerImpl(s3Client: S3Client) extends FileManager {
 
   override def get(filePath: String): Future[ByteArrayOutputStream] = Future.fromTry {
     Try {

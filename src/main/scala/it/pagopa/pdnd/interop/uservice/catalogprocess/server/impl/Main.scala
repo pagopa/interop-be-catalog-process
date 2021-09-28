@@ -18,22 +18,25 @@ import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system.{
   Authenticator,
   CorsSupport,
   classicActorSystem,
-  executionContext
+  executionContext,
+  s3Client
 }
 import it.pagopa.pdnd.interop.uservice.catalogprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.impl.{
   AgreementManagementServiceImpl,
   AttributeRegistryManagementServiceImpl,
   CatalogManagementServiceImpl,
-  PartyManagementServiceImpl
+  PartyManagementServiceImpl,
+  S3ManagerImpl
 }
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{
   AgreementManagementInvoker,
   AgreementManagementService,
-  AttributeRegistryManagementService,
   AttributeRegistryManagementInvoker,
+  AttributeRegistryManagementService,
   CatalogManagementInvoker,
   CatalogManagementService,
+  FileManager,
   PartyManagementInvoker,
   PartyManagementService
 }
@@ -71,6 +74,10 @@ trait PartyManagementAPI {
     PartyManagementServiceImpl(partyManagementInvoker, partyApi)
 }
 
+trait FileManagerAPI {
+  val fileManager: FileManager = S3ManagerImpl(s3Client)
+}
+
 @SuppressWarnings(
   Array(
     "org.wartremover.warts.StringPlusAny",
@@ -85,7 +92,8 @@ object Main
     with AgreementManagementAPI
     with AttributeRegistryManagementAPI
     with PartyManagementAPI
-    with CatalogManagementAPI {
+    with CatalogManagementAPI
+    with FileManagerAPI {
 
   Kamon.init()
 
@@ -94,7 +102,8 @@ object Main
       catalogManagementService = catalogManagementService,
       partyManagementService = partyManagementService,
       attributeRegistryManagementService = attributeRegistryManagementService,
-      agreementManagementService = agreementManagementService
+      agreementManagementService = agreementManagementService,
+      fileManager = fileManager
     ),
     ProcessApiMarshallerImpl(),
     SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)

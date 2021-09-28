@@ -291,18 +291,18 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
 
   override def getEServiceDocument(
     bearerToken: String
-  )(eServiceId: String, descriptorId: String, documentId: String): Future[File] = {
-    val request: ApiRequest[File] =
+  )(eServiceId: String, descriptorId: String, documentId: String): Future[client.model.EServiceDoc] = {
+    val request: ApiRequest[client.model.EServiceDoc] =
       api.getEServiceDocument(eServiceId, descriptorId, documentId)(BearerToken(bearerToken))
     invoker
-      .execute[File](request)
+      .execute[client.model.EServiceDoc](request)
       .map { result =>
         logger.info(s"Document with id $documentId retrieved")
         result.content
       }
       .recoverWith { case ex =>
         logger.error(s"Error while retrieving document with id $eServiceId")
-        Future.failed[File](ex)
+        Future.failed[client.model.EServiceDoc](ex)
       }
   }
 
