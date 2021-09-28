@@ -22,6 +22,7 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.{File, FileOutputStream}
 import java.nio.file.{Files, Path}
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -347,7 +348,12 @@ final case class ProcessApiServiceImpl(
   /** Code: 200, Message: A list of flattened E-Services, DataType: Seq[FlatEService]
     * Code: 500, Message: Internal Server Error, DataType: Problem
     */
-  override def getFlatEServices(producerId: Option[String], consumerId: Option[String], status: Option[String])(implicit
+  override def getFlatEServices(
+    callerId: String,
+    producerId: Option[String],
+    consumerId: Option[String],
+    status: Option[String]
+  )(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerFlatEServicearray: ToEntityMarshaller[Seq[FlatEService]],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
@@ -355,12 +361,15 @@ final case class ProcessApiServiceImpl(
 
     val result =
       for {
-        bearer    <- tokenFromContext(contexts)
-        eservices <- retrieveEservices(bearer, producerId, consumerId, status)
-      } yield eservices
+        bearer                    <- tokenFromContext(contexts)
+        callerSubscribedEservices <- agreementManagementService.getEServiceIdentifiersOfAgreements(bearer)(callerId)
+        eservices                 <- retrieveEservices(bearer, producerId, consumerId, status)
+        flattenServices     = eservices.flatMap(service => convertToFlattenEservice(service, callerSubscribedEservices))
+        filteredDescriptors = flattenServices.filter(item => status.forall(item.status.contains))
+      } yield filteredDescriptors
 
     onComplete(result) {
-      case Success(response) => getFlatEServices200(response.flatMap(convertToFlattenEservice))
+      case Success(response) => getFlatEServices200(response)
       case Failure(ex) =>
         getFlatEServices500(
           Problem(Option(ex.getMessage), 500, s"Unexpected error while retrieving flatted E-Services")
@@ -486,11 +495,14 @@ final case class ProcessApiServiceImpl(
     else
       for {
         agreements <- agreementManagementService.getAgreements(bearer, consumerId, producerId, None)
-        eservices <- agreements.flatTraverse(agreement =>
+        eservices <- agreements.traverse(agreement =>
           catalogManagementService
-            .listEServices(bearer)(producerId = Some(agreement.producerId.toString), status = status)
+            .getEService(bearer)(eServiceId = agreement.eserviceId.toString)
         )
-      } yield eservices
+      } yield eservices.filter(eService =>
+        producerId.forall(_ == eService.producerId.toString) &&
+          status.forall(s => eService.descriptors.exists(_.status.toString == s))
+      )
   }
 
   private[this] def deprecateDescriptorOrCancelPublication(
@@ -538,15 +550,19 @@ final case class ProcessApiServiceImpl(
         .toTry
     )
 
-  private def convertToFlattenEservice(eservice: client.model.EService): Seq[FlatEService] = {
+  private def convertToFlattenEservice(
+    eservice: client.model.EService,
+    agreementSubscribedEservices: Seq[UUID]
+  ): Seq[FlatEService] = {
 
     val flatEServiceZero: FlatEService = FlatEService(
       id = eservice.id,
-      producerId = eservice.id,
+      producerId = eservice.producerId,
       name = eservice.name,
       version = None,
       status = None,
-      descriptorId = None
+      descriptorId = None,
+      callerSubscribed = agreementSubscribedEservices.contains(eservice.id)
     )
 
     val flatEServices: Seq[FlatEService] = eservice.descriptors.map { descriptor =>
