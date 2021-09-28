@@ -541,7 +541,8 @@ final case class ProcessApiServiceImpl(
       version = None,
       status = None,
       descriptorId = None,
-      callerSubscribed = agreementSubscribedEservices.contains(eservice.id)
+      callerSubscribed = agreementSubscribedEservices.contains(eservice.id),
+      certifiedAttributes = eservice.attributes.certified.map(toFlatAttribute)
     )
 
     val flatEServices: Seq[FlatEService] = eservice.descriptors.map { descriptor =>
@@ -555,6 +556,13 @@ final case class ProcessApiServiceImpl(
 
     Option(flatEServices).filter(_.nonEmpty).getOrElse(Seq(flatEServiceZero))
 
+  }
+
+  private def toFlatAttribute(attribute: client.model.Attribute): FlatAttribute = {
+    FlatAttribute(
+      single = attribute.single.map(a => FlatAttributeValue(a.id)),
+      group = attribute.group.map(a => a.map(attr => FlatAttributeValue(attr.id)))
+    )
   }
 
   private def isDraftDescriptor(

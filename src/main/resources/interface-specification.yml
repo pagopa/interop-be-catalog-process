@@ -942,6 +942,7 @@ components:
         - producerId
         - name
         - callerSubscribed
+        - certifiedAttributes
       properties:
         id:
           type: string
@@ -961,10 +962,31 @@ components:
         callerSubscribed:
           type: boolean
           description: 'true if the operation caller has at least a subscription to this e-service'
+        certifiedAttributes:
+          description: 'contains a flat version of the certified attribute identifiers of this e-service'
+          type: array
+          items:
+            $ref: '#/components/schemas/FlatAttribute'
     FlatEServices:
       type: array
       items:
         $ref: '#/components/schemas/FlatEService'
+    FlatAttribute:
+      type: object
+      properties:
+        single:
+          $ref: '#/components/schemas/FlatAttributeValue'
+        group:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlatAttributeValue'
+    FlatAttributeValue:
+      type: object
+      properties:
+        id:
+          type: string
+      required:
+        - id
     Problem:
       properties:
         detail:
