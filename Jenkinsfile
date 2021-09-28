@@ -21,11 +21,11 @@ pipeline {
       steps {
         withCredentials([file(credentialsId: 'pdnd-interop-trust-cert', variable: 'pdnd_certificate')]) {
           sh '''
-                        cat \$pdnd_certificate > gateway.interop.pdnd.dev.cer
-                        keytool -import -file gateway.interop.pdnd.dev.cer -alias pdnd-interop-gateway -keystore PDNDTrustStore -storepass ${PDND_TRUST_STORE_PSW} -noprompt
-                        cp $JAVA_HOME/jre/lib/security/cacerts main_certs
-                        keytool -importkeystore -srckeystore main_certs -destkeystore PDNDTrustStore -srcstorepass ${PDND_TRUST_STORE_PSW} -deststorepass ${PDND_TRUST_STORE_PSW}
-                       '''
+            cat \$pdnd_certificate > gateway.interop.pdnd.dev.cer
+            keytool -import -file gateway.interop.pdnd.dev.cer -alias pdnd-interop-gateway -keystore PDNDTrustStore -storepass ${PDND_TRUST_STORE_PSW} -noprompt
+            cp $JAVA_HOME/jre/lib/security/cacerts main_certs
+            keytool -importkeystore -srckeystore main_certs -destkeystore PDNDTrustStore -srcstorepass ${PDND_TRUST_STORE_PSW} -deststorepass ${PDND_TRUST_STORE_PSW}
+          '''
           stash includes: "PDNDTrustStore", name: "pdnd_trust_store"
         }
       }
@@ -54,9 +54,8 @@ pipeline {
     stage('Apply Kubernetes files') {
       agent { label 'sbt-template' }
       environment {
-        CASSANDRA = credentials('cassandra-db')
-        CASSANDRA_HOST = 'cluster1-dc1-service.cassandra-operator.svc.cluster.local:9042'
         DOCKER_REPO = 'gateway.interop.pdnd.dev'
+        AWS_SECRET_ACCESS = credentials('jenkins-aws')
         DESTINATION_MAIL = credentials('destination-mail')
         //REPLICAS_NR = 1
       }
@@ -64,12 +63,12 @@ pipeline {
         container('sbt-container') {
           withKubeConfig([credentialsId: 'kube-config']) {
             sh '''
-                              cd kubernetes
-                              chmod u+x undeploy.sh
-                              chmod u+x deploy.sh
-                              ./undeploy.sh
-                              ./deploy.sh
-                           '''
+              cd kubernetes
+              chmod u+x undeploy.sh
+              chmod u+x deploy.sh
+              ./undeploy.sh
+              ./deploy.sh
+            '''
           }
         }
       }
