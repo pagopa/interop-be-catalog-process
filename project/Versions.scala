@@ -9,6 +9,7 @@ object Versions {
   lazy val httpJson4sVersion                  = "1.37.0"
   lazy val akkaManagementVersion              = "1.0.10"
   lazy val json4sVersion                      = "4.0.3"
+  lazy val awsSdkVersion                      = "2.17.42"
   lazy val mustacheVersion                    = "0.9.0"
   lazy val kamonVersion                       = "2.2.0"
   lazy val openapi4jVersion                   = "1.0.7"

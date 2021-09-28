@@ -37,7 +37,7 @@ trait CatalogManagementService {
 
   def getEServiceDocument(
     bearerToken: String
-  )(eServiceId: String, descriptorId: String, documentId: String): Future[File]
+  )(eServiceId: String, descriptorId: String, documentId: String): Future[EServiceDoc]
 
   def updateEServiceDocument(bearerToken: String)(
     eServiceId: String,

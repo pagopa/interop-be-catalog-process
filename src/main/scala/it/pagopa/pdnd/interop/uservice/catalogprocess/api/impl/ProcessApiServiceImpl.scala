@@ -1,6 +1,7 @@
 package it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl
 
 import akka.http.scaladsl.marshalling.ToEntityMarshaller
+import akka.http.scaladsl.model.{ContentType, HttpEntity, MessageEntity}
 import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
@@ -10,17 +11,17 @@ import it.pagopa.pdnd.interop.uservice.catalogmanagement.client
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.ApiError
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.EServiceDescriptorEnums
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.ProcessApiService
-import it.pagopa.pdnd.interop.uservice.catalogprocess.errors.{DescriptorNotFound, NotValidDescriptor}
-import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
-import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{
-  AgreementManagementService,
-  AttributeRegistryManagementService,
-  CatalogManagementService,
-  PartyManagementService
+import it.pagopa.pdnd.interop.uservice.catalogprocess.errors.{
+  ContentTypeParsingError,
+  DescriptorNotFound,
+  NotValidDescriptor
 }
+import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
+import it.pagopa.pdnd.interop.uservice.catalogprocess.service._
 import org.slf4j.{Logger, LoggerFactory}
 
-import java.io.File
+import java.io.{File, FileOutputStream}
+import java.nio.file.{Files, Path}
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
@@ -40,7 +41,8 @@ final case class ProcessApiServiceImpl(
   catalogManagementService: CatalogManagementService,
   partyManagementService: PartyManagementService,
   attributeRegistryManagementService: AttributeRegistryManagementService,
-  agreementManagementService: AgreementManagementService
+  agreementManagementService: AgreementManagementService,
+  fileManager: FileManager
 )(implicit ec: ExecutionContext)
     extends ProcessApiService {
 
@@ -289,14 +291,18 @@ final case class ProcessApiServiceImpl(
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerFile: ToEntityMarshaller[File]
   ): Route = {
-    val result =
+    val result: Future[DocumentDetails] =
       for {
-        bearer   <- tokenFromContext(contexts)
-        response <- catalogManagementService.getEServiceDocument(bearer)(eServiceId, descriptorId, documentId)
-      } yield response
+        bearer      <- tokenFromContext(contexts)
+        document    <- catalogManagementService.getEServiceDocument(bearer)(eServiceId, descriptorId, documentId)
+        contentType <- extractFile(document)
+        response    <- fileManager.get(document.path)
+      } yield DocumentDetails(document.name, contentType, response)
 
     onComplete(result) {
-      case Success(response) => getEServiceDocumentById200(response)
+      case Success(documentDetails) =>
+        val output: MessageEntity = convertToMessageEntity(documentDetails)
+        complete(output)
       case Failure(ex: ApiError[_]) if ex.code == 400 =>
         getEServiceDocumentById400(
           Problem(
@@ -322,6 +328,21 @@ final case class ProcessApiServiceImpl(
           )
         )
     }
+  }
+
+  def convertToMessageEntity(documentDetails: DocumentDetails): MessageEntity = {
+    val randomPath: Path               = Files.createTempDirectory(s"document")
+    val temporaryFilePath: String      = s"${randomPath.toString}/${documentDetails.name}"
+    val file: File                     = new File(temporaryFilePath)
+    val outputStream: FileOutputStream = new FileOutputStream(file)
+    documentDetails.data.writeTo(outputStream)
+    HttpEntity.fromFile(documentDetails.contentType, file)
+  }
+
+  private def extractFile(document: catalogmanagement.client.model.EServiceDoc): Future[ContentType] = {
+    ContentType
+      .parse(document.contentType)
+      .fold(ex => Future.failed(ContentTypeParsingError(document, ex)), Future.successful)
   }
 
   /** Code: 200, Message: A list of flattened E-Services, DataType: Seq[FlatEService]

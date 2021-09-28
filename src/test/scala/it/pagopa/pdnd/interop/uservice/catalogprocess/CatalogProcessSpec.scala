@@ -11,6 +11,7 @@ import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{
   AgreementManagementService,
   AttributeRegistryManagementService,
   CatalogManagementService,
+  FileManager,
   PartyManagementService
 }
 import it.pagopa.pdnd.interop.uservice.{attributeregistrymanagement, catalogmanagement, partymanagement}
@@ -50,7 +51,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
           catalogManagementService = catalogManagementService,
           partyManagementService = partyManagementService,
           attributeRegistryManagementService = attributeRegistryManagementService,
-          agreementManagementService = agreementManagementService
+          agreementManagementService = agreementManagementService,
+          fileManager = fileManager
         ),
         processApiMarshaller,
         wrappingDirective
@@ -286,4 +288,5 @@ object CatalogProcessSpec extends MockFactory {
   val agreementManagementService: AgreementManagementService                 = mock[AgreementManagementService]
   val attributeRegistryManagementService: AttributeRegistryManagementService = mock[AttributeRegistryManagementService]
   val partyManagementService: PartyManagementService                         = mock[PartyManagementService]
+  val fileManager: FileManager                                               = mock[FileManager]
 }

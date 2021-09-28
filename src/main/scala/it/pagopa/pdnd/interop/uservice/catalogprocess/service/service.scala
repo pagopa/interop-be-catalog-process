@@ -1,10 +1,12 @@
 package it.pagopa.pdnd.interop.uservice.catalogprocess
 
 import akka.actor.ActorSystem
-import it.pagopa.pdnd.interop.uservice.agreementmanagement
-import it.pagopa.pdnd.interop.uservice.catalogmanagement
-import it.pagopa.pdnd.interop.uservice.partymanagement
-import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement
+import it.pagopa.pdnd.interop.uservice.{
+  agreementmanagement,
+  attributeregistrymanagement,
+  catalogmanagement,
+  partymanagement
+}
 
 package object service {
   type CatalogManagementInvoker           = catalogmanagement.client.invoker.ApiInvoker

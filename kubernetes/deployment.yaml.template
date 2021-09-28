@@ -57,21 +57,16 @@ spec:
             runAsUser: 1001
             allowPrivilegeEscalation: false
           env:
-            - name: CASSANDRA_HOST
+            - name: AWS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: cassandra
-                  key: CASSANDRA_HOST
-            - name: CASSANDRA_USER
+                  name: aws
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
-                  name: cassandra
-                  key: CASSANDRA_USER
-            - name: CASSANDRA_PWD
-              valueFrom:
-                secretKeyRef:
-                  name: cassandra
-                  key: CASSANDRA_PWD
+                  name: aws
+                  key: AWS_ACCESS_KEY_ID
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
