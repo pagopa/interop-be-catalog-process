@@ -6,7 +6,7 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
 object ApplicationConfiguration {
   lazy val config: Config = ConfigFactory.load()
 
-  def serverPort: Int = 8089 // config.getInt("application.port")
+  def serverPort: Int = config.getInt("application.port")
 
   def catalogManagementUrl: String           = config.getString("services.catalog-management")
   def agreementManagementUrl: String         = config.getString("services.agreement-management")
