@@ -941,7 +941,6 @@ components:
         - id
         - producerId
         - name
-        - callerSubscribed
         - certifiedAttributes
       properties:
         id:
@@ -960,8 +959,9 @@ components:
         descriptorId:
           type: string
         callerSubscribed:
-          type: boolean
-          description: 'true if the operation caller has at least a subscription to this e-service'
+          type: string
+          format: uuid
+          description: 'the identifier of the already existing subscribed agreement'
         certifiedAttributes:
           description: 'contains a flat version of the certified attribute identifiers of this e-service'
           type: array
