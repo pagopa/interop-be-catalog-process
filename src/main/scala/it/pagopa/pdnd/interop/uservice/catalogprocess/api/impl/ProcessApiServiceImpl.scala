@@ -6,6 +6,7 @@ import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
+import it.pagopa.pdnd.interop.uservice.agreementmanagement.client.model.Agreement
 import it.pagopa.pdnd.interop.uservice.catalogmanagement
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.ApiError
@@ -23,7 +24,6 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.{File, FileOutputStream}
 import java.nio.file.{Files, Path}
-import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -363,7 +363,7 @@ final case class ProcessApiServiceImpl(
     val result =
       for {
         bearer                    <- tokenFromContext(contexts)
-        callerSubscribedEservices <- agreementManagementService.getEServiceIdentifiersOfAgreements(bearer)(callerId)
+        callerSubscribedEservices <- agreementManagementService.getAgreementsByConsumerId(bearer)(callerId)
         eservices                 <- retrieveEservices(bearer, producerId, consumerId, status)
         organizationsDetails <- partyManagementService.getBulkOrganizations(
           BulkPartiesSeed(partyIdentifiers = eservices.map(_.producerId))
@@ -558,7 +558,7 @@ final case class ProcessApiServiceImpl(
 
   private def convertToFlattenEservice(
     eservice: client.model.EService,
-    agreementSubscribedEservices: Seq[UUID],
+    agreementSubscribedEservices: Seq[Agreement],
     organizationDetails: BulkOrganizations
   ): Seq[FlatEService] = {
 
@@ -566,12 +566,13 @@ final case class ProcessApiServiceImpl(
       id = eservice.id,
       producerId = eservice.producerId,
       name = eservice.name,
+      //TODO "Unknown" is a temporary flag
       producerName =
         organizationDetails.found.find(_.partyId == eservice.producerId).map(_.description).getOrElse("Unknown"),
       version = None,
       status = None,
       descriptorId = None,
-      callerSubscribed = agreementSubscribedEservices.contains(eservice.id),
+      callerSubscribed = agreementSubscribedEservices.find(agr => agr.eserviceId == eservice.id).map(_.id),
       certifiedAttributes = eservice.attributes.certified.map(toFlatAttribute)
     )
 
