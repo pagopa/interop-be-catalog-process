@@ -6,6 +6,7 @@ import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
+import it.pagopa.pdnd.interop.uservice.agreementmanagement.client.model.Agreement
 import it.pagopa.pdnd.interop.uservice.catalogmanagement
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.ApiError
@@ -22,7 +23,6 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.{File, FileOutputStream}
 import java.nio.file.{Files, Path}
-import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -362,7 +362,7 @@ final case class ProcessApiServiceImpl(
     val result =
       for {
         bearer                    <- tokenFromContext(contexts)
-        callerSubscribedEservices <- agreementManagementService.getEServiceIdentifiersOfAgreements(bearer)(callerId)
+        callerSubscribedEservices <- agreementManagementService.getAgreementsByConsumerId(bearer)(callerId)
         eservices                 <- retrieveEservices(bearer, producerId, consumerId, status)
         flattenServices     = eservices.flatMap(service => convertToFlattenEservice(service, callerSubscribedEservices))
         filteredDescriptors = flattenServices.filter(item => status.forall(item.status.contains))
@@ -552,7 +552,7 @@ final case class ProcessApiServiceImpl(
 
   private def convertToFlattenEservice(
     eservice: client.model.EService,
-    agreementSubscribedEservices: Seq[UUID]
+    agreementSubscribedEservices: Seq[Agreement]
   ): Seq[FlatEService] = {
 
     val flatEServiceZero: FlatEService = FlatEService(
@@ -562,7 +562,7 @@ final case class ProcessApiServiceImpl(
       version = None,
       status = None,
       descriptorId = None,
-      callerSubscribed = agreementSubscribedEservices.contains(eservice.id),
+      callerSubscribed = agreementSubscribedEservices.find(agr => agr.eserviceId == eservice.id).map(_.id),
       certifiedAttributes = eservice.attributes.certified.map(toFlatAttribute)
     )
 
