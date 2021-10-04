@@ -19,6 +19,7 @@ import it.pagopa.pdnd.interop.uservice.catalogprocess.errors.{
 }
 import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service._
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{BulkOrganizations, BulkPartiesSeed}
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.{File, FileOutputStream}
@@ -364,7 +365,12 @@ final case class ProcessApiServiceImpl(
         bearer                    <- tokenFromContext(contexts)
         callerSubscribedEservices <- agreementManagementService.getAgreementsByConsumerId(bearer)(callerId)
         eservices                 <- retrieveEservices(bearer, producerId, consumerId, status)
-        flattenServices     = eservices.flatMap(service => convertToFlattenEservice(service, callerSubscribedEservices))
+        organizationsDetails <- partyManagementService.getBulkOrganizations(
+          BulkPartiesSeed(partyIdentifiers = eservices.map(_.producerId))
+        )
+        flattenServices = eservices.flatMap(service =>
+          convertToFlattenEservice(service, callerSubscribedEservices, organizationsDetails)
+        )
         filteredDescriptors = flattenServices.filter(item => status.forall(item.status.contains))
       } yield filteredDescriptors
 
@@ -552,13 +558,17 @@ final case class ProcessApiServiceImpl(
 
   private def convertToFlattenEservice(
     eservice: client.model.EService,
-    agreementSubscribedEservices: Seq[Agreement]
+    agreementSubscribedEservices: Seq[Agreement],
+    organizationDetails: BulkOrganizations
   ): Seq[FlatEService] = {
 
     val flatEServiceZero: FlatEService = FlatEService(
       id = eservice.id,
       producerId = eservice.producerId,
       name = eservice.name,
+      //TODO "Unknown" is a temporary flag
+      producerName =
+        organizationDetails.found.find(_.partyId == eservice.producerId).map(_.description).getOrElse("Unknown"),
       version = None,
       status = None,
       descriptorId = None,

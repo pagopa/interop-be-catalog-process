@@ -940,6 +940,7 @@ components:
       required:
         - id
         - producerId
+        - producerName
         - name
         - certifiedAttributes
       properties:
@@ -949,6 +950,8 @@ components:
         producerId:
           type: string
           format: uuid
+        producerName:
+          type: string
         name:
           type: string
         version:
