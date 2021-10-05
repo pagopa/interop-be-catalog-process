@@ -3,17 +3,14 @@ package it.pagopa.pdnd.interop.uservice.catalogprocess
 import akka.http.scaladsl.model.{HttpMethods, StatusCodes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client
+import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.{
+  EServiceDescriptorEnums => ManagementDescriptorEnums
+}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl._
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.{HealthApi, ProcessApi, ProcessApiMarshaller}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
 import it.pagopa.pdnd.interop.uservice.catalogprocess.server.Controller
-import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{
-  AgreementManagementService,
-  AttributeRegistryManagementService,
-  CatalogManagementService,
-  FileManager,
-  PartyManagementService
-}
+import it.pagopa.pdnd.interop.uservice.catalogprocess.service._
 import it.pagopa.pdnd.interop.uservice.{attributeregistrymanagement, catalogmanagement, partymanagement}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
@@ -30,6 +27,8 @@ import scala.concurrent.{Await, Future}
     "org.wartremover.warts.NonUnitStatements",
     "org.wartremover.warts.Null",
     "org.wartremover.warts.ToString",
+    "org.wartremover.warts.Nothing",
+    "org.wartremover.warts.StringPlusAny",
     "org.wartremover.warts.Any",
     "org.wartremover.warts.OptionPartial",
     "org.wartremover.warts.Var"
@@ -68,9 +67,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     super.afterAll()
   }
 
-  "Processing a request payload" must {
+  "EService creation" must {
 
-    "create an e-service" in {
+    "succeed" in {
 
       val seed = catalogmanagement.client.model.EServiceSeed(
         producerId = UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824300"),
@@ -277,6 +276,100 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       body shouldBe expected
 
+    }
+  }
+
+  "Descriptor suspension" must {
+    "succeed if descriptor is Published" in {
+      val descriptor   = descriptorStub.copy(status = ManagementDescriptorEnums.Status.Published)
+      val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
+      val eServiceId   = eService.id.toString
+      val descriptorId = descriptor.id.toString
+
+      (catalogManagementService
+        .getEService(_: String)(_: String))
+        .expects(bearerToken, eServiceId)
+        .returning(Future.successful(eService))
+        .once()
+
+      (catalogManagementService
+        .suspendDescriptor(_: String)(_: String, _: String))
+        .expects(bearerToken, eServiceId, descriptorId)
+        .returning(Future.successful(()))
+        .once()
+
+      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/suspend", HttpMethods.POST)
+
+      response.status shouldBe StatusCodes.NoContent
+    }
+
+    "succeed if descriptor is Deprecated" in {
+      val descriptor   = descriptorStub.copy(status = ManagementDescriptorEnums.Status.Deprecated)
+      val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
+      val eServiceId   = eService.id.toString
+      val descriptorId = descriptor.id.toString
+
+      (catalogManagementService
+        .getEService(_: String)(_: String))
+        .expects(bearerToken, eServiceId)
+        .returning(Future.successful(eService))
+        .once()
+
+      (catalogManagementService
+        .suspendDescriptor(_: String)(_: String, _: String))
+        .expects(bearerToken, eServiceId, descriptorId)
+        .returning(Future.successful(()))
+        .once()
+
+      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/suspend", HttpMethods.POST)
+
+      response.status shouldBe StatusCodes.NoContent
+    }
+
+    "fail if descriptor is Draft" in {
+      val descriptor   = descriptorStub.copy(status = ManagementDescriptorEnums.Status.Draft)
+      val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
+      val eServiceId   = eService.id.toString
+      val descriptorId = descriptor.id.toString
+
+      (catalogManagementService
+        .getEService(_: String)(_: String))
+        .expects(bearerToken, eServiceId)
+        .returning(Future.successful(eService))
+        .once()
+
+      (catalogManagementService
+        .suspendDescriptor(_: String)(_: String, _: String))
+        .expects(bearerToken, eServiceId, descriptorId)
+        .returning(Future.successful(()))
+        .once()
+
+      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/suspend", HttpMethods.POST)
+
+      response.status shouldBe StatusCodes.BadRequest
+    }
+
+    "fail if descriptor is Archived" in {
+      val descriptor   = descriptorStub.copy(status = ManagementDescriptorEnums.Status.Archived)
+      val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
+      val eServiceId   = eService.id.toString
+      val descriptorId = descriptor.id.toString
+
+      (catalogManagementService
+        .getEService(_: String)(_: String))
+        .expects(bearerToken, eServiceId)
+        .returning(Future.successful(eService))
+        .once()
+
+      (catalogManagementService
+        .suspendDescriptor(_: String)(_: String, _: String))
+        .expects(bearerToken, eServiceId, descriptorId)
+        .returning(Future.successful(()))
+        .once()
+
+      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/suspend", HttpMethods.POST)
+
+      response.status shouldBe StatusCodes.BadRequest
     }
   }
 }
