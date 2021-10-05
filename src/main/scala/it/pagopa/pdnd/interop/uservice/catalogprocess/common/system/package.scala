@@ -57,6 +57,10 @@ package object system {
     def toFuture: Future[A] = either.fold(e => Future.failed[A](e), a => Future.successful[A](a))
   }
 
+  implicit class OptionOps[A](val option: Option[A]) extends AnyVal {
+    def toFuture(error: Throwable): Future[A] = option.fold(Future.failed[A](error))(a => Future.successful[A](a))
+  }
+
   implicit class StringOps(val str: String) extends AnyVal {
     def parseUUID: Either[Throwable, UUID] = Try { UUID.fromString(str) }.toEither
   }

@@ -12,9 +12,11 @@ import it.pagopa.pdnd.interop.uservice.catalogmanagement.client
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.ApiError
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.EServiceDescriptorEnums
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.ProcessApiService
+import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system.OptionOps
 import it.pagopa.pdnd.interop.uservice.catalogprocess.errors.{
   ContentTypeParsingError,
   DescriptorNotFound,
+  EServiceDescriptorNotFound,
   NotValidDescriptor
 }
 import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
@@ -604,12 +606,20 @@ final case class ProcessApiServiceImpl(
         descriptor.status match {
           case EServiceDescriptorEnums.Status.Draft => Future.successful(descriptor)
           case _ =>
-            Future.failed(
-              NotValidDescriptor(s"Descriptor ${descriptor.id.toString} has status ${descriptor.status.toString}")
-            )
+            Future.failed(NotValidDescriptor(descriptor.id.toString, descriptor.status.toString))
         }
     }
   }
+
+  private def isDeprecatedOrPublishedDescriptor(
+    descriptor: catalogmanagement.client.model.EServiceDescriptor
+  ): Future[catalogmanagement.client.model.EServiceDescriptor] =
+    descriptor.status match {
+      case EServiceDescriptorEnums.Status.Deprecated => Future.successful(descriptor)
+      case EServiceDescriptorEnums.Status.Published  => Future.successful(descriptor)
+      case _ =>
+        Future.failed(NotValidDescriptor(descriptor.id.toString, descriptor.status.toString))
+    }
 
   /** Code: 204, Message: Document deleted.
     * Code: 404, Message: E-Service descriptor document not found, DataType: Problem
@@ -754,6 +764,74 @@ final case class ProcessApiServiceImpl(
       case Success(_) => deleteEService204
       case Failure(ex) =>
         complete(500, Problem(Option(ex.getMessage), 500, s"Error while deleting E-service $eServiceId"))
+    }
+  }
+
+  /** Code: 204, Message: E-Service Descriptor activated
+    * Code: 400, Message: Invalid input, DataType: Problem
+    * Code: 404, Message: Not found, DataType: Problem
+    */
+  override def activateDescriptor(eServiceId: String, descriptorId: String)(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+  ): Route = ???
+
+  /** Code: 204, Message: E-Service Descriptor suspended
+    * Code: 400, Message: Invalid input, DataType: Problem
+    * Code: 404, Message: Not found, DataType: Problem
+    */
+  override def suspendDescriptor(eServiceId: String, descriptorId: String)(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+  ): Route = {
+    val result =
+      for {
+        bearer   <- tokenFromContext(contexts)
+        eService <- catalogManagementService.getEService(bearer)(eServiceId)
+        descriptor <- eService.descriptors
+          .find(_.id.toString == descriptorId)
+          .toFuture(EServiceDescriptorNotFound(eServiceId, descriptorId))
+        _ <- isDeprecatedOrPublishedDescriptor(descriptor)
+        _ <- catalogManagementService.suspendDescriptor(bearer)(eServiceId, descriptorId)
+      } yield ()
+
+    onComplete(result) {
+      case Success(_) => suspendDescriptor204
+      case Failure(ex: NotValidDescriptor) =>
+        suspendDescriptor400(
+          Problem(
+            Option(ex.getMessage),
+            400,
+            s"Error while publishing descriptor $descriptorId for E-Service $eServiceId"
+          )
+        )
+      case Failure(ex: ApiError[_]) if ex.code == 400 =>
+        suspendDescriptor400(
+          Problem(
+            Option(ex.getMessage),
+            400,
+            s"Error while publishing descriptor $descriptorId for E-Service $eServiceId"
+          )
+        )
+      case Failure(ex: ApiError[_]) if ex.code == 404 =>
+        suspendDescriptor404(
+          Problem(
+            Option(ex.getMessage),
+            404,
+            s"Error while publishing descriptor $descriptorId for E-Service $eServiceId"
+          )
+        )
+      case Failure(ex) =>
+        complete(
+          (
+            500,
+            Problem(
+              Option(ex.getMessage),
+              500,
+              s"Unexpected error while publishing descriptor $descriptorId for E-Service $eServiceId"
+            )
+          )
+        )
     }
   }
 }

@@ -354,4 +354,19 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         Future.failed[client.model.EServiceDoc](ex)
       }
   }
+
+  override def suspendDescriptor(bearerToken: String)(eServiceId: String, descriptorId: String): Future[Unit] = {
+    val request: ApiRequest[Unit] =
+      api.suspendDescriptor(eServiceId = eServiceId, descriptorId = descriptorId)(BearerToken(bearerToken))
+    invoker
+      .execute[Unit](request)
+      .map { result =>
+        logger.info(s"Descriptor $descriptorId suspended for E-Services $eServiceId")
+        result.content
+      }
+      .recoverWith { case ex =>
+        logger.error(s"Error while Suspending Descriptor $descriptorId suspended for E-Services $eServiceId")
+        Future.failed[Unit](ex)
+      }
+  }
 }
