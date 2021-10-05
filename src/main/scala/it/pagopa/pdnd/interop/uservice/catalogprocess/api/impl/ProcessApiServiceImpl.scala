@@ -573,8 +573,10 @@ final case class ProcessApiServiceImpl(
       producerId = eservice.producerId,
       name = eservice.name,
       //TODO "Unknown" is a temporary flag
-      producerName =
-        organizationDetails.found.find(_.partyId == eservice.producerId).map(_.description).getOrElse("Unknown"),
+      producerName = organizationDetails.found
+        .find(_.partyId == eservice.producerId.toString)
+        .map(_.description)
+        .getOrElse("Unknown"),
       version = None,
       status = None,
       descriptorId = None,
