@@ -11,11 +11,23 @@ import akka.http.scaladsl.server.directives.{AuthenticationDirective, SecurityDi
 import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system.Authenticator
 import it.pagopa.pdnd.interop.uservice.catalogprocess.server.Controller
 
+import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
+import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.{
+  EService => ManagementEService,
+  EServiceDescriptor => ManagementDescriptor,
+  EServiceDescriptorEnums => ManagementDescriptorEnums,
+  Attributes => ManagementAttributes
+}
 
 @SuppressWarnings(
-  Array("org.wartremover.warts.Any", "org.wartremover.warts.OptionPartial", "org.wartremover.warts.Var")
+  Array(
+    "org.wartremover.warts.Any",
+    "org.wartremover.warts.OptionPartial",
+    "org.wartremover.warts.Nothing",
+    "org.wartremover.warts.Var"
+  )
 )
 abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.config) with SpecConfiguration {
 
@@ -31,6 +43,27 @@ abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.co
 
   val wrappingDirective: AuthenticationDirective[Seq[(String, String)]] =
     SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
+
+  def descriptorStub: ManagementDescriptor = ManagementDescriptor(
+    id = UUID.randomUUID(),
+    version = "1",
+    description = None,
+    audience = Seq.empty,
+    voucherLifespan = 0,
+    interface = None,
+    docs = Seq.empty,
+    status = ManagementDescriptorEnums.Status.Published
+  )
+
+  def eServiceStub: ManagementEService = ManagementEService(
+    id = UUID.randomUUID(),
+    producerId = UUID.randomUUID(),
+    name = "EService1",
+    description = "",
+    technology = "REST",
+    attributes = ManagementAttributes(Seq.empty, Seq.empty, Seq.empty),
+    descriptors = Seq.empty
+  )
 
   def startServer(controller: Controller): Http.ServerBinding = {
     bindServer = Some(

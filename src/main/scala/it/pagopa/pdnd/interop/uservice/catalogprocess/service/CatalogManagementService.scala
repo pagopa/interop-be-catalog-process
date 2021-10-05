@@ -22,6 +22,7 @@ trait CatalogManagementService {
   def archiveDescriptor(bearerToken: String)(eServiceId: String, descriptorId: String): Future[Unit]
   def publishDescriptor(bearerToken: String)(eServiceId: String, descriptorId: String): Future[Unit]
   def draftDescriptor(bearerToken: String)(eServiceId: String, descriptorId: String): Future[Unit]
+  def suspendDescriptor(bearerToken: String)(eServiceId: String, descriptorId: String): Future[Unit]
   def hasNotDraftDescriptor(eService: EService): Future[Boolean]
   def updateDraftDescriptor(
     bearerToken: String
