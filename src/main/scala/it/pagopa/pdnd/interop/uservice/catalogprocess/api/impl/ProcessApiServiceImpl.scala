@@ -10,7 +10,11 @@ import it.pagopa.pdnd.interop.uservice.agreementmanagement.client.model.Agreemen
 import it.pagopa.pdnd.interop.uservice.catalogmanagement
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.ApiError
-import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.EServiceDescriptorEnums
+import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.{
+  EService => ManagementEService,
+  EServiceDescriptor => ManagementDescriptor,
+  EServiceDescriptorEnums
+}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.ProcessApiService
 import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system.OptionOps
 import it.pagopa.pdnd.interop.uservice.catalogprocess.errors.{
@@ -611,12 +615,21 @@ final case class ProcessApiServiceImpl(
     }
   }
 
-  private def isDeprecatedOrPublishedDescriptor(
+  private def descriptorCanBeSuspended(
     descriptor: catalogmanagement.client.model.EServiceDescriptor
   ): Future[catalogmanagement.client.model.EServiceDescriptor] =
     descriptor.status match {
       case EServiceDescriptorEnums.Status.Deprecated => Future.successful(descriptor)
       case EServiceDescriptorEnums.Status.Published  => Future.successful(descriptor)
+      case _ =>
+        Future.failed(NotValidDescriptor(descriptor.id.toString, descriptor.status.toString))
+    }
+
+  private def descriptorCanBeActivated(
+    descriptor: catalogmanagement.client.model.EServiceDescriptor
+  ): Future[catalogmanagement.client.model.EServiceDescriptor] =
+    descriptor.status match {
+      case EServiceDescriptorEnums.Status.Suspended => Future.successful(descriptor)
       case _ =>
         Future.failed(NotValidDescriptor(descriptor.id.toString, descriptor.status.toString))
     }
@@ -774,7 +787,80 @@ final case class ProcessApiServiceImpl(
   override def activateDescriptor(eServiceId: String, descriptorId: String)(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
-  ): Route = ???
+  ): Route = {
+    def activateDescriptor(
+      bearer: String
+    )(eService: ManagementEService, descriptor: ManagementDescriptor): Future[Unit] = {
+      val validStatus = Seq(
+        EServiceDescriptorEnums.Status.Suspended,
+        EServiceDescriptorEnums.Status.Deprecated,
+        EServiceDescriptorEnums.Status.Published
+      )
+      val mostRecentValidVersion =
+        eService.descriptors
+          .filter(d => validStatus.contains(d.status))
+          .map(_.version.toInt)
+          .sorted(Ordering.Int.reverse)
+          .headOption
+
+      mostRecentValidVersion match {
+        case Some(version) if version == descriptor.version.toInt =>
+          catalogManagementService.publishDescriptor(bearer)(eServiceId, descriptorId)
+        case _ =>
+          catalogManagementService.deprecateDescriptor(bearer)(eServiceId, descriptorId)
+      }
+    }
+
+    val result =
+      for {
+        bearer   <- tokenFromContext(contexts)
+        eService <- catalogManagementService.getEService(bearer)(eServiceId)
+        descriptor <- eService.descriptors
+          .find(_.id.toString == descriptorId)
+          .toFuture(EServiceDescriptorNotFound(eServiceId, descriptorId))
+        _ <- descriptorCanBeActivated(descriptor)
+        _ <- activateDescriptor(bearer)(eService, descriptor)
+      } yield ()
+
+    onComplete(result) {
+      case Success(_) => activateDescriptor204
+      case Failure(ex: NotValidDescriptor) =>
+        activateDescriptor400(
+          Problem(
+            Option(ex.getMessage),
+            400,
+            s"Error while activating descriptor $descriptorId for E-Service $eServiceId"
+          )
+        )
+      case Failure(ex: ApiError[_]) if ex.code == 400 =>
+        activateDescriptor400(
+          Problem(
+            Option(ex.getMessage),
+            400,
+            s"Error while activating descriptor $descriptorId for E-Service $eServiceId"
+          )
+        )
+      case Failure(ex: ApiError[_]) if ex.code == 404 =>
+        activateDescriptor404(
+          Problem(
+            Option(ex.getMessage),
+            404,
+            s"Error while activating descriptor $descriptorId for E-Service $eServiceId"
+          )
+        )
+      case Failure(ex) =>
+        complete(
+          (
+            500,
+            Problem(
+              Option(ex.getMessage),
+              500,
+              s"Unexpected error while activating descriptor $descriptorId for E-Service $eServiceId"
+            )
+          )
+        )
+    }
+  }
 
   /** Code: 204, Message: E-Service Descriptor suspended
     * Code: 400, Message: Invalid input, DataType: Problem
@@ -791,7 +877,7 @@ final case class ProcessApiServiceImpl(
         descriptor <- eService.descriptors
           .find(_.id.toString == descriptorId)
           .toFuture(EServiceDescriptorNotFound(eServiceId, descriptorId))
-        _ <- isDeprecatedOrPublishedDescriptor(descriptor)
+        _ <- descriptorCanBeSuspended(descriptor)
         _ <- catalogManagementService.suspendDescriptor(bearer)(eServiceId, descriptorId)
       } yield ()
 
@@ -802,7 +888,7 @@ final case class ProcessApiServiceImpl(
           Problem(
             Option(ex.getMessage),
             400,
-            s"Error while publishing descriptor $descriptorId for E-Service $eServiceId"
+            s"Error while suspending descriptor $descriptorId for E-Service $eServiceId"
           )
         )
       case Failure(ex: ApiError[_]) if ex.code == 400 =>
@@ -810,7 +896,7 @@ final case class ProcessApiServiceImpl(
           Problem(
             Option(ex.getMessage),
             400,
-            s"Error while publishing descriptor $descriptorId for E-Service $eServiceId"
+            s"Error while suspending descriptor $descriptorId for E-Service $eServiceId"
           )
         )
       case Failure(ex: ApiError[_]) if ex.code == 404 =>
@@ -818,7 +904,7 @@ final case class ProcessApiServiceImpl(
           Problem(
             Option(ex.getMessage),
             404,
-            s"Error while publishing descriptor $descriptorId for E-Service $eServiceId"
+            s"Error while suspending descriptor $descriptorId for E-Service $eServiceId"
           )
         )
       case Failure(ex) =>
@@ -828,7 +914,7 @@ final case class ProcessApiServiceImpl(
             Problem(
               Option(ex.getMessage),
               500,
-              s"Unexpected error while publishing descriptor $descriptorId for E-Service $eServiceId"
+              s"Unexpected error while suspending descriptor $descriptorId for E-Service $eServiceId"
             )
           )
         )

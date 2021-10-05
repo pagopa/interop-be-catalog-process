@@ -372,6 +372,215 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       response.status shouldBe StatusCodes.BadRequest
     }
   }
+
+  "Descriptor activation" must {
+    val eService1 = eServiceStub.copy(descriptors =
+      Seq(
+        descriptorStub.copy(version = "1", status = ManagementDescriptorEnums.Status.Archived),
+        descriptorStub.copy(version = "2", status = ManagementDescriptorEnums.Status.Deprecated),
+        descriptorStub.copy(version = "3", status = ManagementDescriptorEnums.Status.Suspended),
+        descriptorStub.copy(version = "4", status = ManagementDescriptorEnums.Status.Suspended),
+        descriptorStub.copy(version = "5", status = ManagementDescriptorEnums.Status.Draft)
+      )
+    )
+    val eService2 = eServiceStub.copy(descriptors =
+      Seq(
+        descriptorStub.copy(version = "1", status = ManagementDescriptorEnums.Status.Archived),
+        descriptorStub.copy(version = "2", status = ManagementDescriptorEnums.Status.Deprecated),
+        descriptorStub.copy(version = "3", status = ManagementDescriptorEnums.Status.Suspended),
+        descriptorStub.copy(version = "4", status = ManagementDescriptorEnums.Status.Published),
+        descriptorStub.copy(version = "5", status = ManagementDescriptorEnums.Status.Draft)
+      )
+    )
+    val eService3 = eServiceStub.copy(descriptors =
+      Seq(
+        descriptorStub.copy(version = "1", status = ManagementDescriptorEnums.Status.Archived),
+        descriptorStub.copy(version = "2", status = ManagementDescriptorEnums.Status.Suspended),
+        descriptorStub.copy(version = "3", status = ManagementDescriptorEnums.Status.Suspended)
+      )
+    )
+
+    "activate Deprecated descriptor - case 1" in {
+      val eService     = eService1
+      val eServiceId   = eService.id.toString
+      val descriptorId = eService.descriptors.find(_.version == "3").get.id.toString
+
+      (catalogManagementService
+        .getEService(_: String)(_: String))
+        .expects(bearerToken, eServiceId)
+        .returning(Future.successful(eService))
+        .once()
+
+      (catalogManagementService
+        .deprecateDescriptor(_: String)(_: String, _: String))
+        .expects(bearerToken, eServiceId, descriptorId)
+        .returning(Future.successful(()))
+        .once()
+
+      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/activate", HttpMethods.POST)
+
+      response.status shouldBe StatusCodes.NoContent
+    }
+
+    "activate Deprecated descriptor - case 2" in {
+      val eService     = eService2
+      val eServiceId   = eService.id.toString
+      val descriptorId = eService.descriptors.find(_.version == "3").get.id.toString
+
+      (catalogManagementService
+        .getEService(_: String)(_: String))
+        .expects(bearerToken, eServiceId)
+        .returning(Future.successful(eService))
+        .once()
+
+      (catalogManagementService
+        .deprecateDescriptor(_: String)(_: String, _: String))
+        .expects(bearerToken, eServiceId, descriptorId)
+        .returning(Future.successful(()))
+        .once()
+
+      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/activate", HttpMethods.POST)
+
+      response.status shouldBe StatusCodes.NoContent
+    }
+
+    "activate Published descriptor - case 1" in {
+      val eService     = eService1
+      val eServiceId   = eService.id.toString
+      val descriptorId = eService.descriptors.find(_.version == "4").get.id.toString
+
+      (catalogManagementService
+        .getEService(_: String)(_: String))
+        .expects(bearerToken, eServiceId)
+        .returning(Future.successful(eService))
+        .once()
+
+      (catalogManagementService
+        .publishDescriptor(_: String)(_: String, _: String))
+        .expects(bearerToken, eServiceId, descriptorId)
+        .returning(Future.successful(()))
+        .once()
+
+      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/activate", HttpMethods.POST)
+
+      response.status shouldBe StatusCodes.NoContent
+    }
+
+    "activate Published descriptor - case 2" in {
+      val eService     = eService3
+      val eServiceId   = eService.id.toString
+      val descriptorId = eService.descriptors.find(_.version == "3").get.id.toString
+
+      (catalogManagementService
+        .getEService(_: String)(_: String))
+        .expects(bearerToken, eServiceId)
+        .returning(Future.successful(eService))
+        .once()
+
+      (catalogManagementService
+        .publishDescriptor(_: String)(_: String, _: String))
+        .expects(bearerToken, eServiceId, descriptorId)
+        .returning(Future.successful(()))
+        .once()
+
+      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/activate", HttpMethods.POST)
+
+      response.status shouldBe StatusCodes.NoContent
+    }
+
+    "fail if descriptor is Draft" in {
+      val descriptor   = descriptorStub.copy(status = ManagementDescriptorEnums.Status.Draft)
+      val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
+      val eServiceId   = eService.id.toString
+      val descriptorId = descriptor.id.toString
+
+      (catalogManagementService
+        .getEService(_: String)(_: String))
+        .expects(bearerToken, eServiceId)
+        .returning(Future.successful(eService))
+        .once()
+
+      (catalogManagementService
+        .suspendDescriptor(_: String)(_: String, _: String))
+        .expects(bearerToken, eServiceId, descriptorId)
+        .returning(Future.successful(()))
+        .once()
+
+      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/activate", HttpMethods.POST)
+
+      response.status shouldBe StatusCodes.BadRequest
+    }
+
+    "fail if descriptor is Deprecated" in {
+      val descriptor   = descriptorStub.copy(status = ManagementDescriptorEnums.Status.Deprecated)
+      val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
+      val eServiceId   = eService.id.toString
+      val descriptorId = descriptor.id.toString
+
+      (catalogManagementService
+        .getEService(_: String)(_: String))
+        .expects(bearerToken, eServiceId)
+        .returning(Future.successful(eService))
+        .once()
+
+      (catalogManagementService
+        .suspendDescriptor(_: String)(_: String, _: String))
+        .expects(bearerToken, eServiceId, descriptorId)
+        .returning(Future.successful(()))
+        .once()
+
+      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/activate", HttpMethods.POST)
+
+      response.status shouldBe StatusCodes.BadRequest
+    }
+
+    "fail if descriptor is Published" in {
+      val descriptor   = descriptorStub.copy(status = ManagementDescriptorEnums.Status.Published)
+      val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
+      val eServiceId   = eService.id.toString
+      val descriptorId = descriptor.id.toString
+
+      (catalogManagementService
+        .getEService(_: String)(_: String))
+        .expects(bearerToken, eServiceId)
+        .returning(Future.successful(eService))
+        .once()
+
+      (catalogManagementService
+        .suspendDescriptor(_: String)(_: String, _: String))
+        .expects(bearerToken, eServiceId, descriptorId)
+        .returning(Future.successful(()))
+        .once()
+
+      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/activate", HttpMethods.POST)
+
+      response.status shouldBe StatusCodes.BadRequest
+    }
+
+    "fail if descriptor is Archived" in {
+      val descriptor   = descriptorStub.copy(status = ManagementDescriptorEnums.Status.Archived)
+      val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
+      val eServiceId   = eService.id.toString
+      val descriptorId = descriptor.id.toString
+
+      (catalogManagementService
+        .getEService(_: String)(_: String))
+        .expects(bearerToken, eServiceId)
+        .returning(Future.successful(eService))
+        .once()
+
+      (catalogManagementService
+        .suspendDescriptor(_: String)(_: String, _: String))
+        .expects(bearerToken, eServiceId, descriptorId)
+        .returning(Future.successful(()))
+        .once()
+
+      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/activate", HttpMethods.POST)
+
+      response.status shouldBe StatusCodes.BadRequest
+    }
+  }
+
 }
 
 @SuppressWarnings(Array("org.wartremover.warts.Null", "org.wartremover.warts.ImplicitParameter"))
