@@ -359,7 +359,8 @@ final case class ProcessApiServiceImpl(
     callerId: String,
     producerId: Option[String],
     consumerId: Option[String],
-    status: Option[String]
+    status: Option[String],
+    latestPublishedOnly: Option[Boolean]
   )(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerFlatEServicearray: ToEntityMarshaller[Seq[FlatEService]],
@@ -370,7 +371,8 @@ final case class ProcessApiServiceImpl(
       for {
         bearer                    <- tokenFromContext(contexts)
         callerSubscribedEservices <- agreementManagementService.getAgreementsByConsumerId(bearer)(callerId)
-        eservices                 <- retrieveEservices(bearer, producerId, consumerId, status)
+        retrievedEservices        <- retrieveEservices(bearer, producerId, consumerId, status)
+        eservices                 <- processEservicesWithLatestFilter(retrievedEservices, latestPublishedOnly)
         organizationsDetails <- partyManagementService.getBulkOrganizations(
           BulkPartiesSeed(partyIdentifiers = eservices.map(_.producerId))
         )
@@ -387,6 +389,30 @@ final case class ProcessApiServiceImpl(
           Problem(Option(ex.getMessage), 500, s"Unexpected error while retrieving flatted E-Services")
         )
     }
+  }
+
+  private def processEservicesWithLatestFilter(
+    eservices: Seq[catalogmanagement.client.model.EService],
+    latestOnly: Option[Boolean]
+  ): Future[Seq[catalogmanagement.client.model.EService]] = {
+    latestOnly match {
+      case Some(true) =>
+        Future.successful(eservices.map(eservice => {
+          val latestDescriptor =
+            eservice.descriptors
+              .filter(d =>
+                d.status == EServiceDescriptorEnums.Status.Published || d.status == EServiceDescriptorEnums.Status.Suspended
+              )
+              .sortWith((ver1, ver2) => Ordering[Option[Long]].gt(ver1.version.toLongOption, ver2.version.toLongOption))
+              .headOption
+
+          eservice.copy(descriptors =
+            latestDescriptor.fold(Seq.empty[catalogmanagement.client.model.EServiceDescriptor])(latest => Seq(latest))
+          )
+        }))
+      case _ => Future.successful(eservices)
+    }
+
   }
 
   /** Code: 200, Message: EService Descriptor created., DataType: EServiceDescriptor
