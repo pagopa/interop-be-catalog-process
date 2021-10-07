@@ -397,21 +397,19 @@ final case class ProcessApiServiceImpl(
   ): Future[Seq[catalogmanagement.client.model.EService]] = {
     latestOnly match {
       case Some(true) =>
-        Future.successful(
-          eservices.map(eservice =>
-            eservice.copy(descriptors =
-              eservice.descriptors
-                .filter(d =>
-                  d.status == EServiceDescriptorEnums.Status.Published || d.status == EServiceDescriptorEnums.Status.Suspended
-                )
-                .sortWith((ver1, ver2) =>
-                  Ordering[Option[Long]].gt(ver1.version.toLongOption, ver2.version.toLongOption)
-                )
-                .headOption
-                .fold(Seq.empty[catalogmanagement.client.model.EServiceDescriptor])(latest => Seq(latest))
-            )
+        Future.successful(eservices.map(eservice => {
+          val latestDescriptor =
+            eservice.descriptors
+              .filter(d =>
+                d.status == EServiceDescriptorEnums.Status.Published || d.status == EServiceDescriptorEnums.Status.Suspended
+              )
+              .sortWith((ver1, ver2) => Ordering[Option[Long]].gt(ver1.version.toLongOption, ver2.version.toLongOption))
+              .headOption
+
+          eservice.copy(descriptors =
+            latestDescriptor.fold(Seq.empty[catalogmanagement.client.model.EServiceDescriptor])(latest => Seq(latest))
           )
-        )
+        }))
       case _ => Future.successful(eservices)
     }
 
