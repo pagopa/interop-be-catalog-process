@@ -117,7 +117,11 @@ paths:
           name: status
           schema:
             type: string
-            enum: [ draft, published, deprecated, archived ]
+            enum: [ draft, suspended, published, deprecated, archived ]
+        - in: query
+          name: latestPublishedOnly
+          schema:
+            type: boolean
       responses:
         "200":
           description: A list of flattened E-Services
