@@ -56,7 +56,6 @@ pipeline {
       environment {
         DOCKER_REPO = 'gateway.interop.pdnd.dev'
         AWS_SECRET_ACCESS = credentials('jenkins-aws')
-        DESTINATION_MAIL = credentials('destination-mail')
         //REPLICAS_NR = 1
       }
       steps {
