@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Catalog Process Micro Service
   description: This service is the catalog process
-  version: '0.0.1'
+  version: '{{version}}'
   contact:
     name: API Support
     url: http://www.example.com/support
@@ -11,8 +11,8 @@ info:
   x-api-id: an x-api-id
   x-summary: an x-summary
 servers:
-  - url: https://gateway.interop.pdnd.dev/pdnd-interop-uservice-catalog-process/0.0
-#  - url: http://localhost:8088/pdnd-interop-uservice-catalog-process/0.0
+  - url: 'https://gateway.interop.pdnd.dev/pdnd-interop-uservice-catalog-process/{{version}}'
+#  - url: 'http://localhost:8088/pdnd-interop-uservice-catalog-process/{{version}}'
     description: This service is the catalog process
 security:
   - bearerAuth: [ ]

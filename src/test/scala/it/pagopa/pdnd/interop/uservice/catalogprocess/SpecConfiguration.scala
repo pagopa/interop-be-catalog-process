@@ -11,9 +11,9 @@ trait SpecConfiguration {
   System.setProperty("AWS_SECRET_ACCESS_KEY", "bar")
 
   val config: Config = ConfigFactory
-    .parseResourcesAnySyntax("test")
+    .parseResourcesAnySyntax("application-test")
 
-  def serviceURL: String = config.getString("application.url")
+  def serviceURL: String = s"${config.getString("application.url")}/${buildinfo.BuildInfo.interfaceVersion}"
   def servicePort: Int   = config.getInt("application.port")
 }
 
