@@ -56,7 +56,7 @@ pipeline {
       environment {
         DOCKER_REPO = 'gateway.interop.pdnd.dev'
         AWS_SECRET_ACCESS = credentials('jenkins-aws')
-        //REPLICAS_NR = 1
+        REPLICAS_NR = 3
       }
       steps {
         container('sbt-container') {
