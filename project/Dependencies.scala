@@ -10,8 +10,8 @@ object Dependencies {
     lazy val stream     = namespace                       %% "akka-stream"              % akkaVersion
     lazy val http       = namespace                       %% "akka-http"                % akkaHttpVersion
     lazy val httpJson   = namespace                       %% "akka-http-spray-json"     % akkaHttpVersion
-    lazy val httpJson4s = "de.heikoseeberger"             %% "akka-http-json4s"         % "1.37.0"
-    lazy val management = "com.lightbend.akka.management" %% "akka-management"          % "1.1.1"
+    lazy val httpJson4s = "de.heikoseeberger"             %% "akka-http-json4s"         % akkaHttpJson4sVersion
+    lazy val management = "com.lightbend.akka.management" %% "akka-management"          % akkaManagementVersion
     lazy val slf4j      = namespace                       %% "akka-slf4j"               % akkaVersion
     lazy val testkit    = namespace                       %% "akka-actor-testkit-typed" % akkaVersion
   }
@@ -56,7 +56,8 @@ object Dependencies {
   }
 
   private[this] object mustache {
-    lazy val mustache = "com.github.spullara.mustache.java" % "compiler" % mustacheVersion
+    lazy val namespace = "com.github.spullara.mustache.java"
+    lazy val compiler  = namespace % "compiler" % mustacheVersion
   }
 
   private[this] object kamon {
@@ -117,7 +118,7 @@ object Dependencies {
       cats.core                                % Compile,
       awssdk.s3                                % Compile,
       commons.fileUpload                       % Compile,
-      mustache.mustache                        % Compile,
+      mustache.compiler                        % Compile,
       logback.classic                          % Compile,
       akka.slf4j                               % Compile,
       openapi4j.operationValidator             % Compile,
