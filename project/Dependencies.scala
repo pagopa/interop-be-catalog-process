@@ -96,7 +96,7 @@ object Dependencies {
       namespace %% "pdnd-interop-uservice-agreement-management-client" % agreementManagementClientVersion
 
     lazy val partyManagementClient =
-      namespace %% "pdnd-interop-uservice-party-management-client" % agreementManagementClientVersion
+      namespace %% "pdnd-interop-uservice-party-management-client" % partyManagementClientVersion
 
     lazy val attributeRegistryManagementClient =
       namespace %% "pdnd-interop-uservice-attribute-registry-management-client" % attributeRegistryManagementVersion
