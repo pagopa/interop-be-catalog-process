@@ -600,7 +600,7 @@ final case class ProcessApiServiceImpl(
       name = eservice.name,
       //TODO "Unknown" is a temporary flag
       producerName = organizationDetails.found
-        .find(_.partyId == eservice.producerId.toString)
+        .find(_.id == eservice.producerId)
         .map(_.description)
         .getOrElse("Unknown"),
       version = None,
