@@ -129,10 +129,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val organization = partymanagement.client.model.Organization(
         institutionId = "institutionId",
         description = "organization description",
-        managerName = "managerName",
-        managerSurname = "managerSurname",
         digitalAddress = "digitalAddress",
-        partyId = seed.producerId.toString,
+        id = seed.producerId,
         attributes = Seq.empty[String]
       )
 
@@ -220,7 +218,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       val expected = EService(
         id = UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824301"),
-        producer = Organization(id = UUID.fromString(organization.partyId), name = organization.description),
+        producer = Organization(id = organization.id, name = organization.description),
         name = seed.name,
         description = seed.description,
         technology = seed.technology.toString,
