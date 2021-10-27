@@ -13,7 +13,6 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
     extends PartyManagementService {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  @SuppressWarnings(Array("org.wartremover.warts.ImplicitParameter"))
   override def getOrganization(id: UUID): Future[Organization] = {
     val request = api.getPartyOrganizationByUUID(id)
     invoker

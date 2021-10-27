@@ -13,7 +13,6 @@ final case class AgreementManagementServiceImpl(invoker: AgreementManagementInvo
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  @SuppressWarnings(Array("org.wartremover.warts.ImplicitParameter"))
   override def getAgreements(
     bearerToken: String,
     consumerId: Option[String],
@@ -29,7 +28,9 @@ final case class AgreementManagementServiceImpl(invoker: AgreementManagementInvo
         result.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Error trying to get agreements for consumer ${consumerId.getOrElse("Unknown")}. Error: ${ex.getMessage}")
+        logger.error(
+          s"Error trying to get agreements for consumer ${consumerId.getOrElse("Unknown")}. Error: ${ex.getMessage}"
+        )
         Future.failed[Seq[Agreement]](ex)
       }
 

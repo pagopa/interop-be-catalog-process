@@ -12,7 +12,6 @@ import it.pagopa.pdnd.interop.uservice.{attributeregistrymanagement, catalogmana
 import scala.concurrent.Future
 import scala.util.{Failure, Try}
 
-@SuppressWarnings(Array("org.wartremover.warts.ToString"))
 object Converter {
 
   private final case class AttributeDetails(name: String, description: String)

@@ -78,14 +78,6 @@ trait FileManagerAPI {
   val fileManager: FileManager = S3ManagerImpl(s3Client)
 }
 
-@SuppressWarnings(
-  Array(
-    "org.wartremover.warts.StringPlusAny",
-    "org.wartremover.warts.Nothing",
-    "org.wartremover.warts.ImplicitConversion",
-    "org.wartremover.warts.NonUnitStatements"
-  )
-)
 object Main
     extends App
     with CorsSupport

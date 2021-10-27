@@ -22,18 +22,6 @@ import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-@SuppressWarnings(
-  Array(
-    "org.wartremover.warts.NonUnitStatements",
-    "org.wartremover.warts.Null",
-    "org.wartremover.warts.ToString",
-    "org.wartremover.warts.Nothing",
-    "org.wartremover.warts.StringPlusAny",
-    "org.wartremover.warts.Any",
-    "org.wartremover.warts.OptionPartial",
-    "org.wartremover.warts.Var"
-  )
-)
 class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndAfterAll with MockFactory {
 
   import CatalogProcessSpec._
@@ -583,7 +571,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
 }
 
-@SuppressWarnings(Array("org.wartremover.warts.Null", "org.wartremover.warts.ImplicitParameter"))
 object CatalogProcessSpec extends MockFactory {
   val mockHealthApi: HealthApi                                               = mock[HealthApi]
   val catalogManagementService: CatalogManagementService                     = mock[CatalogManagementService]

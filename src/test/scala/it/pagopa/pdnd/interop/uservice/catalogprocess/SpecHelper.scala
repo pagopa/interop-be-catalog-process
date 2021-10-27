@@ -21,14 +21,6 @@ import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.{
   Attributes => ManagementAttributes
 }
 
-@SuppressWarnings(
-  Array(
-    "org.wartremover.warts.Any",
-    "org.wartremover.warts.OptionPartial",
-    "org.wartremover.warts.Nothing",
-    "org.wartremover.warts.Var"
-  )
-)
 abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.config) with SpecConfiguration {
 
   var bindServer: Option[Future[Http.ServerBinding]] = None
@@ -82,13 +74,6 @@ abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.co
     println("Resources cleaned")
   }
 
-  @SuppressWarnings(
-    Array(
-      "org.wartremover.warts.DefaultArguments",
-      "org.wartremover.warts.ImplicitParameter",
-      "org.wartremover.warts.JavaSerializable"
-    )
-  )
   def request(path: String, verb: HttpMethod, data: Option[String] = None): HttpResponse = {
     val entity: RequestEntity = data match {
       case Some(d) => HttpEntity(ContentTypes.`application/json`, d)
