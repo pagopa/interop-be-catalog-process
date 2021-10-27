@@ -4,7 +4,6 @@ import com.typesafe.config.{Config, ConfigFactory}
 
 /** Selfless trait containing base test configuration for Akka Cluster Setup
   */
-@SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements"))
 trait SpecConfiguration {
 
   System.setProperty("AWS_ACCESS_KEY_ID", "foo")

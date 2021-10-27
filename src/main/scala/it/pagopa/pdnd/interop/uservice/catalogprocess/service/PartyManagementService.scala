@@ -6,7 +6,6 @@ import java.util.UUID
 import scala.concurrent.Future
 
 trait PartyManagementService {
-  @SuppressWarnings(Array("org.wartremover.warts.ImplicitParameter"))
   def getOrganization(id: UUID): Future[Organization]
   def getBulkOrganizations(identifiers: BulkPartiesSeed): Future[BulkOrganizations]
 }

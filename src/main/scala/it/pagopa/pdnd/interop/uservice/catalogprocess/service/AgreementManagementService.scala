@@ -4,7 +4,6 @@ import it.pagopa.pdnd.interop.uservice.agreementmanagement.client.model.Agreemen
 
 import scala.concurrent.{ExecutionContext, Future}
 
-@SuppressWarnings(Array("org.wartremover.warts.ImplicitParameter"))
 trait AgreementManagementService {
   def getAgreements(
     bearerToken: String,

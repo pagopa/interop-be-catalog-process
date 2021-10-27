@@ -33,17 +33,6 @@ import java.nio.file.{Files, Path}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-@SuppressWarnings(
-  Array(
-    "org.wartremover.warts.ImplicitParameter",
-    "org.wartremover.warts.Any",
-    "org.wartremover.warts.Equals",
-    "org.wartremover.warts.Nothing",
-    "org.wartremover.warts.ToString",
-    "org.wartremover.warts.Option2Iterable",
-    "org.wartremover.warts.Recursion"
-  )
-)
 final case class ProcessApiServiceImpl(
   catalogManagementService: CatalogManagementService,
   partyManagementService: PartyManagementService,

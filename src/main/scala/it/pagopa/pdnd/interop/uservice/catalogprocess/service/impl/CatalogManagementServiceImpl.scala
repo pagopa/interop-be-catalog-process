@@ -13,15 +13,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import java.io.File
 import scala.concurrent.Future
 
-@SuppressWarnings(
-  Array(
-    "org.wartremover.warts.ImplicitParameter",
-    "org.wartremover.warts.StringPlusAny",
-    "org.wartremover.warts.Any",
-    "org.wartremover.warts.Nothing",
-    "org.wartremover.warts.Equals"
-  )
-)
 final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker, api: EServiceApi)
     extends CatalogManagementService {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
