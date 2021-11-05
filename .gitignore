@@ -10,3 +10,5 @@ metals.sbt
 .openapi-generator
 .DS_Store
 client/project/build.properties
+generated/src/
+client/src/
