@@ -48,7 +48,7 @@ paths:
         - in: query
           name: status
           schema:
-            $ref: '#/components/schemas/EServiceTechnologyEnum'
+            $ref: '#/components/schemas/EServiceDescriptorStatusEnum'
       responses:
         "200":
           description: A list of E-Service
