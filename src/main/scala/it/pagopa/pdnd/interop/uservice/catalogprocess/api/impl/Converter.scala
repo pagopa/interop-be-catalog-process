@@ -1,16 +1,10 @@
 package it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl
 
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client
-import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.{
-  EServiceSeedEnums,
-  UpdateEServiceDescriptorSeedEnums,
-  UpdateEServiceSeedEnums
-}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
 import it.pagopa.pdnd.interop.uservice.{attributeregistrymanagement, catalogmanagement, partymanagement}
 
 import scala.concurrent.Future
-import scala.util.{Failure, Try}
 
 @SuppressWarnings(Array("org.wartremover.warts.ToString"))
 object Converter {
@@ -27,7 +21,7 @@ object Converter {
       producer = Organization(id = eservice.producerId, name = organization.description),
       name = eservice.name,
       description = eservice.description,
-      technology = eservice.technology,
+      technology = convertToApiTechnology(eservice.technology),
       attributes = convertToApiAttributes(eservice.attributes, attributes),
       descriptors = eservice.descriptors.map(convertToApiDescriptor)
     )
@@ -39,7 +33,7 @@ object Converter {
       description = descriptor.description,
       interface = descriptor.interface.map(convertToApiEserviceDoc),
       docs = descriptor.docs.map(convertToApiEserviceDoc),
-      status = descriptor.status.toString,
+      status = convertToApiDescriptorStatus(descriptor.status),
       audience = descriptor.audience,
       voucherLifespan = descriptor.voucherLifespan
     )
@@ -92,31 +86,14 @@ object Converter {
       explicitAttributeVerification = value.explicitAttributeVerification
     )
 
-  def convertToClientEServiceSeed(eServiceSeed: EServiceSeed): Future[client.model.EServiceSeed] = {
-    val converted: Try[EServiceSeedEnums.Technology.Value] = Try(
-      EServiceSeedEnums.Technology.withName(eServiceSeed.technology)
+  def convertToClientEServiceSeed(eServiceSeed: EServiceSeed): client.model.EServiceSeed =
+    client.model.EServiceSeed(
+      producerId = eServiceSeed.producerId,
+      name = eServiceSeed.name,
+      description = eServiceSeed.description,
+      technology = convertFromApiTechnology(eServiceSeed.technology),
+      attributes = convertToCatalogClientAttributes(eServiceSeed.attributes)
     )
-    Future.fromTry {
-      converted
-        .map(seedTechnology =>
-          client.model.EServiceSeed(
-            producerId = eServiceSeed.producerId,
-            name = eServiceSeed.name,
-            description = eServiceSeed.description,
-            technology = seedTechnology,
-            attributes = convertToCatalogClientAttributes(eServiceSeed.attributes)
-          )
-        )
-        .recoverWith { _ =>
-          Failure[client.model.EServiceSeed](
-            new RuntimeException(
-              s"Unknown Technology ${eServiceSeed.technology}. Allowed values: [${UpdateEServiceSeedEnums.Technology.values.map(_.toString).mkString(",")}]"
-            )
-          )
-        }
-    }
-
-  }
 
   def convertToClientEServiceDescriptorSeed(
     descriptor: EServiceDescriptorSeed
@@ -130,32 +107,13 @@ object Converter {
     )
   }
 
-  def convertToClientUpdateEServiceSeed(eServiceSeed: UpdateEServiceSeed): Future[client.model.UpdateEServiceSeed] = {
-
-    val converted: Try[UpdateEServiceSeedEnums.Technology.Value] = Try(
-      UpdateEServiceSeedEnums.Technology.withName(eServiceSeed.technology)
+  def convertToClientUpdateEServiceSeed(eServiceSeed: UpdateEServiceSeed): client.model.UpdateEServiceSeed =
+    client.model.UpdateEServiceSeed(
+      name = eServiceSeed.name,
+      description = eServiceSeed.description,
+      technology = convertFromApiTechnology(eServiceSeed.technology),
+      attributes = convertToCatalogClientAttributes(eServiceSeed.attributes)
     )
-
-    Future.fromTry {
-      converted
-        .map(seedTechnology =>
-          client.model.UpdateEServiceSeed(
-            name = eServiceSeed.name,
-            description = eServiceSeed.description,
-            technology = seedTechnology,
-            attributes = convertToCatalogClientAttributes(eServiceSeed.attributes)
-          )
-        )
-        .recoverWith { _ =>
-          Failure[client.model.UpdateEServiceSeed](
-            new RuntimeException(
-              s"Unknown Technology ${eServiceSeed.technology}. Allowed values: [${UpdateEServiceSeedEnums.Technology.values.map(_.toString).mkString(",")}]"
-            )
-          )
-        }
-    }
-
-  }
 
   def convertToClientEServiceDescriptorDocumentSeed(
     seed: UpdateEServiceDescriptorDocumentSeed
@@ -171,10 +129,37 @@ object Converter {
         description = seed.description,
         audience = seed.audience,
         voucherLifespan = seed.voucherLifespan,
-        status = UpdateEServiceDescriptorSeedEnums.Status.Draft
+        status = catalogmanagement.client.model.DRAFT
       )
     )
   }
+
+  def convertToApiDescriptorStatus(
+    clientStatus: catalogmanagement.client.model.EServiceDescriptorStatusEnum
+  ): EServiceDescriptorStatusEnum =
+    clientStatus match {
+      case catalogmanagement.client.model.DRAFT      => DRAFT
+      case catalogmanagement.client.model.PUBLISHED  => PUBLISHED
+      case catalogmanagement.client.model.DEPRECATED => DEPRECATED
+      case catalogmanagement.client.model.SUSPENDED  => SUSPENDED
+      case catalogmanagement.client.model.ARCHIVED   => ARCHIVED
+    }
+
+  def convertToApiTechnology(
+    technology: catalogmanagement.client.model.EServiceTechnologyEnum
+  ): EServiceTechnologyEnum =
+    technology match {
+      case catalogmanagement.client.model.REST => REST
+      case catalogmanagement.client.model.SOAP => SOAP
+    }
+
+  def convertFromApiTechnology(
+    technology: EServiceTechnologyEnum
+  ): catalogmanagement.client.model.EServiceTechnologyEnum =
+    technology match {
+      case REST => catalogmanagement.client.model.REST
+      case SOAP => catalogmanagement.client.model.SOAP
+    }
 
   private def convertToCatalogClientAttributes(seed: AttributesSeed): client.model.Attributes =
     client.model.Attributes(

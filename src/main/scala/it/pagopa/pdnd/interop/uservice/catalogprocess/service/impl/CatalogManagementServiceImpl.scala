@@ -93,7 +93,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
 
   override def listEServices(
     bearerToken: String
-  )(producerId: Option[String], status: Option[String]): Future[Seq[EService]] = {
+  )(producerId: Option[String], status: Option[EServiceDescriptorStatusEnum]): Future[Seq[EService]] = {
     val request: ApiRequest[Seq[client.model.EService]] =
       api.getEServices(producerId = producerId, status = status)(BearerToken(bearerToken))
     invoker
@@ -238,7 +238,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   override def hasNotDraftDescriptor(eService: EService): Future[Boolean] = {
     Either
       .cond(
-        eService.descriptors.count(_.status == EServiceDescriptorEnums.Status.Draft) < 1,
+        eService.descriptors.count(_.status == DRAFT) < 1,
         true,
         ForbiddenOperation(s"E-service ${eService.id} already has a draft version.")
       )

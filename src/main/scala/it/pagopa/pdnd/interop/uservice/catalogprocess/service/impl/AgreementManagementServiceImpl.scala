@@ -2,7 +2,7 @@ package it.pagopa.pdnd.interop.uservice.catalogprocess.service.impl
 
 import it.pagopa.pdnd.interop.uservice.agreementmanagement.client.api.AgreementApi
 import it.pagopa.pdnd.interop.uservice.agreementmanagement.client.invoker.{ApiRequest, BearerToken}
-import it.pagopa.pdnd.interop.uservice.agreementmanagement.client.model.Agreement
+import it.pagopa.pdnd.interop.uservice.agreementmanagement.client.model.{Agreement, AgreementStatusEnum}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{AgreementManagementInvoker, AgreementManagementService}
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -18,7 +18,7 @@ final case class AgreementManagementServiceImpl(invoker: AgreementManagementInvo
     bearerToken: String,
     consumerId: Option[String],
     producerId: Option[String],
-    status: Option[String]
+    status: Option[AgreementStatusEnum]
   )(implicit ec: ExecutionContext): Future[Seq[Agreement]] = {
     val request: ApiRequest[Seq[Agreement]] =
       api.getAgreements(consumerId = consumerId, producerId = producerId, status = status)(BearerToken(bearerToken))
@@ -29,7 +29,9 @@ final case class AgreementManagementServiceImpl(invoker: AgreementManagementInvo
         result.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Error trying to get agreements for consumer ${consumerId.getOrElse("Unknown")}. Error: ${ex.getMessage}")
+        logger.error(
+          s"Error trying to get agreements for consumer ${consumerId.getOrElse("Unknown")}. Error: ${ex.getMessage}"
+        )
         Future.failed[Seq[Agreement]](ex)
       }
 

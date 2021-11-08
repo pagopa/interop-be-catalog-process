@@ -14,10 +14,10 @@ import it.pagopa.pdnd.interop.uservice.catalogprocess.server.Controller
 import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
+import it.pagopa.pdnd.interop.uservice.catalogmanagement
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.{
   EService => ManagementEService,
   EServiceDescriptor => ManagementDescriptor,
-  EServiceDescriptorEnums => ManagementDescriptorEnums,
   Attributes => ManagementAttributes
 }
 
@@ -52,7 +52,7 @@ abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.co
     voucherLifespan = 0,
     interface = None,
     docs = Seq.empty,
-    status = ManagementDescriptorEnums.Status.Published
+    status = catalogmanagement.client.model.PUBLISHED
   )
 
   def eServiceStub: ManagementEService = ManagementEService(
@@ -60,7 +60,7 @@ abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.co
     producerId = UUID.randomUUID(),
     name = "EService1",
     description = "",
-    technology = "REST",
+    technology = catalogmanagement.client.model.REST,
     attributes = ManagementAttributes(Seq.empty, Seq.empty, Seq.empty),
     descriptors = Seq.empty
   )
