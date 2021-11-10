@@ -2,16 +2,14 @@ package it.pagopa.pdnd.interop.uservice.catalogprocess
 
 import akka.http.scaladsl.model.{HttpMethods, StatusCodes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import it.pagopa.pdnd.interop.uservice.catalogmanagement.client
-import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.{
-  EServiceDescriptorEnums => ManagementDescriptorEnums
-}
+import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.{model => CatalogManagementDependency}
+import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl.Converter.convertToApiTechnology
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl._
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.{HealthApi, ProcessApi, ProcessApiMarshaller}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
 import it.pagopa.pdnd.interop.uservice.catalogprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service._
-import it.pagopa.pdnd.interop.uservice.{attributeregistrymanagement, catalogmanagement, partymanagement}
+import it.pagopa.pdnd.interop.uservice.{attributeregistrymanagement, partymanagement}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -71,55 +69,53 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
     "succeed" in {
 
-      val seed = catalogmanagement.client.model.EServiceSeed(
+      val seed = CatalogManagementDependency.EServiceSeed(
         producerId = UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824300"),
         name = "MyService",
         description = "My Service",
-        technology = catalogmanagement.client.model.EServiceSeedEnums.Technology.REST,
-        attributes = catalogmanagement.client.model.Attributes(
+        technology = CatalogManagementDependency.EServiceTechnology.REST,
+        attributes = CatalogManagementDependency.Attributes(
           certified = List(
-            catalogmanagement.client.model
+            CatalogManagementDependency
               .Attribute(
                 single =
-                  Some(catalogmanagement.client.model.AttributeValue("0001", explicitAttributeVerification = false)),
+                  Some(CatalogManagementDependency.AttributeValue("0001", explicitAttributeVerification = false)),
                 group = None
               )
           ),
           declared = List(
-            catalogmanagement.client.model
+            CatalogManagementDependency
               .Attribute(
                 single = None,
-                group = Some(
-                  List(catalogmanagement.client.model.AttributeValue("0002", explicitAttributeVerification = false))
-                )
+                group =
+                  Some(List(CatalogManagementDependency.AttributeValue("0002", explicitAttributeVerification = false)))
               )
           ),
           verified = List(
-            catalogmanagement.client.model
+            CatalogManagementDependency
               .Attribute(
-                single =
-                  Some(catalogmanagement.client.model.AttributeValue("0003", explicitAttributeVerification = true)),
+                single = Some(CatalogManagementDependency.AttributeValue("0003", explicitAttributeVerification = true)),
                 group = None
               )
           )
         )
       )
 
-      val eservice = catalogmanagement.client.model.EService(
+      val eservice = CatalogManagementDependency.EService(
         id = UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824301"),
         producerId = seed.producerId,
         name = seed.name,
         description = seed.description,
-        technology = seed.technology.toString,
+        technology = seed.technology,
         attributes = seed.attributes,
         descriptors = List(
-          catalogmanagement.client.model.EServiceDescriptor(
+          CatalogManagementDependency.EServiceDescriptor(
             id = UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824302"),
             version = "1",
             description = None,
             interface = None,
             docs = Nil,
-            status = catalogmanagement.client.model.EServiceDescriptorEnums.Status.Draft,
+            state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
             audience = List("aud1"),
             voucherLifespan = 1000
           )
@@ -131,7 +127,10 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         description = "organization description",
         digitalAddress = "digitalAddress",
         id = seed.producerId,
-        attributes = Seq.empty[String]
+        attributes = Seq.empty[String],
+        products = Set.empty,
+        code = None,
+        fiscalCode = "code"
       )
 
       val attributeId1: String = "0001"
@@ -167,7 +166,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       )
 
       (catalogManagementService
-        .createEService(_: String)(_: catalogmanagement.client.model.EServiceSeed))
+        .createEService(_: String)(_: CatalogManagementDependency.EServiceSeed))
         .expects(bearerToken, seed)
         .returning(Future.successful(eservice))
         .once()
@@ -182,35 +181,34 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .returning(Future.successful(Seq(attribute1, attribute2, attribute3)))
         .once()
 
-      implicit val seedFormat: JsonFormat[catalogmanagement.client.model.EServiceSeedEnums.Technology] =
-        new JsonFormat[catalogmanagement.client.model.EServiceSeedEnums.Technology] {
-          override def write(obj: catalogmanagement.client.model.EServiceSeedEnums.Technology): JsValue =
-            JsString(obj.toString)
+      implicit val seedFormat: JsonFormat[CatalogManagementDependency.EServiceTechnology] =
+        new JsonFormat[CatalogManagementDependency.EServiceTechnology] {
+          override def write(obj: CatalogManagementDependency.EServiceTechnology): JsValue =
+            obj match {
+              case CatalogManagementDependency.EServiceTechnology.REST => JsString("REST")
+              case CatalogManagementDependency.EServiceTechnology.SOAP => JsString("SOAP")
+            }
 
-          override def read(json: JsValue): catalogmanagement.client.model.EServiceSeedEnums.Technology = json match {
-            case JsString(s) =>
-              s match {
-                case "REST" => catalogmanagement.client.model.EServiceSeedEnums.Technology.REST
-                case "SOAP" => catalogmanagement.client.model.EServiceSeedEnums.Technology.SOAP
-                case _ =>
-                  deserializationError(s"could not parse $s as EServiceSeedEnums.Technology")
-              }
-            case notAJsString =>
-              deserializationError(s"expected a String but got a ${notAJsString.compactPrint}")
-          }
+          override def read(json: JsValue): CatalogManagementDependency.EServiceTechnology =
+            json match {
+              case JsString("REST") => CatalogManagementDependency.EServiceTechnology.REST
+              case JsString("SOAP") => CatalogManagementDependency.EServiceTechnology.SOAP
+              case unrecognized =>
+                deserializationError(s"EServiceTechnology serialization error ${unrecognized.toString}")
+            }
         }
 
-      implicit val attributeValueFormat: RootJsonFormat[client.model.AttributeValue] =
-        jsonFormat2(catalogmanagement.client.model.AttributeValue)
+      implicit val attributeValueFormat: RootJsonFormat[CatalogManagementDependency.AttributeValue] =
+        jsonFormat2(CatalogManagementDependency.AttributeValue)
 
-      implicit val attributeFormat: RootJsonFormat[client.model.Attribute] =
-        jsonFormat2(catalogmanagement.client.model.Attribute)
+      implicit val attributeFormat: RootJsonFormat[CatalogManagementDependency.Attribute] =
+        jsonFormat2(CatalogManagementDependency.Attribute)
 
-      implicit val attributesFormat: RootJsonFormat[client.model.Attributes] =
-        jsonFormat3(catalogmanagement.client.model.Attributes)
+      implicit val attributesFormat: RootJsonFormat[CatalogManagementDependency.Attributes] =
+        jsonFormat3(CatalogManagementDependency.Attributes)
 
-      implicit val eServiceSeedFormat: RootJsonFormat[client.model.EServiceSeed] =
-        jsonFormat5(catalogmanagement.client.model.EServiceSeed)
+      implicit val eServiceSeedFormat: RootJsonFormat[CatalogManagementDependency.EServiceSeed] =
+        jsonFormat5(CatalogManagementDependency.EServiceSeed)
 
       val requestData = seed.toJson.toString
 
@@ -221,7 +219,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         producer = Organization(id = organization.id, name = organization.description),
         name = seed.name,
         description = seed.description,
-        technology = seed.technology.toString,
+        technology = convertToApiTechnology(seed.technology),
         attributes = Attributes(
           certified = Seq(
             Attribute(
@@ -279,7 +277,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
   "Descriptor suspension" must {
     "succeed if descriptor is Published" in {
-      val descriptor   = descriptorStub.copy(status = ManagementDescriptorEnums.Status.Published)
+      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED)
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
@@ -302,7 +300,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "succeed if descriptor is Deprecated" in {
-      val descriptor   = descriptorStub.copy(status = ManagementDescriptorEnums.Status.Deprecated)
+      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED)
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
@@ -325,7 +323,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Draft" in {
-      val descriptor   = descriptorStub.copy(status = ManagementDescriptorEnums.Status.Draft)
+      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
@@ -348,7 +346,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Archived" in {
-      val descriptor   = descriptorStub.copy(status = ManagementDescriptorEnums.Status.Archived)
+      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED)
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
@@ -374,27 +372,27 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
   "Descriptor activation" must {
     val eService1 = eServiceStub.copy(descriptors =
       Seq(
-        descriptorStub.copy(version = "1", status = ManagementDescriptorEnums.Status.Archived),
-        descriptorStub.copy(version = "2", status = ManagementDescriptorEnums.Status.Deprecated),
-        descriptorStub.copy(version = "3", status = ManagementDescriptorEnums.Status.Suspended),
-        descriptorStub.copy(version = "4", status = ManagementDescriptorEnums.Status.Suspended),
-        descriptorStub.copy(version = "5", status = ManagementDescriptorEnums.Status.Draft)
+        descriptorStub.copy(version = "1", state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED),
+        descriptorStub.copy(version = "2", state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED),
+        descriptorStub.copy(version = "3", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED),
+        descriptorStub.copy(version = "4", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED),
+        descriptorStub.copy(version = "5", state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
       )
     )
     val eService2 = eServiceStub.copy(descriptors =
       Seq(
-        descriptorStub.copy(version = "1", status = ManagementDescriptorEnums.Status.Archived),
-        descriptorStub.copy(version = "2", status = ManagementDescriptorEnums.Status.Deprecated),
-        descriptorStub.copy(version = "3", status = ManagementDescriptorEnums.Status.Suspended),
-        descriptorStub.copy(version = "4", status = ManagementDescriptorEnums.Status.Published),
-        descriptorStub.copy(version = "5", status = ManagementDescriptorEnums.Status.Draft)
+        descriptorStub.copy(version = "1", state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED),
+        descriptorStub.copy(version = "2", state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED),
+        descriptorStub.copy(version = "3", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED),
+        descriptorStub.copy(version = "4", state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED),
+        descriptorStub.copy(version = "5", state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
       )
     )
     val eService3 = eServiceStub.copy(descriptors =
       Seq(
-        descriptorStub.copy(version = "1", status = ManagementDescriptorEnums.Status.Archived),
-        descriptorStub.copy(version = "2", status = ManagementDescriptorEnums.Status.Suspended),
-        descriptorStub.copy(version = "3", status = ManagementDescriptorEnums.Status.Suspended)
+        descriptorStub.copy(version = "1", state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED),
+        descriptorStub.copy(version = "2", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED),
+        descriptorStub.copy(version = "3", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED)
       )
     )
 
@@ -487,7 +485,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Draft" in {
-      val descriptor   = descriptorStub.copy(status = ManagementDescriptorEnums.Status.Draft)
+      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
@@ -510,7 +508,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Deprecated" in {
-      val descriptor   = descriptorStub.copy(status = ManagementDescriptorEnums.Status.Deprecated)
+      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED)
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
@@ -533,7 +531,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Published" in {
-      val descriptor   = descriptorStub.copy(status = ManagementDescriptorEnums.Status.Published)
+      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED)
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
@@ -556,7 +554,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Archived" in {
-      val descriptor   = descriptorStub.copy(status = ManagementDescriptorEnums.Status.Archived)
+      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED)
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString

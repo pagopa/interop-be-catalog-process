@@ -46,10 +46,9 @@ paths:
           schema:
             type: string
         - in: query
-          name: status
+          name: state
           schema:
-            type: string
-            enum: [ draft, published, deprecated, archived ]
+            $ref: '#/components/schemas/EServiceDescriptorState'
       responses:
         "200":
           description: A list of E-Service
@@ -114,10 +113,9 @@ paths:
           schema:
             type: string
         - in: query
-          name: status
+          name: state
           schema:
-            type: string
-            enum: [ draft, suspended, published, deprecated, archived ]
+            $ref: '#/components/schemas/EServiceDescriptorState'
         - in: query
           name: latestPublishedOnly
           schema:
@@ -564,7 +562,10 @@ paths:
               properties:
                 kind:
                   type: string
-                  enum: [ "interface", "document" ]
+                  description: Document Type
+                  enum:
+                    - INTERFACE
+                    - DOCUMENT
                 description:
                   type: string
                 doc:
@@ -778,8 +779,7 @@ components:
         description:
           type: string
         technology:
-          type: string
-          enum: [ 'REST', 'SOAP' ]
+          $ref: '#/components/schemas/EServiceTechnology'
         attributes:
           $ref: '#/components/schemas/AttributesSeed'
     UpdateEServiceSeed:
@@ -795,8 +795,7 @@ components:
         description:
           type: string
         technology:
-          type: string
-          enum: [ 'REST', 'SOAP' ]
+          $ref: '#/components/schemas/EServiceTechnology'
         attributes:
           $ref: '#/components/schemas/AttributesSeed'
     EServiceDescriptorSeed:
@@ -816,7 +815,7 @@ components:
           format: int32
     UpdateEServiceDescriptorSeed:
       required:
-        - status
+        - state
         - audience
         - voucherLifespan
       type: object
@@ -906,7 +905,7 @@ components:
         description:
           type: string
         technology:
-          type: string
+          $ref: '#/components/schemas/EServiceTechnology'
         attributes:
           $ref: '#/components/schemas/Attributes'
         descriptors:
@@ -940,7 +939,7 @@ components:
         - id
         - version
         - docs
-        - status
+        - state
         - creationDate
         - audience
         - voucherLifespan
@@ -958,9 +957,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EServiceDoc'
-        status:
-          type: string
-          enum: [ 'draft', 'published','deprecated','archived' ]
+        state:
+          $ref: '#/components/schemas/EServiceDescriptorState'
         audience:
           type: array
           items:
@@ -1032,9 +1030,8 @@ components:
           type: string
         version:
           type: string
-        status:
-          type: string
-          enum: [ 'draft', 'published','deprecated','archived' ]
+        state:
+          $ref: '#/components/schemas/EServiceDescriptorState'
         descriptorId:
           type: string
         callerSubscribed:
@@ -1046,6 +1043,21 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FlatAttribute'
+    EServiceTechnology:
+      type: string
+      description: API Technology
+      enum:
+        - REST
+        - SOAP
+    EServiceDescriptorState:
+      type: string
+      description: EService Descriptor State
+      enum:
+        - DRAFT
+        - PUBLISHED
+        - DEPRECATED
+        - SUSPENDED
+        - ARCHIVED
     FlatEServices:
       type: array
       items:
