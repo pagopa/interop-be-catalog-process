@@ -2,7 +2,7 @@ package it.pagopa.pdnd.interop.uservice.catalogprocess.service.impl
 
 import it.pagopa.pdnd.interop.uservice.agreementmanagement.client.api.AgreementApi
 import it.pagopa.pdnd.interop.uservice.agreementmanagement.client.invoker.{ApiRequest, BearerToken}
-import it.pagopa.pdnd.interop.uservice.agreementmanagement.client.model.Agreement
+import it.pagopa.pdnd.interop.uservice.agreementmanagement.client.model.{Agreement, AgreementState}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{AgreementManagementInvoker, AgreementManagementService}
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -17,10 +17,10 @@ final case class AgreementManagementServiceImpl(invoker: AgreementManagementInvo
     bearerToken: String,
     consumerId: Option[String],
     producerId: Option[String],
-    status: Option[String]
+    state: Option[AgreementState]
   )(implicit ec: ExecutionContext): Future[Seq[Agreement]] = {
     val request: ApiRequest[Seq[Agreement]] =
-      api.getAgreements(consumerId = consumerId, producerId = producerId, status = status)(BearerToken(bearerToken))
+      api.getAgreements(consumerId = consumerId, producerId = producerId, state = state)(BearerToken(bearerToken))
     invoker
       .execute(request)
       .map { result =>

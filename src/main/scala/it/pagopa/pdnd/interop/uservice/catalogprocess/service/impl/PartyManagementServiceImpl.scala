@@ -14,7 +14,7 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
   override def getOrganization(id: UUID): Future[Organization] = {
-    val request = api.getPartyOrganizationByUUID(id)
+    val request = api.getOrganizationById(id)
     invoker
       .execute(request)
       .map { result =>

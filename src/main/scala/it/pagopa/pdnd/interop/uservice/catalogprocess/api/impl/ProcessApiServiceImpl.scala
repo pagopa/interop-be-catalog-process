@@ -7,16 +7,16 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
 import it.pagopa.pdnd.interop.uservice.agreementmanagement.client.model.Agreement
-import it.pagopa.pdnd.interop.uservice.catalogmanagement
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.ApiError
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.{
   EService => ManagementEService,
-  EServiceDescriptor => ManagementDescriptor,
-  EServiceDescriptorEnums
+  EServiceDescriptor => ManagementDescriptor
 }
+import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.ProcessApiService
-import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system.OptionOps
+import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl.Converter.convertToApiDescriptorState
+import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system.{EitherOps, OptionOps}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.errors.{
   ContentTypeParsingError,
   DescriptorNotFound,
@@ -54,8 +54,8 @@ final case class ProcessApiServiceImpl(
   ): Route = {
     val result =
       for {
-        bearer          <- tokenFromContext(contexts)
-        clientSeed      <- Converter.convertToClientEServiceSeed(eServiceSeed)
+        bearer <- tokenFromContext(contexts)
+        clientSeed = Converter.convertToClientEServiceSeed(eServiceSeed)
         createdEService <- catalogManagementService.createEService(bearer)(clientSeed)
         apiEservice     <- convertToApiEservice(createdEService)
       } yield apiEservice
@@ -126,7 +126,8 @@ final case class ProcessApiServiceImpl(
     val result =
       for {
         bearer       <- tokenFromContext(contexts)
-        eservices    <- retrieveEservices(bearer, producerId, consumerId, status)
+        statusEnum   <- status.traverse(CatalogManagementDependency.EServiceDescriptorState.fromValue).toFuture
+        eservices    <- retrieveEservices(bearer, producerId, consumerId, statusEnum)
         apiEservices <- eservices.traverse(convertToApiEservice)
       } yield apiEservices
 
@@ -152,7 +153,7 @@ final case class ProcessApiServiceImpl(
         currentEService <- catalogManagementService.getEService(bearer)(eServiceId)
         _               <- isDraftDescriptor(currentEService.descriptors.find(_.id.toString == descriptorId))
         currentActiveDescriptor = currentEService.descriptors.find(d =>
-          d.status == EServiceDescriptorEnums.Status.Published
+          d.state == CatalogManagementDependency.EServiceDescriptorState.PUBLISHED
         ) // Must be at most one
         _ <- catalogManagementService.publishDescriptor(bearer)(eServiceId, descriptorId)
         _ <- currentActiveDescriptor
@@ -335,7 +336,7 @@ final case class ProcessApiServiceImpl(
     HttpEntity.fromFile(documentDetails.contentType, file)
   }
 
-  private def extractFile(document: catalogmanagement.client.model.EServiceDoc): Future[ContentType] = {
+  private def extractFile(document: CatalogManagementDependency.EServiceDoc): Future[ContentType] = {
     ContentType
       .parse(document.contentType)
       .fold(ex => Future.failed(ContentTypeParsingError(document, ex)), Future.successful)
@@ -359,8 +360,9 @@ final case class ProcessApiServiceImpl(
     val result =
       for {
         bearer                    <- tokenFromContext(contexts)
+        statusEnum                <- status.traverse(CatalogManagementDependency.EServiceDescriptorState.fromValue).toFuture
         callerSubscribedEservices <- agreementManagementService.getAgreementsByConsumerId(bearer)(callerId)
-        retrievedEservices        <- retrieveEservices(bearer, producerId, consumerId, status)
+        retrievedEservices        <- retrieveEservices(bearer, producerId, consumerId, statusEnum)
         eservices                 <- processEservicesWithLatestFilter(retrievedEservices, latestPublishedOnly)
         organizationsDetails <- partyManagementService.getBulkOrganizations(
           BulkPartiesSeed(partyIdentifiers = eservices.map(_.producerId))
@@ -368,7 +370,7 @@ final case class ProcessApiServiceImpl(
         flattenServices = eservices.flatMap(service =>
           convertToFlattenEservice(service, callerSubscribedEservices, organizationsDetails)
         )
-        filteredDescriptors = flattenServices.filter(item => status.forall(item.status.contains))
+        filteredDescriptors = flattenServices.filter(item => status.forall(item.state.contains))
       } yield filteredDescriptors
 
     onComplete(result) {
@@ -381,22 +383,22 @@ final case class ProcessApiServiceImpl(
   }
 
   private def processEservicesWithLatestFilter(
-    eservices: Seq[catalogmanagement.client.model.EService],
+    eservices: Seq[CatalogManagementDependency.EService],
     latestOnly: Option[Boolean]
-  ): Future[Seq[catalogmanagement.client.model.EService]] = {
+  ): Future[Seq[CatalogManagementDependency.EService]] = {
     latestOnly match {
       case Some(true) =>
         Future.successful(eservices.map(eservice => {
           val latestDescriptor =
             eservice.descriptors
               .filter(d =>
-                d.status == EServiceDescriptorEnums.Status.Published || d.status == EServiceDescriptorEnums.Status.Suspended
+                d.state == CatalogManagementDependency.EServiceDescriptorState.PUBLISHED || d.state == CatalogManagementDependency.EServiceDescriptorState.SUSPENDED
               )
               .sortWith((ver1, ver2) => Ordering[Option[Long]].gt(ver1.version.toLongOption, ver2.version.toLongOption))
               .headOption
 
           eservice.copy(descriptors =
-            latestDescriptor.fold(Seq.empty[catalogmanagement.client.model.EServiceDescriptor])(latest => Seq(latest))
+            latestDescriptor.fold(Seq.empty[CatalogManagementDependency.EServiceDescriptor])(latest => Seq(latest))
           )
         }))
       case _ => Future.successful(eservices)
@@ -477,8 +479,8 @@ final case class ProcessApiServiceImpl(
   ): Route = {
     val result =
       for {
-        bearer          <- tokenFromContext(contexts)
-        clientSeed      <- Converter.convertToClientUpdateEServiceSeed(updateEServiceSeed)
+        bearer <- tokenFromContext(contexts)
+        clientSeed = Converter.convertToClientUpdateEServiceSeed(updateEServiceSeed)
         updatedEservice <- catalogManagementService.updateEservice(bearer)(eServiceId, clientSeed)
         apiEservice     <- convertToApiEservice(updatedEservice)
       } yield apiEservice
@@ -492,20 +494,20 @@ final case class ProcessApiServiceImpl(
     }
   }
 
-  private def convertToApiEservice(eservice: catalogmanagement.client.model.EService): Future[EService] = {
+  private def convertToApiEservice(eservice: CatalogManagementDependency.EService): Future[EService] = {
     for {
       organization <- partyManagementService.getOrganization(eservice.producerId)
       attributes   <- attributeRegistryManagementService.getAttributesBulk(extractIdsFromAttributes(eservice.attributes))
     } yield Converter.convertToApiEservice(eservice, organization, attributes)
   }
 
-  private def extractIdsFromAttributes(attributes: catalogmanagement.client.model.Attributes): Seq[String] = {
+  private def extractIdsFromAttributes(attributes: CatalogManagementDependency.Attributes): Seq[String] = {
     attributes.certified.flatMap(extractIdsFromAttribute) ++
       attributes.declared.flatMap(extractIdsFromAttribute) ++
       attributes.verified.flatMap(extractIdsFromAttribute)
   }
 
-  private def extractIdsFromAttribute(attribute: catalogmanagement.client.model.Attribute): Seq[String] = {
+  private def extractIdsFromAttribute(attribute: CatalogManagementDependency.Attribute): Seq[String] = {
     val fromSingle: Seq[String] = attribute.single.toSeq.map(_.id)
     val fromGroup: Seq[String]  = attribute.group.toSeq.flatMap(_.map(_.id))
 
@@ -516,8 +518,8 @@ final case class ProcessApiServiceImpl(
     bearer: String,
     producerId: Option[String],
     consumerId: Option[String],
-    status: Option[String]
-  ): Future[Seq[catalogmanagement.client.model.EService]] = {
+    status: Option[CatalogManagementDependency.EServiceDescriptorState]
+  ): Future[Seq[CatalogManagementDependency.EService]] = {
     if (consumerId.isEmpty) catalogManagementService.listEServices(bearer)(producerId, status)
     else
       for {
@@ -528,7 +530,7 @@ final case class ProcessApiServiceImpl(
         )
       } yield eservices.filter(eService =>
         producerId.forall(_ == eService.producerId.toString) &&
-          status.forall(s => eService.descriptors.exists(_.status.toString == s))
+          status.forall(s => eService.descriptors.exists(_.state == s))
       )
   }
 
@@ -589,11 +591,11 @@ final case class ProcessApiServiceImpl(
       name = eservice.name,
       //TODO "Unknown" is a temporary flag
       producerName = organizationDetails.found
-        .find(_.partyId == eservice.producerId.toString)
+        .find(_.id == eservice.producerId)
         .map(_.description)
         .getOrElse("Unknown"),
       version = None,
-      status = None,
+      state = None,
       descriptorId = None,
       callerSubscribed = agreementSubscribedEservices.find(agr => agr.eserviceId == eservice.id).map(_.id),
       certifiedAttributes = eservice.attributes.certified.map(toFlatAttribute)
@@ -602,7 +604,7 @@ final case class ProcessApiServiceImpl(
     val flatEServices: Seq[FlatEService] = eservice.descriptors.map { descriptor =>
       flatEServiceZero.copy(
         version = Some(descriptor.version),
-        status = Some(descriptor.status.toString),
+        state = Some(convertToApiDescriptorState(descriptor.state)),
         descriptorId = Some(descriptor.id.toString)
       )
 
@@ -620,35 +622,35 @@ final case class ProcessApiServiceImpl(
   }
 
   private def isDraftDescriptor(
-    optDescriptor: Option[catalogmanagement.client.model.EServiceDescriptor]
-  ): Future[catalogmanagement.client.model.EServiceDescriptor] = {
-    optDescriptor.fold(Future.failed[catalogmanagement.client.model.EServiceDescriptor](DescriptorNotFound(""))) {
+    optDescriptor: Option[CatalogManagementDependency.EServiceDescriptor]
+  ): Future[CatalogManagementDependency.EServiceDescriptor] = {
+    optDescriptor.fold(Future.failed[CatalogManagementDependency.EServiceDescriptor](DescriptorNotFound(""))) {
       descriptor =>
-        descriptor.status match {
-          case EServiceDescriptorEnums.Status.Draft => Future.successful(descriptor)
+        descriptor.state match {
+          case CatalogManagementDependency.EServiceDescriptorState.DRAFT => Future.successful(descriptor)
           case _ =>
-            Future.failed(NotValidDescriptor(descriptor.id.toString, descriptor.status.toString))
+            Future.failed(NotValidDescriptor(descriptor.id.toString, descriptor.state.toString))
         }
     }
   }
 
   private def descriptorCanBeSuspended(
-    descriptor: catalogmanagement.client.model.EServiceDescriptor
-  ): Future[catalogmanagement.client.model.EServiceDescriptor] =
-    descriptor.status match {
-      case EServiceDescriptorEnums.Status.Deprecated => Future.successful(descriptor)
-      case EServiceDescriptorEnums.Status.Published  => Future.successful(descriptor)
+    descriptor: CatalogManagementDependency.EServiceDescriptor
+  ): Future[CatalogManagementDependency.EServiceDescriptor] =
+    descriptor.state match {
+      case CatalogManagementDependency.EServiceDescriptorState.DEPRECATED => Future.successful(descriptor)
+      case CatalogManagementDependency.EServiceDescriptorState.PUBLISHED  => Future.successful(descriptor)
       case _ =>
-        Future.failed(NotValidDescriptor(descriptor.id.toString, descriptor.status.toString))
+        Future.failed(NotValidDescriptor(descriptor.id.toString, descriptor.state.toString))
     }
 
   private def descriptorCanBeActivated(
-    descriptor: catalogmanagement.client.model.EServiceDescriptor
-  ): Future[catalogmanagement.client.model.EServiceDescriptor] =
-    descriptor.status match {
-      case EServiceDescriptorEnums.Status.Suspended => Future.successful(descriptor)
+    descriptor: CatalogManagementDependency.EServiceDescriptor
+  ): Future[CatalogManagementDependency.EServiceDescriptor] =
+    descriptor.state match {
+      case CatalogManagementDependency.EServiceDescriptorState.SUSPENDED => Future.successful(descriptor)
       case _ =>
-        Future.failed(NotValidDescriptor(descriptor.id.toString, descriptor.status.toString))
+        Future.failed(NotValidDescriptor(descriptor.id.toString, descriptor.state.toString))
     }
 
   /** Code: 204, Message: Document deleted.
@@ -808,14 +810,15 @@ final case class ProcessApiServiceImpl(
     def activateDescriptor(
       bearer: String
     )(eService: ManagementEService, descriptor: ManagementDescriptor): Future[Unit] = {
-      val validStatus = Seq(
-        EServiceDescriptorEnums.Status.Suspended,
-        EServiceDescriptorEnums.Status.Deprecated,
-        EServiceDescriptorEnums.Status.Published
-      )
+      val validState =
+        Seq(
+          CatalogManagementDependency.EServiceDescriptorState.SUSPENDED,
+          CatalogManagementDependency.EServiceDescriptorState.DEPRECATED,
+          CatalogManagementDependency.EServiceDescriptorState.PUBLISHED
+        )
       val mostRecentValidVersion =
         eService.descriptors
-          .filter(d => validStatus.contains(d.status))
+          .filter(d => validState.contains(d.state))
           .map(_.version.toInt)
           .sorted(Ordering.Int.reverse)
           .headOption

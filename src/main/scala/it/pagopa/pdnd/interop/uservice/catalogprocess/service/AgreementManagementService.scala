@@ -1,6 +1,6 @@
 package it.pagopa.pdnd.interop.uservice.catalogprocess.service
 
-import it.pagopa.pdnd.interop.uservice.agreementmanagement.client.model.Agreement
+import it.pagopa.pdnd.interop.uservice.agreementmanagement.client.model.{Agreement, AgreementState}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -9,7 +9,7 @@ trait AgreementManagementService {
     bearerToken: String,
     consumerId: Option[String],
     producerId: Option[String],
-    status: Option[String]
+    status: Option[AgreementState]
   )(implicit ec: ExecutionContext): Future[Seq[Agreement]]
 
   /** Returns the agreements related to the consumer passed in input.

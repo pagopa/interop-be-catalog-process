@@ -5,21 +5,16 @@ import akka.actor.testkit.typed.scaladsl.{ActorTestKit, ScalaTestWithActorTestKi
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.Behaviors
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, SecurityDirectives}
+import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system.Authenticator
 import it.pagopa.pdnd.interop.uservice.catalogprocess.server.Controller
 
 import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
-import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.{
-  EService => ManagementEService,
-  EServiceDescriptor => ManagementDescriptor,
-  EServiceDescriptorEnums => ManagementDescriptorEnums,
-  Attributes => ManagementAttributes
-}
 
 abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.config) with SpecConfiguration {
 
@@ -36,7 +31,7 @@ abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.co
   val wrappingDirective: AuthenticationDirective[Seq[(String, String)]] =
     SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
 
-  def descriptorStub: ManagementDescriptor = ManagementDescriptor(
+  def descriptorStub: CatalogManagementDependency.EServiceDescriptor = CatalogManagementDependency.EServiceDescriptor(
     id = UUID.randomUUID(),
     version = "1",
     description = None,
@@ -44,16 +39,16 @@ abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.co
     voucherLifespan = 0,
     interface = None,
     docs = Seq.empty,
-    status = ManagementDescriptorEnums.Status.Published
+    state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED
   )
 
-  def eServiceStub: ManagementEService = ManagementEService(
+  def eServiceStub: CatalogManagementDependency.EService = CatalogManagementDependency.EService(
     id = UUID.randomUUID(),
     producerId = UUID.randomUUID(),
     name = "EService1",
     description = "",
-    technology = "REST",
-    attributes = ManagementAttributes(Seq.empty, Seq.empty, Seq.empty),
+    technology = CatalogManagementDependency.EServiceTechnology.REST,
+    attributes = CatalogManagementDependency.Attributes(Seq.empty, Seq.empty, Seq.empty),
     descriptors = Seq.empty
   )
 
