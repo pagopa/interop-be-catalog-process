@@ -9,7 +9,7 @@ import scala.concurrent.Future
 trait CatalogManagementService {
   def listEServices(
     bearerToken: String
-  )(producerId: Option[String], status: Option[EServiceDescriptorStatusEnum]): Future[Seq[EService]]
+  )(producerId: Option[String], status: Option[EServiceDescriptorState]): Future[Seq[EService]]
   def getEService(bearerToken: String)(eServiceId: String): Future[EService]
   def createEService(bearerToken: String)(eServiceSeed: EServiceSeed): Future[EService]
   def deleteDraft(bearerToken: String)(eServiceId: String, descriptorId: String): Future[Unit]

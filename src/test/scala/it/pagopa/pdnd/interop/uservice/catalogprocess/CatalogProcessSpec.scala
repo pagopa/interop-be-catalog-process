@@ -73,7 +73,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         producerId = UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824300"),
         name = "MyService",
         description = "My Service",
-        technology = CatalogManagementDependency.REST,
+        technology = CatalogManagementDependency.EServiceTechnology.REST,
         attributes = CatalogManagementDependency.Attributes(
           certified = List(
             CatalogManagementDependency
@@ -115,7 +115,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
             description = None,
             interface = None,
             docs = Nil,
-            status = CatalogManagementDependency.DRAFT,
+            state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
             audience = List("aud1"),
             voucherLifespan = 1000
           )
@@ -127,7 +127,10 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         description = "organization description",
         digitalAddress = "digitalAddress",
         id = seed.producerId,
-        attributes = Seq.empty[String]
+        attributes = Seq.empty[String],
+        products = Set.empty,
+        code = None,
+        fiscalCode = "code"
       )
 
       val attributeId1: String = "0001"
@@ -178,20 +181,20 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .returning(Future.successful(Seq(attribute1, attribute2, attribute3)))
         .once()
 
-      implicit val seedFormat: JsonFormat[CatalogManagementDependency.EServiceTechnologyEnum] =
-        new JsonFormat[CatalogManagementDependency.EServiceTechnologyEnum] {
-          override def write(obj: CatalogManagementDependency.EServiceTechnologyEnum): JsValue =
+      implicit val seedFormat: JsonFormat[CatalogManagementDependency.EServiceTechnology] =
+        new JsonFormat[CatalogManagementDependency.EServiceTechnology] {
+          override def write(obj: CatalogManagementDependency.EServiceTechnology): JsValue =
             obj match {
-              case CatalogManagementDependency.REST => JsString("REST")
-              case CatalogManagementDependency.SOAP => JsString("SOAP")
+              case CatalogManagementDependency.EServiceTechnology.REST => JsString("REST")
+              case CatalogManagementDependency.EServiceTechnology.SOAP => JsString("SOAP")
             }
 
-          override def read(json: JsValue): CatalogManagementDependency.EServiceTechnologyEnum =
+          override def read(json: JsValue): CatalogManagementDependency.EServiceTechnology =
             json match {
-              case JsString("REST") => CatalogManagementDependency.REST
-              case JsString("SOAP") => CatalogManagementDependency.SOAP
+              case JsString("REST") => CatalogManagementDependency.EServiceTechnology.REST
+              case JsString("SOAP") => CatalogManagementDependency.EServiceTechnology.SOAP
               case unrecognized =>
-                deserializationError(s"EServiceTechnologyEnum serialization error ${unrecognized.toString}")
+                deserializationError(s"EServiceTechnology serialization error ${unrecognized.toString}")
             }
         }
 
@@ -274,7 +277,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
   "Descriptor suspension" must {
     "succeed if descriptor is Published" in {
-      val descriptor   = descriptorStub.copy(status = CatalogManagementDependency.PUBLISHED)
+      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED)
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
@@ -297,7 +300,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "succeed if descriptor is Deprecated" in {
-      val descriptor   = descriptorStub.copy(status = CatalogManagementDependency.DEPRECATED)
+      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED)
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
@@ -320,7 +323,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Draft" in {
-      val descriptor   = descriptorStub.copy(status = CatalogManagementDependency.DRAFT)
+      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
@@ -343,7 +346,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Archived" in {
-      val descriptor   = descriptorStub.copy(status = CatalogManagementDependency.ARCHIVED)
+      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED)
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
@@ -369,27 +372,27 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
   "Descriptor activation" must {
     val eService1 = eServiceStub.copy(descriptors =
       Seq(
-        descriptorStub.copy(version = "1", status = CatalogManagementDependency.ARCHIVED),
-        descriptorStub.copy(version = "2", status = CatalogManagementDependency.DEPRECATED),
-        descriptorStub.copy(version = "3", status = CatalogManagementDependency.SUSPENDED),
-        descriptorStub.copy(version = "4", status = CatalogManagementDependency.SUSPENDED),
-        descriptorStub.copy(version = "5", status = CatalogManagementDependency.DRAFT)
+        descriptorStub.copy(version = "1", state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED),
+        descriptorStub.copy(version = "2", state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED),
+        descriptorStub.copy(version = "3", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED),
+        descriptorStub.copy(version = "4", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED),
+        descriptorStub.copy(version = "5", state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
       )
     )
     val eService2 = eServiceStub.copy(descriptors =
       Seq(
-        descriptorStub.copy(version = "1", status = CatalogManagementDependency.ARCHIVED),
-        descriptorStub.copy(version = "2", status = CatalogManagementDependency.DEPRECATED),
-        descriptorStub.copy(version = "3", status = CatalogManagementDependency.SUSPENDED),
-        descriptorStub.copy(version = "4", status = CatalogManagementDependency.PUBLISHED),
-        descriptorStub.copy(version = "5", status = CatalogManagementDependency.DRAFT)
+        descriptorStub.copy(version = "1", state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED),
+        descriptorStub.copy(version = "2", state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED),
+        descriptorStub.copy(version = "3", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED),
+        descriptorStub.copy(version = "4", state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED),
+        descriptorStub.copy(version = "5", state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
       )
     )
     val eService3 = eServiceStub.copy(descriptors =
       Seq(
-        descriptorStub.copy(version = "1", status = CatalogManagementDependency.ARCHIVED),
-        descriptorStub.copy(version = "2", status = CatalogManagementDependency.SUSPENDED),
-        descriptorStub.copy(version = "3", status = CatalogManagementDependency.SUSPENDED)
+        descriptorStub.copy(version = "1", state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED),
+        descriptorStub.copy(version = "2", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED),
+        descriptorStub.copy(version = "3", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED)
       )
     )
 
@@ -482,7 +485,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Draft" in {
-      val descriptor   = descriptorStub.copy(status = CatalogManagementDependency.DRAFT)
+      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
@@ -505,7 +508,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Deprecated" in {
-      val descriptor   = descriptorStub.copy(status = CatalogManagementDependency.DEPRECATED)
+      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED)
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
@@ -528,7 +531,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Published" in {
-      val descriptor   = descriptorStub.copy(status = CatalogManagementDependency.PUBLISHED)
+      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED)
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
@@ -551,7 +554,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Archived" in {
-      val descriptor   = descriptorStub.copy(status = CatalogManagementDependency.ARCHIVED)
+      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED)
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString

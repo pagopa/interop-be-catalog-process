@@ -93,17 +93,17 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
 
   override def listEServices(
     bearerToken: String
-  )(producerId: Option[String], status: Option[EServiceDescriptorStatusEnum]): Future[Seq[EService]] = {
+  )(producerId: Option[String], state: Option[EServiceDescriptorState]): Future[Seq[EService]] = {
     val request: ApiRequest[Seq[client.model.EService]] =
-      api.getEServices(producerId = producerId, status = status)(BearerToken(bearerToken))
+      api.getEServices(producerId = producerId, state = state)(BearerToken(bearerToken))
     invoker
       .execute[Seq[client.model.EService]](request)
       .map { result =>
-        logger.info(s"E-Services list retrieved for filters: producerId = $producerId,  status = $status")
+        logger.info(s"E-Services list retrieved for filters: producerId = $producerId,  status = $state")
         result.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Error while retrieving E-Services for filters: producerId = $producerId, status = $status")
+        logger.error(s"Error while retrieving E-Services for filters: producerId = $producerId, status = $state")
         Future.failed[Seq[client.model.EService]](ex)
       }
   }
@@ -238,7 +238,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   override def hasNotDraftDescriptor(eService: EService): Future[Boolean] = {
     Either
       .cond(
-        eService.descriptors.count(_.status == DRAFT) < 1,
+        eService.descriptors.count(_.state == EServiceDescriptorState.DRAFT) < 1,
         true,
         ForbiddenOperation(s"E-service ${eService.id} already has a draft version.")
       )
