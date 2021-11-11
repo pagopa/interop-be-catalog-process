@@ -19,8 +19,8 @@ import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl.Converter.convert
 import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system.{EitherOps, OptionOps}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.errors.{
   ContentTypeParsingError,
-  DescriptorNotFound,
   EServiceDescriptorNotFound,
+  EServiceDescriptorWithoutInterface,
   NotValidDescriptor
 }
 import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
@@ -41,6 +41,8 @@ final case class ProcessApiServiceImpl(
   fileManager: FileManager
 )(implicit ec: ExecutionContext)
     extends ProcessApiService {
+
+  import ProcessApiServiceImpl._
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
@@ -151,7 +153,10 @@ final case class ProcessApiServiceImpl(
       for {
         bearer          <- tokenFromContext(contexts)
         currentEService <- catalogManagementService.getEService(bearer)(eServiceId)
-        _               <- isDraftDescriptor(currentEService.descriptors.find(_.id.toString == descriptorId))
+        descriptor <- currentEService.descriptors
+          .find(_.id.toString == descriptorId)
+          .toFuture(EServiceDescriptorNotFound(eServiceId, descriptorId))
+        _ <- verifyPublicationEligibility(descriptor)
         currentActiveDescriptor = currentEService.descriptors.find(d =>
           d.state == CatalogManagementDependency.EServiceDescriptorState.PUBLISHED
         ) // Must be at most one
@@ -453,7 +458,10 @@ final case class ProcessApiServiceImpl(
       for {
         bearer          <- tokenFromContext(contexts)
         currentEService <- catalogManagementService.getEService(bearer)(eServiceId)
-        _               <- isDraftDescriptor(currentEService.descriptors.find(_.id.toString == descriptorId))
+        descriptor <- currentEService.descriptors
+          .find(_.id.toString == descriptorId)
+          .toFuture(EServiceDescriptorNotFound(eServiceId, descriptorId))
+        _               <- isDraftDescriptor(descriptor)
         clientSeed      <- Converter.convertToClientUpdateEServiceDescriptorSeed(updateEServiceDescriptorSeed)
         updatedEservice <- catalogManagementService.updateDraftDescriptor(bearer)(eServiceId, descriptorId, clientSeed)
         apiEservice     <- convertToApiEservice(updatedEservice)
@@ -619,19 +627,6 @@ final case class ProcessApiServiceImpl(
       single = attribute.single.map(a => FlatAttributeValue(a.id)),
       group = attribute.group.map(a => a.map(attr => FlatAttributeValue(attr.id)))
     )
-  }
-
-  private def isDraftDescriptor(
-    optDescriptor: Option[CatalogManagementDependency.EServiceDescriptor]
-  ): Future[CatalogManagementDependency.EServiceDescriptor] = {
-    optDescriptor.fold(Future.failed[CatalogManagementDependency.EServiceDescriptor](DescriptorNotFound(""))) {
-      descriptor =>
-        descriptor.state match {
-          case CatalogManagementDependency.EServiceDescriptorState.DRAFT => Future.successful(descriptor)
-          case _ =>
-            Future.failed(NotValidDescriptor(descriptor.id.toString, descriptor.state.toString))
-        }
-    }
   }
 
   private def descriptorCanBeSuspended(
@@ -940,4 +935,24 @@ final case class ProcessApiServiceImpl(
         )
     }
   }
+}
+
+object ProcessApiServiceImpl {
+  def verifyPublicationEligibility(
+    descriptor: CatalogManagementDependency.EServiceDescriptor
+  )(implicit ec: ExecutionContext): Future[Unit] = {
+    for {
+      _ <- isDraftDescriptor(descriptor)
+      _ <- descriptor.interface.toFuture(EServiceDescriptorWithoutInterface(descriptor.id.toString))
+    } yield ()
+  }
+
+  def isDraftDescriptor(
+    descriptor: CatalogManagementDependency.EServiceDescriptor
+  ): Future[CatalogManagementDependency.EServiceDescriptor] =
+    descriptor.state match {
+      case CatalogManagementDependency.EServiceDescriptorState.DRAFT => Future.successful(descriptor)
+      case _ =>
+        Future.failed(NotValidDescriptor(descriptor.id.toString, descriptor.state.toString))
+    }
 }
