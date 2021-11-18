@@ -111,14 +111,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       )
 
       val organization = partymanagement.client.model.Organization(
+        id = seed.producerId,
         institutionId = "institutionId",
         description = "organization description",
         digitalAddress = "digitalAddress",
-        id = seed.producerId,
         attributes = Seq.empty[String],
         products = Set.empty,
-        code = None,
-        fiscalCode = "code"
+        taxCode = "code"
       )
 
       val attributeId1: String = "0001"
