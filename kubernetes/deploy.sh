@@ -16,7 +16,7 @@ kubectl get secret regcred -n default -o yaml | sed s/"namespace: default"/"name
 
 kubectl create secret generic application.conf --from-file=application.conf=$SCRIPT_PATH/../src/main/resources/application.conf -n $NAMESPACE
 
-kubectl create secret generic aws --from-literal=AWS_ACCESS_KEY_ID=$AWS_SECRET_ACCESS_USR --from-literal=AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_PSW -n $NAMESPACE
+kubectl create secret generic storage --from-literal=STORAGE_USR=$STORAGE_USR --from-literal=STORAGE_PSW=$STORAGE_PSW -n $NAMESPACE
 
 $SCRIPT_PATH/templater.sh $SCRIPT_PATH/deployment.yaml.template -s -f $SCRIPT_PATH/config > $SCRIPT_PATH/deployment.yaml
 

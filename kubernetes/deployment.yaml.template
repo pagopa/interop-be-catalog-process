@@ -81,6 +81,22 @@ spec:
               value: "{{partyManagementUrl}}"
             - name: ATTRIBUTE_REGISTRY_MANAGEMENT_URL
               value: "{{attributeRegistryManagementUrl}}"
+            - name: STORAGE_TYPE
+              value: {{storageType}}
+            - name: STORAGE_CONTAINER
+              value: {{storageContainer}}
+            - name: STORAGE_ENDPOINT
+              value: {{storageEndpoint}}
+            - name: STORAGE_CREDENTIAL_ID
+              valueFrom:
+                secretKeyRef:
+                  name: storage
+                  key: STORAGE_USR
+            - name: STORAGE_CREDENTIAL_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: storage
+                  key: STORAGE_PSW
           volumeMounts:
             - name: application-conf
               mountPath: /opt/docker/etc

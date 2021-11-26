@@ -6,6 +6,7 @@ import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
+import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.uservice.agreementmanagement.client.model.Agreement
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.ApiError
@@ -16,7 +17,7 @@ import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.{
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.ProcessApiService
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl.Converter.convertToApiDescriptorState
-import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system.{EitherOps, OptionOps}
+import it.pagopa.pdnd.interop.commons.utils.TypeConversions.{EitherOps, OptionOps}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.errors.{
   ContentTypeParsingError,
   EServiceDescriptorNotFound,
@@ -59,7 +60,7 @@ final case class ProcessApiServiceImpl(
         bearer <- tokenFromContext(contexts)
         clientSeed = Converter.convertToClientEServiceSeed(eServiceSeed)
         createdEService <- catalogManagementService.createEService(bearer)(clientSeed)
-        apiEservice     <- convertToApiEservice(createdEService)
+        apiEservice     <- convertToApiEservice(bearer, createdEService)
       } yield apiEservice
 
     onComplete(result) {
@@ -130,7 +131,7 @@ final case class ProcessApiServiceImpl(
         bearer       <- tokenFromContext(contexts)
         statusEnum   <- status.traverse(CatalogManagementDependency.EServiceDescriptorState.fromValue).toFuture
         eservices    <- retrieveEservices(bearer, producerId, consumerId, statusEnum)
-        apiEservices <- eservices.traverse(convertToApiEservice)
+        apiEservices <- eservices.traverse(service => convertToApiEservice(bearer, service))
       } yield apiEservices
 
     onComplete(result) {
@@ -216,7 +217,7 @@ final case class ProcessApiServiceImpl(
       for {
         bearer      <- tokenFromContext(contexts)
         eservice    <- catalogManagementService.getEService(bearer)(eServiceId)
-        apiEservice <- convertToApiEservice(eservice)
+        apiEservice <- convertToApiEservice(bearer, eservice)
       } yield apiEservice
 
     onComplete(result) {
@@ -251,7 +252,7 @@ final case class ProcessApiServiceImpl(
           description,
           doc
         )
-        apiEservice <- convertToApiEservice(eservice)
+        apiEservice <- convertToApiEservice(bearer, eservice)
       } yield apiEservice
 
     onComplete(result) {
@@ -371,7 +372,7 @@ final case class ProcessApiServiceImpl(
         eservices                 <- processEservicesWithLatestFilter(retrievedEservices, latestPublishedOnly)
         organizationsDetails <- partyManagementService.getBulkOrganizations(
           BulkPartiesSeed(partyIdentifiers = eservices.map(_.producerId))
-        )
+        )(bearer)
         flattenServices = eservices.flatMap(service =>
           convertToFlattenEservice(service, callerSubscribedEservices, organizationsDetails)
         )
@@ -464,7 +465,7 @@ final case class ProcessApiServiceImpl(
         _               <- isDraftDescriptor(descriptor)
         clientSeed      <- Converter.convertToClientUpdateEServiceDescriptorSeed(updateEServiceDescriptorSeed)
         updatedEservice <- catalogManagementService.updateDraftDescriptor(bearer)(eServiceId, descriptorId, clientSeed)
-        apiEservice     <- convertToApiEservice(updatedEservice)
+        apiEservice     <- convertToApiEservice(bearer, updatedEservice)
       } yield apiEservice
 
     onComplete(result) {
@@ -490,7 +491,7 @@ final case class ProcessApiServiceImpl(
         bearer <- tokenFromContext(contexts)
         clientSeed = Converter.convertToClientUpdateEServiceSeed(updateEServiceSeed)
         updatedEservice <- catalogManagementService.updateEservice(bearer)(eServiceId, clientSeed)
-        apiEservice     <- convertToApiEservice(updatedEservice)
+        apiEservice     <- convertToApiEservice(bearer, updatedEservice)
       } yield apiEservice
 
     onComplete(result) {
@@ -502,9 +503,9 @@ final case class ProcessApiServiceImpl(
     }
   }
 
-  private def convertToApiEservice(eservice: CatalogManagementDependency.EService): Future[EService] = {
+  private def convertToApiEservice(bearer: String, eservice: CatalogManagementDependency.EService): Future[EService] = {
     for {
-      organization <- partyManagementService.getOrganization(eservice.producerId)
+      organization <- partyManagementService.getOrganization(eservice.producerId)(bearer)
       attributes   <- attributeRegistryManagementService.getAttributesBulk(extractIdsFromAttributes(eservice.attributes))
     } yield Converter.convertToApiEservice(eservice, organization, attributes)
   }
@@ -762,7 +763,7 @@ final case class ProcessApiServiceImpl(
       for {
         bearer         <- tokenFromContext(contexts)
         clonedEService <- catalogManagementService.cloneEservice(bearer)(eServiceId, descriptorId)
-        apiEservice    <- convertToApiEservice(clonedEService)
+        apiEservice    <- convertToApiEservice(bearer, clonedEService)
       } yield apiEservice
 
     onComplete(result) {

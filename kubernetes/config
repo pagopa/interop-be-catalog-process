@@ -21,6 +21,10 @@ agreementManagementUrl="http://pdnd-interop-uservice-agreement-management.pdnd-i
 partyManagementUrl="http://pdnd-interop-uservice-party-management.pdnd-interop-uservice-party-management.svc.cluster.local:8088/pdnd-interop-uservice-party-management/"$partyManagementVersion
 attributeRegistryManagementUrl="http://pdnd-interop-uservice-attribute-registry-management.pdnd-interop-uservice-attribute-registry-management.svc.cluster.local:8088/pdnd-interop-uservice-attribute-registry-management/"$attributeRegistryManagementVersion
 
+storageType=$STORAGE_TYPE
+storageContainer=$STORAGE_CONTAINER
+storageEndpoint=$STORAGE_ENDPOINT
+
 name=$(cat $SCRIPT_PATH/../build.sbt | grep "name :=" | awk -F:= '{ print $2 }' | sed 's/\"//' | sed 's/\",//' | sed 's/ //' | tr '[:upper:]' '[:lower:]' | grep -v client)
 
 #getting version from sbt
