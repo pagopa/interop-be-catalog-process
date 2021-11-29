@@ -55,7 +55,7 @@ pipeline {
       agent { label 'sbt-template' }
       environment {
         DOCKER_REPO = 'gateway.interop.pdnd.dev'
-        AWS_SECRET_ACCESS = credentials('jenkins-aws')
+        STORAGE = credentials('jenkins-aws')
         REPLICAS_NR = 3
       }
       steps {

@@ -3,6 +3,7 @@ package it.pagopa.pdnd.interop.uservice.catalogprocess.service.impl
 import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system._
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{PartyManagementInvoker, PartyManagementService}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.invoker.BearerToken
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{BulkOrganizations, BulkPartiesSeed, Organization}
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -13,8 +14,8 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
     extends PartyManagementService {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  override def getOrganization(id: UUID): Future[Organization] = {
-    val request = api.getOrganizationById(id)
+  override def getOrganization(id: UUID)(bearerToken: String): Future[Organization] = {
+    val request = api.getOrganizationById(id)(BearerToken(bearerToken))
     invoker
       .execute(request)
       .map { result =>
@@ -27,8 +28,8 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
   }
 
-  override def getBulkOrganizations(identifiers: BulkPartiesSeed): Future[BulkOrganizations] = {
-    val request = api.bulkOrganizations(identifiers)
+  override def getBulkOrganizations(identifiers: BulkPartiesSeed)(bearerToken: String): Future[BulkOrganizations] = {
+    val request = api.bulkOrganizations(identifiers)(BearerToken(bearerToken))
     invoker
       .execute(request)
       .map { result =>

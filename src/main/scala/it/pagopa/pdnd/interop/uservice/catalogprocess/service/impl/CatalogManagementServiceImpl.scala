@@ -6,6 +6,7 @@ import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.api.EServiceApi
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.{ApiRequest, BearerToken}
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model._
 import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system._
+import it.pagopa.pdnd.interop.commons.utils.TypeConversions.{StringOps, EitherOps}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.errors.ForbiddenOperation
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{CatalogManagementInvoker, CatalogManagementService}
 import org.slf4j.{Logger, LoggerFactory}
@@ -33,8 +34,8 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
 
   override def cloneEservice(bearer: String)(eServiceId: String, descriptorId: String): Future[EService] = {
     for {
-      eServiceUUID   <- eServiceId.parseUUID.toFuture
-      descriptorUUID <- descriptorId.parseUUID.toFuture
+      eServiceUUID   <- eServiceId.toFutureUUID
+      descriptorUUID <- descriptorId.toFutureUUID
       request: ApiRequest[client.model.EService] = api.cloneEServiceByDescriptor(
         eServiceId = eServiceUUID,
         descriptorId = descriptorUUID

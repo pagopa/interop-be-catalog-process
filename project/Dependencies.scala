@@ -1,5 +1,5 @@
-import Versions._
 import PDNDVersions._
+import Versions._
 import sbt._
 
 object Dependencies {
@@ -101,6 +101,8 @@ object Dependencies {
     lazy val attributeRegistryManagementClient =
       namespace %% "pdnd-interop-uservice-attribute-registry-management-client" % attributeRegistryManagementVersion
 
+    lazy val commons     = namespace %% "pdnd-interop-commons-utils"        % commonsVersion
+    lazy val fileManager = namespace %% "pdnd-interop-commons-file-manager" % commonsVersion
   }
 
   object Jars {
@@ -129,6 +131,8 @@ object Dependencies {
       pagopa.agreementManagementClient         % Compile,
       pagopa.partyManagementClient             % Compile,
       pagopa.attributeRegistryManagementClient % Compile,
+      pagopa.commons                           % Compile,
+      pagopa.fileManager                       % Compile,
       scalaprotobuf.core                       % Protobuf,
       akka.testkit                             % Test,
       scalatest.core                           % Test,

@@ -2,6 +2,7 @@ package it.pagopa.pdnd.interop.uservice.catalogprocess
 
 import akka.http.scaladsl.model.{HttpMethods, StatusCodes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
+import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl.Converter.convertToApiTechnology
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl._
@@ -19,6 +20,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import it.pagopa.pdnd.interop.commons.utils.SprayCommonFormats.uuidFormat
 
 class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndAfterAll with MockFactory {
 
@@ -158,8 +160,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .returning(Future.successful(eservice))
         .once()
 
-      (partyManagementService.getOrganization _)
-        .expects(seed.producerId)
+      (partyManagementService
+        .getOrganization(_: UUID)(_: String))
+        .expects(seed.producerId, bearerToken)
         .returning(Future.successful(organization))
         .once()
 
