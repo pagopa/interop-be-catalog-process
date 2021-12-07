@@ -7,6 +7,7 @@ import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{
   AttributeRegistryManagementInvoker,
   AttributeRegistryManagementService
 }
+import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.invoker.BearerToken
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -17,8 +18,9 @@ final case class AttributeRegistryManagementServiceImpl(invoker: AttributeRegist
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  override def getAttributesBulk(attributeIds: Seq[String]): Future[Seq[Attribute]] = {
-    val request: ApiRequest[AttributesResponse] = api.getBulkedAttributes(Some(attributeIds.mkString(",")))
+  override def getAttributesBulk(attributeIds: Seq[String])(bearerToken: String): Future[Seq[Attribute]] = {
+    val request: ApiRequest[AttributesResponse] =
+      api.getBulkedAttributes(Some(attributeIds.mkString(",")))(BearerToken(bearerToken))
     invoker
       .execute(request)
       .map { x =>
