@@ -118,7 +118,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         description = "organization description",
         digitalAddress = "digitalAddress",
         attributes = Seq.empty[String],
-        products = Set.empty,
         taxCode = "code"
       )
 
@@ -166,8 +165,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .returning(Future.successful(organization))
         .once()
 
-      (attributeRegistryManagementService.getAttributesBulk _)
-        .expects(Seq(attributeId1, attributeId2, attributeId3))
+      (attributeRegistryManagementService
+        .getAttributesBulk(_: Seq[String])(_: String))
+        .expects(Seq(attributeId1, attributeId2, attributeId3), bearerToken)
         .returning(Future.successful(Seq(attribute1, attribute2, attribute3)))
         .once()
 

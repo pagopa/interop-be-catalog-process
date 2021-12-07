@@ -19,6 +19,7 @@ import it.pagopa.pdnd.interop.uservice.catalogprocess.api.ProcessApiService
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl.Converter.convertToApiDescriptorState
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions.{EitherOps, OptionOps}
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.getFutureBearer
+import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system.ApplicationConfiguration
 import it.pagopa.pdnd.interop.uservice.catalogprocess.errors.{
   ContentTypeParsingError,
   EServiceDescriptorNotFound,
@@ -300,7 +301,7 @@ final case class ProcessApiServiceImpl(
         bearer      <- getFutureBearer(contexts)
         document    <- catalogManagementService.getEServiceDocument(bearer)(eServiceId, descriptorId, documentId)
         contentType <- extractFile(document)
-        response    <- fileManager.get(document.path)
+        response    <- fileManager.get(ApplicationConfiguration.storageContainer)(document.path)
       } yield DocumentDetails(document.name, contentType, response)
 
     onComplete(result) {
@@ -507,7 +508,9 @@ final case class ProcessApiServiceImpl(
   private def convertToApiEservice(bearer: String, eservice: CatalogManagementDependency.EService): Future[EService] = {
     for {
       organization <- partyManagementService.getOrganization(eservice.producerId)(bearer)
-      attributes   <- attributeRegistryManagementService.getAttributesBulk(extractIdsFromAttributes(eservice.attributes))
+      attributes <- attributeRegistryManagementService.getAttributesBulk(extractIdsFromAttributes(eservice.attributes))(
+        bearer
+      )
     } yield Converter.convertToApiEservice(eservice, organization, attributes)
   }
 

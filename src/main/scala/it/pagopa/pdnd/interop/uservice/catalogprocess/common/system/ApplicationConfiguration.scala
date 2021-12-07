@@ -11,5 +11,6 @@ object ApplicationConfiguration {
   def agreementManagementUrl: String         = config.getString("services.agreement-management")
   def attributeRegistryManagementUrl: String = config.getString("services.attribute-registry-management")
   def partyManagementUrl: String             = config.getString("services.party-management")
+  def storageContainer: String               = config.getString("pdnd-interop-commons.storage.container")
 
 }
