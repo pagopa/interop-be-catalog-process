@@ -2,7 +2,9 @@ package it.pagopa.pdnd.interop.uservice.catalogprocess
 
 import akka.http.scaladsl.model.{HttpMethods, StatusCodes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
+import com.nimbusds.jwt.JWTClaimsSet
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
+import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl.Converter.convertToApiTechnology
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl._
@@ -22,6 +24,8 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import it.pagopa.pdnd.interop.commons.utils.SprayCommonFormats.uuidFormat
 
+import scala.util.Success
+
 class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndAfterAll with MockFactory {
 
   import CatalogProcessSpec._
@@ -39,7 +43,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
           partyManagementService = partyManagementService,
           attributeRegistryManagementService = attributeRegistryManagementService,
           agreementManagementService = agreementManagementService,
-          fileManager = fileManager
+          fileManager = fileManager,
+          jwtReader = jwtReader
         ),
         processApiMarshaller,
         wrappingDirective
@@ -152,6 +157,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         name = s"$attributeId3-name",
         creationTime = OffsetDateTime.now()
       )
+
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
 
       (catalogManagementService
         .createEService(_: String)(_: CatalogManagementDependency.EServiceSeed))
@@ -272,6 +283,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
 
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
+
       (catalogManagementService
         .getEService(_: String)(_: String))
         .expects(bearerToken, eServiceId)
@@ -294,6 +311,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
+
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
 
       (catalogManagementService
         .getEService(_: String)(_: String))
@@ -318,6 +341,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
 
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
+
       (catalogManagementService
         .getEService(_: String)(_: String))
         .expects(bearerToken, eServiceId)
@@ -340,6 +369,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
+
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
 
       (catalogManagementService
         .getEService(_: String)(_: String))
@@ -391,6 +426,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val eServiceId   = eService.id.toString
       val descriptorId = eService.descriptors.find(_.version == "3").get.id.toString
 
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
+
       (catalogManagementService
         .getEService(_: String)(_: String))
         .expects(bearerToken, eServiceId)
@@ -412,6 +453,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val eService     = eService2
       val eServiceId   = eService.id.toString
       val descriptorId = eService.descriptors.find(_.version == "3").get.id.toString
+
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
 
       (catalogManagementService
         .getEService(_: String)(_: String))
@@ -435,6 +482,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val eServiceId   = eService.id.toString
       val descriptorId = eService.descriptors.find(_.version == "4").get.id.toString
 
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
+
       (catalogManagementService
         .getEService(_: String)(_: String))
         .expects(bearerToken, eServiceId)
@@ -456,6 +509,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val eService     = eService3
       val eServiceId   = eService.id.toString
       val descriptorId = eService.descriptors.find(_.version == "3").get.id.toString
+
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
 
       (catalogManagementService
         .getEService(_: String)(_: String))
@@ -480,6 +539,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
 
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
+
       (catalogManagementService
         .getEService(_: String)(_: String))
         .expects(bearerToken, eServiceId)
@@ -502,6 +567,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
+
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
 
       (catalogManagementService
         .getEService(_: String)(_: String))
@@ -526,6 +597,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
 
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
+
       (catalogManagementService
         .getEService(_: String)(_: String))
         .expects(bearerToken, eServiceId)
@@ -548,6 +625,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
       val eServiceId   = eService.id.toString
       val descriptorId = descriptor.id.toString
+
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
 
       (catalogManagementService
         .getEService(_: String)(_: String))
@@ -576,4 +659,6 @@ object CatalogProcessSpec extends MockFactory {
   val attributeRegistryManagementService: AttributeRegistryManagementService = mock[AttributeRegistryManagementService]
   val partyManagementService: PartyManagementService                         = mock[PartyManagementService]
   val fileManager: FileManager                                               = mock[FileManager]
+  val jwtReader: JWTReader                                                   = mock[JWTReader]
+  def mockSubject(uuid: String)                                              = Success(new JWTClaimsSet.Builder().subject(uuid).build())
 }

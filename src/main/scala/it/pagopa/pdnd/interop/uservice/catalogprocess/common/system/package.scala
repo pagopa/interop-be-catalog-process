@@ -5,9 +5,12 @@ import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.scaladsl.adapter.TypedActorSystemOps
 import akka.util.Timeout
 import akka.{actor => classic}
+import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
+import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.getFutureBearer
+import it.pagopa.pdnd.interop.commons.utils.TypeConversions.TryOps
 
-import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
 package object system {
 
@@ -17,4 +20,10 @@ package object system {
   implicit val executionContext: ExecutionContextExecutor = actorSystem.executionContext
 
   implicit val timeout: Timeout = 300.seconds
+
+  def validateBearer(contexts: Seq[(String, String)], jwt: JWTReader): Future[String] =
+    for {
+      bearer <- getFutureBearer(contexts)
+      _      <- jwt.getClaims(bearer).toFuture
+    } yield bearer
 }

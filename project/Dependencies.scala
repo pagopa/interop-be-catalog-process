@@ -103,6 +103,7 @@ object Dependencies {
 
     lazy val commons     = namespace %% "pdnd-interop-commons-utils"        % commonsVersion
     lazy val fileManager = namespace %% "pdnd-interop-commons-file-manager" % commonsVersion
+    lazy val commonsJWT  = namespace %% "pdnd-interop-commons-jwt"          % commonsVersion
   }
 
   object Jars {
@@ -133,6 +134,7 @@ object Dependencies {
       pagopa.attributeRegistryManagementClient % Compile,
       pagopa.commons                           % Compile,
       pagopa.fileManager                       % Compile,
+      pagopa.commonsJWT                        % Compile,
       scalaprotobuf.core                       % Protobuf,
       akka.testkit                             % Test,
       scalatest.core                           % Test,

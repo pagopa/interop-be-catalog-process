@@ -87,6 +87,8 @@ spec:
               value: {{storageContainer}}
             - name: STORAGE_ENDPOINT
               value: {{storageEndpoint}}
+            - name: WELL_KNOWN_URL
+              value: "{{wellKnownURL}}"
             - name: STORAGE_CREDENTIAL_ID
               valueFrom:
                 secretKeyRef:
