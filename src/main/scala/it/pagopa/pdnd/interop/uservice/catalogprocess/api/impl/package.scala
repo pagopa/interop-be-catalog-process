@@ -1,6 +1,7 @@
 package it.pagopa.pdnd.interop.uservice.catalogprocess.api
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import akka.http.scaladsl.model.StatusCode
 import it.pagopa.pdnd.interop.commons.utils.SprayCommonFormats.uuidFormat
 import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
@@ -32,6 +33,20 @@ package object impl extends SprayJsonSupport with DefaultJsonProtocol {
   implicit val flatAttributeFormat: RootJsonFormat[FlatAttribute]           = jsonFormat2(FlatAttribute)
   implicit val flatEServiceFormat: RootJsonFormat[FlatEService]             = jsonFormat9(FlatEService)
 
-  implicit val problemFormat: RootJsonFormat[Problem] = jsonFormat3(Problem)
+  implicit val problemErrorFormat: RootJsonFormat[ProblemError] = jsonFormat2(ProblemError)
+  implicit val problemFormat: RootJsonFormat[Problem]           = jsonFormat5(Problem)
 
+  def problemOf(
+    httpError: StatusCode,
+    errorCode: String,
+    exception: Throwable = new RuntimeException(),
+    defaultMessage: String = "Unknown error"
+  ): Problem =
+    Problem(
+      `type` = "about:blank",
+      status = httpError.intValue,
+      title = httpError.defaultMessage,
+      errors =
+        Seq(ProblemError(code = s"009-$errorCode", detail = Option(exception.getMessage).getOrElse(defaultMessage)))
+    )
 }
