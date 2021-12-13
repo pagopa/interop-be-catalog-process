@@ -1,11 +1,16 @@
 package it.pagopa.pdnd.interop.uservice.catalogprocess.server.impl
 
+import akka.actor.CoordinatedShutdown
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.directives.SecurityDirectives
 import akka.management.scaladsl.AkkaManagement
 import it.pagopa.pdnd.interop.commons.files.StorageConfiguration
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
+import it.pagopa.pdnd.interop.commons.jwt.{JWTConfiguration, PublicKeysHolder}
+import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
+import it.pagopa.pdnd.interop.commons.jwt.service.impl.DefaultJWTReader
 import it.pagopa.pdnd.interop.commons.utils.{AkkaUtils, CORSSupport}
+import it.pagopa.pdnd.interop.commons.utils.TypeConversions.TryOps
 import it.pagopa.pdnd.interop.uservice.agreementmanagement.client.api.AgreementApi
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.api.AttributeApi
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.api.EServiceApi
@@ -42,6 +47,10 @@ import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import kamon.Kamon
 
 import scala.concurrent.Future
+import scala.util.{Failure, Success}
+
+//shuts down the actor system in case of startup errors
+case object StartupErrorShutdown extends CoordinatedShutdown.Reason
 
 trait AgreementManagementDependency {
   private final val agreementManagementInvoker: AgreementManagementInvoker = AgreementManagementInvoker()
@@ -80,36 +89,54 @@ object Main
     with PartyManagementDependency
     with CatalogManagementDependency {
 
-  //end of the world here. It must break the execution if no concrete implementation is provided
-  val runtimeFileManager = FileManager.getConcreteImplementation(StorageConfiguration.runtimeFileManager).get
+  val dependenciesLoaded: Future[(FileManager, JWTReader)] = for {
+    fileManager <- FileManager.getConcreteImplementation(StorageConfiguration.runtimeFileManager).toFuture
+    keyset      <- JWTConfiguration.jwtReader.loadKeyset().toFuture
+    jwtValidator = new DefaultJWTReader with PublicKeysHolder {
+      var publicKeyset = keyset
+    }
+  } yield (fileManager, jwtValidator)
 
-  Kamon.init()
-
-  val processApi: ProcessApi = new ProcessApi(
-    ProcessApiServiceImpl(
-      catalogManagementService = catalogManagementService,
-      partyManagementService = partyManagementService,
-      attributeRegistryManagementService = attributeRegistryManagementService,
-      agreementManagementService = agreementManagementService,
-      fileManager = runtimeFileManager
-    ),
-    ProcessApiMarshallerImpl(),
-    SecurityDirectives.authenticateOAuth2("SecurityRealm", AkkaUtils.Authenticator)
-  )
-
-  val healthApi: HealthApi = new HealthApi(
-    new HealthServiceApiImpl(),
-    new HealthApiMarshallerImpl(),
-    SecurityDirectives.authenticateOAuth2("SecurityRealm", AkkaUtils.Authenticator)
-  )
-
-  locally {
-    AkkaManagement.get(classicActorSystem).start()
+  dependenciesLoaded.transformWith {
+    case Success((fileManager, jwtValidator)) => launchApp(fileManager, jwtValidator)
+    case Failure(ex) => {
+      classicActorSystem.log.error(s"Startup error: ${ex.getMessage}")
+      classicActorSystem.log.error(s"${ex.getStackTrace.mkString("\n")}")
+      CoordinatedShutdown(classicActorSystem).run(StartupErrorShutdown)
+    }
   }
 
-  val controller: Controller = new Controller(healthApi, processApi)
+  private def launchApp(fileManager: FileManager, jwtReader: JWTReader): Future[Http.ServerBinding] = {
+    Kamon.init()
 
-  val bindingFuture: Future[Http.ServerBinding] =
-    Http().newServerAt("0.0.0.0", ApplicationConfiguration.serverPort).bind(corsHandler(controller.routes))
+    val processApi: ProcessApi = new ProcessApi(
+      ProcessApiServiceImpl(
+        catalogManagementService = catalogManagementService,
+        partyManagementService = partyManagementService,
+        attributeRegistryManagementService = attributeRegistryManagementService,
+        agreementManagementService = agreementManagementService,
+        fileManager = fileManager,
+        jwtReader = jwtReader
+      ),
+      ProcessApiMarshallerImpl(),
+      SecurityDirectives.authenticateOAuth2("SecurityRealm", AkkaUtils.Authenticator)
+    )
 
+    val healthApi: HealthApi = new HealthApi(
+      new HealthServiceApiImpl(),
+      new HealthApiMarshallerImpl(),
+      SecurityDirectives.authenticateOAuth2("SecurityRealm", AkkaUtils.Authenticator)
+    )
+
+    locally {
+      AkkaManagement.get(classicActorSystem).start()
+    }
+
+    val controller: Controller = new Controller(healthApi, processApi)
+
+    val server: Future[Http.ServerBinding] =
+      Http().newServerAt("0.0.0.0", ApplicationConfiguration.serverPort).bind(corsHandler(controller.routes))
+
+    server
+  }
 }

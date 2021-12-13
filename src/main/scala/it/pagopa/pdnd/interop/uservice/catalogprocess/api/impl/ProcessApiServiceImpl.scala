@@ -7,7 +7,7 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
-import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.getFutureBearer
+import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions.{EitherOps, OptionOps}
 import it.pagopa.pdnd.interop.uservice.agreementmanagement.client.model.Agreement
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client
@@ -20,6 +20,7 @@ import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.{model => Catalo
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.ProcessApiService
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl.Converter.convertToApiDescriptorState
 import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system.ApplicationConfiguration
+import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system.{validateBearer}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.errors.{
   ContentTypeParsingError,
   EServiceDescriptorNotFound,
@@ -41,7 +42,8 @@ final case class ProcessApiServiceImpl(
   partyManagementService: PartyManagementService,
   attributeRegistryManagementService: AttributeRegistryManagementService,
   agreementManagementService: AgreementManagementService,
-  fileManager: FileManager
+  fileManager: FileManager,
+  jwtReader: JWTReader
 )(implicit ec: ExecutionContext)
     extends ProcessApiService {
 
@@ -59,7 +61,7 @@ final case class ProcessApiServiceImpl(
   ): Route = {
     val result =
       for {
-        bearer <- getFutureBearer(contexts)
+        bearer <- validateBearer(contexts, jwtReader)
         clientSeed = Converter.convertToClientEServiceSeed(eServiceSeed)
         createdEService <- catalogManagementService.createEService(bearer)(clientSeed)
         apiEservice     <- convertToApiEservice(bearer, createdEService)
@@ -89,7 +91,7 @@ final case class ProcessApiServiceImpl(
   ): Route = {
     val result =
       for {
-        bearer <- getFutureBearer(contexts)
+        bearer <- validateBearer(contexts, jwtReader)
         _      <- catalogManagementService.deleteDraft(bearer)(eServiceId, descriptorId)
       } yield ()
 
@@ -133,7 +135,7 @@ final case class ProcessApiServiceImpl(
   ): Route = {
     val result =
       for {
-        bearer       <- getFutureBearer(contexts)
+        bearer       <- validateBearer(contexts, jwtReader)
         statusEnum   <- status.traverse(CatalogManagementDependency.EServiceDescriptorState.fromValue).toFuture
         eservices    <- retrieveEservices(bearer, producerId, consumerId, statusEnum)
         apiEservices <- eservices.traverse(service => convertToApiEservice(bearer, service))
@@ -159,7 +161,7 @@ final case class ProcessApiServiceImpl(
 
     val result =
       for {
-        bearer          <- getFutureBearer(contexts)
+        bearer          <- validateBearer(contexts, jwtReader)
         currentEService <- catalogManagementService.getEService(bearer)(eServiceId)
         descriptor <- currentEService.descriptors
           .find(_.id.toString == descriptorId)
@@ -225,7 +227,7 @@ final case class ProcessApiServiceImpl(
   ): Route = {
     val result =
       for {
-        bearer      <- getFutureBearer(contexts)
+        bearer      <- validateBearer(contexts, jwtReader)
         eservice    <- catalogManagementService.getEService(bearer)(eServiceId)
         apiEservice <- convertToApiEservice(bearer, eservice)
       } yield apiEservice
@@ -256,7 +258,7 @@ final case class ProcessApiServiceImpl(
   ): Route = {
     val result =
       for {
-        bearer <- getFutureBearer(contexts)
+        bearer <- validateBearer(contexts, jwtReader)
         eservice <- catalogManagementService.createEServiceDocument(bearer)(
           eServiceId,
           descriptorId,
@@ -311,7 +313,7 @@ final case class ProcessApiServiceImpl(
   ): Route = {
     val result: Future[DocumentDetails] =
       for {
-        bearer      <- getFutureBearer(contexts)
+        bearer      <- validateBearer(contexts, jwtReader)
         document    <- catalogManagementService.getEServiceDocument(bearer)(eServiceId, descriptorId, documentId)
         contentType <- extractFile(document)
         response    <- fileManager.get(ApplicationConfiguration.storageContainer)(document.path)
@@ -382,7 +384,7 @@ final case class ProcessApiServiceImpl(
 
     val result =
       for {
-        bearer                    <- getFutureBearer(contexts)
+        bearer                    <- validateBearer(contexts, jwtReader)
         statusEnum                <- status.traverse(CatalogManagementDependency.EServiceDescriptorState.fromValue).toFuture
         callerSubscribedEservices <- agreementManagementService.getAgreementsByConsumerId(bearer)(callerId)
         retrievedEservices        <- retrieveEservices(bearer, producerId, consumerId, statusEnum)
@@ -446,7 +448,7 @@ final case class ProcessApiServiceImpl(
   ): Route = {
     val result =
       for {
-        bearer                    <- getFutureBearer(contexts)
+        bearer                    <- validateBearer(contexts, jwtReader)
         currentEService           <- catalogManagementService.getEService(bearer)(eServiceId)
         _                         <- catalogManagementService.hasNotDraftDescriptor(currentEService)
         clientSeed                <- Converter.convertToClientEServiceDescriptorSeed(eServiceDescriptorSeed)
@@ -479,7 +481,7 @@ final case class ProcessApiServiceImpl(
 
     val result: Future[EService] =
       for {
-        bearer          <- getFutureBearer(contexts)
+        bearer          <- validateBearer(contexts, jwtReader)
         currentEService <- catalogManagementService.getEService(bearer)(eServiceId)
         descriptor <- currentEService.descriptors
           .find(_.id.toString == descriptorId)
@@ -515,7 +517,7 @@ final case class ProcessApiServiceImpl(
   ): Route = {
     val result =
       for {
-        bearer <- getFutureBearer(contexts)
+        bearer <- validateBearer(contexts, jwtReader)
         clientSeed = Converter.convertToClientUpdateEServiceSeed(updateEServiceSeed)
         updatedEservice <- catalogManagementService.updateEservice(bearer)(eServiceId, clientSeed)
         apiEservice     <- convertToApiEservice(bearer, updatedEservice)
@@ -679,7 +681,7 @@ final case class ProcessApiServiceImpl(
   ): Route = {
     val result =
       for {
-        bearer <- getFutureBearer(contexts)
+        bearer <- validateBearer(contexts, jwtReader)
         _      <- catalogManagementService.deleteEServiceDocument(bearer)(eServiceId, descriptorId, documentId)
       } yield ()
 
@@ -731,7 +733,7 @@ final case class ProcessApiServiceImpl(
 
     val result =
       for {
-        bearer <- getFutureBearer(contexts)
+        bearer <- validateBearer(contexts, jwtReader)
         clientSeed <-
           Converter.convertToClientEServiceDescriptorDocumentSeed(updateEServiceDescriptorDocumentSeed)
         updatedDocument <- catalogManagementService.updateEServiceDocument(bearer)(
@@ -785,7 +787,7 @@ final case class ProcessApiServiceImpl(
   ): Route = {
     val result =
       for {
-        bearer         <- getFutureBearer(contexts)
+        bearer         <- validateBearer(contexts, jwtReader)
         clonedEService <- catalogManagementService.cloneEservice(bearer)(eServiceId, descriptorId)
         apiEservice    <- convertToApiEservice(bearer, clonedEService)
       } yield apiEservice
@@ -813,7 +815,7 @@ final case class ProcessApiServiceImpl(
   )(implicit contexts: Seq[(String, String)], toEntityMarshallerProblem: ToEntityMarshaller[Problem]): Route = {
     val result =
       for {
-        bearer <- getFutureBearer(contexts)
+        bearer <- validateBearer(contexts, jwtReader)
         _      <- catalogManagementService.deleteEService(bearer)(eServiceId)
       } yield ()
 
@@ -860,7 +862,7 @@ final case class ProcessApiServiceImpl(
 
     val result =
       for {
-        bearer   <- getFutureBearer(contexts)
+        bearer   <- validateBearer(contexts, jwtReader)
         eService <- catalogManagementService.getEService(bearer)(eServiceId)
         descriptor <- eService.descriptors
           .find(_.id.toString == descriptorId)
@@ -919,7 +921,7 @@ final case class ProcessApiServiceImpl(
   ): Route = {
     val result =
       for {
-        bearer   <- getFutureBearer(contexts)
+        bearer   <- validateBearer(contexts, jwtReader)
         eService <- catalogManagementService.getEService(bearer)(eServiceId)
         descriptor <- eService.descriptors
           .find(_.id.toString == descriptorId)
