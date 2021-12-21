@@ -23,7 +23,7 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
         result.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Error trying to get organization for id ${id.toString}. Error: ${ex.getMessage}")
+        logger.error(s"Error trying to get organization for id ${id.toString}", ex)
         Future.failed[Organization](ex)
       }
   }
@@ -38,7 +38,8 @@ final case class PartyManagementServiceImpl(invoker: PartyManagementInvoker, api
       }
       .recoverWith { case ex =>
         logger.error(
-          s"Error trying to retriever organizations for id ${identifiers.partyIdentifiers.mkString(",")}. Error: ${ex.getMessage}"
+          s"Error trying to retriever organizations for id ${identifiers.partyIdentifiers.mkString(",")}",
+          ex
         )
         Future.failed[BulkOrganizations](ex)
       }
