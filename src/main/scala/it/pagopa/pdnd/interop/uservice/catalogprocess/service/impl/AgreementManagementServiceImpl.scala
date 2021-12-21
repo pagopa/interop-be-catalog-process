@@ -28,9 +28,7 @@ final case class AgreementManagementServiceImpl(invoker: AgreementManagementInvo
         result.content
       }
       .recoverWith { case ex =>
-        logger.error(
-          s"Error trying to get agreements for consumer ${consumerId.getOrElse("Unknown")}. Error: ${ex.getMessage}"
-        )
+        logger.error(s"Error trying to get agreements for consumer ${consumerId.getOrElse("Unknown")}.", ex)
         Future.failed[Seq[Agreement]](ex)
       }
 

@@ -27,7 +27,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         result.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Error while creating E-Service ${ex.getMessage}")
+        logger.error("Error while creating E-Service ", ex)
         Future.failed[client.model.EService](ex)
       }
   }
@@ -47,7 +47,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
           result.content
         }
         .recoverWith { case ex =>
-          logger.error(s"Error while cloning E-Service ${ex.getMessage}")
+          logger.error("Error while cloning E-Service ", ex)
           Future.failed[client.model.EService](ex)
         }
     } yield result
@@ -62,9 +62,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         result.content
       }
       .recoverWith { case ex =>
-        logger.error(
-          s"Error while deleting E-Service with Id $eServiceId and descriptor Id $descriptorId. Error: ${ex.getMessage}"
-        )
+        logger.error(s"Error while deleting E-Service with Id $eServiceId and descriptor Id $descriptorId. ", ex)
         Future.failed[Unit](ex)
       }
   }
@@ -78,7 +76,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         result.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Error while deleting E-Service with Id $eServiceId. Error: ${ex.getMessage}")
+        logger.error(s"Error while deleting E-Service with Id $eServiceId.", ex)
         Future.failed[Unit](ex)
       }
   }
@@ -95,7 +93,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         result.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Error while retrieving E-Services for filters: producerId = $producerId, status = $state")
+        logger.error(s"Error while retrieving E-Services for filters: producerId = $producerId, status = $state", ex)
         Future.failed[Seq[client.model.EService]](ex)
       }
   }
@@ -109,7 +107,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         result.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Error while retrieving E-Service with id $eServiceId")
+        logger.error(s"Error while retrieving E-Service with id $eServiceId", ex)
         Future.failed[client.model.EService](ex)
       }
   }
@@ -128,7 +126,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         result.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Error while updating descriptor $descriptorId for E-Services $eServiceId")
+        logger.error(s"Error while updating descriptor $descriptorId for E-Services $eServiceId", ex)
         Future.failed[client.model.EService](ex)
       }
   }
@@ -155,7 +153,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         result.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Error while updating E-Service $eServiceId: ${ex.getMessage}")
+        logger.error("Error while updating E-Service {}", eServiceId, ex)
         Future.failed[client.model.EService](ex)
       }
 
@@ -170,7 +168,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         result.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Error while $eServiceId deprecating $descriptorId")
+        logger.error(s"Error while $eServiceId deprecating $descriptorId", ex)
         Future.failed[Unit](ex)
       }
   }
@@ -184,7 +182,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         result.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Error while $eServiceId archiving $descriptorId")
+        logger.error(s"Error while $eServiceId archiving $descriptorId", ex)
         Future.failed[Unit](ex)
       }
   }
@@ -198,7 +196,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         result.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Error while $eServiceId publishing $descriptorId")
+        logger.error(s"Error while $eServiceId publishing $descriptorId", ex)
         Future.failed[Unit](ex)
       }
   }
@@ -212,7 +210,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         result.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Error while $eServiceId moving $descriptorId to draft")
+        logger.error(s"Error while $eServiceId moving $descriptorId to draft", ex)
         Future.failed[Unit](ex)
       }
   }
@@ -250,7 +248,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         result.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Error while creating Descrriptor ${ex.getMessage}")
+        logger.error(s"Error while creating Descriptor", ex)
         Future.failed[client.model.EServiceDescriptor](ex)
       }
 
@@ -275,7 +273,8 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       }
       .recoverWith { case ex =>
         logger.error(
-          s"Error while creating document with description $description created on Descriptor $descriptorId for E-Services $eServiceId"
+          s"Error while creating document with description $description created on Descriptor $descriptorId for E-Services $eServiceId",
+          ex
         )
         Future.failed[client.model.EService](ex)
       }
@@ -293,7 +292,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         result.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Error while retrieving document with id $eServiceId")
+        logger.error(s"Error while retrieving document with id $eServiceId", ex)
         Future.failed[client.model.EServiceDoc](ex)
       }
   }
@@ -313,7 +312,8 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       }
       .recoverWith { case ex =>
         logger.error(
-          s"Error while DELETING Document with id $documentId deleted on Descriptor $descriptorId for E-Services $eServiceId"
+          s"Error while DELETING Document with id $documentId deleted on Descriptor $descriptorId for E-Services $eServiceId",
+          ex
         )
         Future.failed[Unit](ex)
       }
@@ -341,7 +341,8 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       }
       .recoverWith { case ex =>
         logger.error(
-          s"Error while UPDATING Document with id $documentId deleted on Descriptor $descriptorId for E-Services $eServiceId"
+          s"Error while UPDATING Document with id $documentId deleted on Descriptor $descriptorId for E-Services $eServiceId",
+          ex
         )
         Future.failed[client.model.EServiceDoc](ex)
       }
@@ -357,7 +358,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         result.content
       }
       .recoverWith { case ex =>
-        logger.error(s"Error while Suspending Descriptor $descriptorId suspended for E-Services $eServiceId")
+        logger.error(s"Error while Suspending Descriptor $descriptorId suspended for E-Services $eServiceId", ex)
         Future.failed[Unit](ex)
       }
   }

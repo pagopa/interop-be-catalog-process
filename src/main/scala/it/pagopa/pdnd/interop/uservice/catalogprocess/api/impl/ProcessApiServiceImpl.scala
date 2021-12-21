@@ -74,10 +74,10 @@ final case class ProcessApiServiceImpl(
       case Success(res) => createEService200(res)
       case Failure(ex) =>
         logger.error(
-          "Error while creating e-service for producer {} with service name {} - {}",
+          "Error while creating e-service for producer {} with service name {}",
           eServiceSeed.producerId,
           eServiceSeed.name,
-          ex.getMessage
+          ex
         )
         val errorResponse: Problem =
           problemOf(
@@ -108,12 +108,7 @@ final case class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_) => deleteDraft204
       case Failure(ex: ApiError[_]) if ex.code == 400 =>
-        logger.error(
-          "Error while deleting draft descriptor {} for e-service {} - {}",
-          eServiceId,
-          descriptorId,
-          ex.getMessage
-        )
+        logger.error("Error while deleting draft descriptor {} for e-service {}", eServiceId, descriptorId, ex)
         deleteDraft400(
           problemOf(
             StatusCodes.BadRequest,
@@ -123,12 +118,7 @@ final case class ProcessApiServiceImpl(
           )
         )
       case Failure(ex: ApiError[_]) if ex.code == 404 =>
-        logger.error(
-          "Error while deleting draft descriptor {} for e-service {} - {}",
-          eServiceId,
-          descriptorId,
-          ex.getMessage
-        )
+        logger.error("Error while deleting draft descriptor {} for e-service {}", eServiceId, descriptorId, ex)
         deleteDraft404(
           problemOf(
             StatusCodes.NotFound,
@@ -138,12 +128,7 @@ final case class ProcessApiServiceImpl(
           )
         )
       case Failure(ex) =>
-        logger.error(
-          "Error while deleting draft descriptor {} for e-service {} - {}",
-          eServiceId,
-          descriptorId,
-          ex.getMessage
-        )
+        logger.error("Error while deleting draft descriptor {} for e-service {}", eServiceId, descriptorId, ex)
         val error = problemOf(
           StatusCodes.InternalServerError,
           "0004",
@@ -174,11 +159,11 @@ final case class ProcessApiServiceImpl(
       case Success(response) => getEServices200(response)
       case Failure(ex) =>
         logger.error(
-          "Error while getting e-service with producer = {}, consumer = {} and state = {} - {}",
+          "Error while getting e-service with producer = {}, consumer = {} and state = {}",
           producerId,
           consumerId,
           status,
-          ex.getMessage
+          ex
         )
         val error =
           problemOf(StatusCodes.InternalServerError, "0005", ex, s"Unexpected error while retrieving E-Services")
@@ -222,12 +207,7 @@ final case class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_) => publishDescriptor204
       case Failure(ex: ApiError[_]) if ex.code == 400 =>
-        logger.error(
-          "Error while publishing descriptor {} for eservice {} - {}",
-          descriptorId,
-          eServiceId,
-          ex.getMessage
-        )
+        logger.error("Error while publishing descriptor {} for eservice {}", descriptorId, eServiceId, ex)
         publishDescriptor400(
           problemOf(
             StatusCodes.BadRequest,
@@ -237,12 +217,7 @@ final case class ProcessApiServiceImpl(
           )
         )
       case Failure(ex: ApiError[_]) if ex.code == 404 =>
-        logger.error(
-          "Error while publishing descriptor {} for eservice {} - {}",
-          descriptorId,
-          eServiceId,
-          ex.getMessage
-        )
+        logger.error("Error while publishing descriptor {} for eservice {}", descriptorId, eServiceId, ex)
         publishDescriptor404(
           problemOf(
             StatusCodes.NotFound,
@@ -252,12 +227,7 @@ final case class ProcessApiServiceImpl(
           )
         )
       case Failure(ex) =>
-        logger.error(
-          "Error while publishing descriptor {} for eservice {} - {}",
-          descriptorId,
-          eServiceId,
-          ex.getMessage
-        )
+        logger.error("Error while publishing descriptor {} for eservice {}", descriptorId, eServiceId, ex)
         val error =
           problemOf(
             StatusCodes.InternalServerError,
@@ -290,7 +260,7 @@ final case class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(response) => getEServiceById200(response)
       case Failure(ex) =>
-        logger.error("Error while getting e-service {} - {}", eServiceId, ex.getMessage)
+        logger.error("Error while getting e-service {}", eServiceId, ex)
         val error =
           problemOf(StatusCodes.InternalServerError, "0009", ex, s"Unexpected error retrieving E-Service $eServiceId")
         complete(error.status, error)
@@ -335,11 +305,11 @@ final case class ProcessApiServiceImpl(
       case Success(response) => createEServiceDocument200(response)
       case Failure(ex: ApiError[_]) if ex.code == 400 =>
         logger.error(
-          "Failure in creation of e-service document of kind {} for e-service {} and descriptor {} - {}",
+          "Failure in creation of e-service document of kind {} for e-service {} and descriptor {}",
           kind,
           eServiceId,
           descriptorId,
-          ex.getMessage
+          ex
         )
         createEServiceDocument400(
           problemOf(
@@ -351,11 +321,11 @@ final case class ProcessApiServiceImpl(
         )
       case Failure(ex: ApiError[_]) if ex.code == 404 =>
         logger.error(
-          "Failure in creation of e-service document of kind {} for e-service {} and descriptor {} - {}",
+          "Failure in creation of e-service document of kind {} for e-service {} and descriptor {}",
           kind,
           eServiceId,
           descriptorId,
-          ex.getMessage
+          ex
         )
         createEServiceDocument404(
           problemOf(
@@ -367,11 +337,11 @@ final case class ProcessApiServiceImpl(
         )
       case Failure(ex) =>
         logger.error(
-          "Failure in creation of e-service document of kind {} for e-service {} and descriptor {} - {}",
+          "Failure in creation of e-service document of kind {} for e-service {} and descriptor {}",
           kind,
           eServiceId,
           descriptorId,
-          ex.getMessage
+          ex
         )
         val error =
           problemOf(
@@ -414,11 +384,11 @@ final case class ProcessApiServiceImpl(
         complete(output)
       case Failure(ex: ApiError[_]) if ex.code == 400 =>
         logger.error(
-          "Error while getting e-service document {} for e-service {} and descriptor {} - {}",
+          "Error while getting e-service document {} for e-service {} and descriptor {}",
           documentId,
           eServiceId,
           descriptorId,
-          ex.getMessage
+          ex
         )
         getEServiceDocumentById400(
           problemOf(
@@ -430,11 +400,11 @@ final case class ProcessApiServiceImpl(
         )
       case Failure(ex: ApiError[_]) if ex.code == 404 =>
         logger.error(
-          "Error while getting e-service document {} for e-service {} and descriptor {} - {}",
+          "Error while getting e-service document {} for e-service {} and descriptor {}",
           documentId,
           eServiceId,
           descriptorId,
-          ex.getMessage
+          ex
         )
         getEServiceDocumentById404(
           problemOf(
@@ -446,11 +416,11 @@ final case class ProcessApiServiceImpl(
         )
       case Failure(ex) =>
         logger.error(
-          "Error while getting e-service document {} for e-service {} and descriptor {} - {}",
+          "Error while getting e-service document {} for e-service {} and descriptor {}",
           documentId,
           eServiceId,
           descriptorId,
-          ex.getMessage
+          ex
         )
         val error =
           problemOf(
@@ -519,13 +489,13 @@ final case class ProcessApiServiceImpl(
       case Success(response) => getFlatEServices200(response)
       case Failure(ex) =>
         logger.error(
-          "Error while getting flatten e-services list for caller {} where producer = {}, consumer = {}, state = {} and latest published only = {} - {}",
+          "Error while getting flatten e-services list for caller {} where producer = {}, consumer = {}, state = {} and latest published only = {}",
           callerId,
           producerId,
           consumerId,
           status,
           latestPublishedOnly,
-          ex.getMessage
+          ex
         )
         val error =
           problemOf(
@@ -585,7 +555,7 @@ final case class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(res) => createDescriptor200(res)
       case Failure(ex) =>
-        logger.error("Error while creating descriptor for e-service {} - {}", eServiceId, ex.getMessage)
+        logger.error("Error while creating descriptor for e-service {}", eServiceId, ex)
         val errorResponse: Problem =
           problemOf(StatusCodes.BadRequest, "0017", ex, s"Error while creating Descriptor for e-service Id $eServiceId")
         createDescriptor400(errorResponse)
@@ -623,12 +593,7 @@ final case class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(res) => updateDraftDescriptor200(res)
       case Failure(ex) =>
-        logger.error(
-          "Error while updating draft descriptor {} of e-service {} - {}",
-          descriptorId,
-          eServiceId,
-          ex.getMessage
-        )
+        logger.error("Error while updating draft descriptor {} of e-service {}", descriptorId, eServiceId, ex)
         val errorResponse: Problem =
           problemOf(
             StatusCodes.BadRequest,
@@ -661,7 +626,7 @@ final case class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(res) => updateEServiceById200(res)
       case Failure(ex) =>
-        logger.error("Error while updating e-service by id {} - {}", eServiceId, ex.getMessage)
+        logger.error("Error while updating e-service by id {}", eServiceId, ex)
         val errorResponse: Problem =
           problemOf(StatusCodes.BadRequest, "0019", ex, s"Error while creating Descriptor for e-service Id $eServiceId")
         createDescriptor400(errorResponse)
@@ -729,7 +694,7 @@ final case class ProcessApiServiceImpl(
     catalogManagementService
       .deprecateDescriptor(bearerToken)(eServiceId = eServiceId, descriptorId = descriptorId)
       .recoverWith { case ex =>
-        logger.error(s"Unable to deprecate descriptor $descriptorId on E-Service $eServiceId. Reason: ${ex.getMessage}")
+        logger.error(s"Unable to deprecate descriptor $descriptorId on E-Service $eServiceId.", ex)
         Future.failed(ex)
       }
   }
@@ -826,11 +791,11 @@ final case class ProcessApiServiceImpl(
       case Success(_) => deleteEServiceDocumentById204
       case Failure(ex: ApiError[_]) if ex.code == 400 =>
         logger.error(
-          "Error while deleting document {} of descriptor {} for e-service {} - {}",
+          "Error while deleting document {} of descriptor {} for e-service {}",
           documentId,
           descriptorId,
           eServiceId,
-          ex.getMessage
+          ex
         )
         deleteEServiceDocumentById400(
           problemOf(
@@ -842,11 +807,11 @@ final case class ProcessApiServiceImpl(
         )
       case Failure(ex: ApiError[_]) if ex.code == 404 =>
         logger.error(
-          "Error while deleting document {} of descriptor {} for e-service {} - {}",
+          "Error while deleting document {} of descriptor {} for e-service {}",
           documentId,
           descriptorId,
           eServiceId,
-          ex.getMessage
+          ex
         )
         deleteEServiceDocumentById404(
           problemOf(
@@ -858,11 +823,11 @@ final case class ProcessApiServiceImpl(
         )
       case Failure(ex) =>
         logger.error(
-          "Error while deleting document {} of descriptor {} for e-service {} - {}",
+          "Error while deleting document {} of descriptor {} for e-service {}",
           documentId,
           descriptorId,
           eServiceId,
-          ex.getMessage
+          ex
         )
         val error = problemOf(
           StatusCodes.InternalServerError,
@@ -905,7 +870,7 @@ final case class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(updatedDocument) => updateEServiceDocumentById200(updatedDocument)
       case Failure(ex: ApiError[_]) if ex.code == 400 =>
-        logger.error("Error while updating e-service by id {} - {}", eServiceId, ex.getMessage)
+        logger.error("Error while updating e-service by id {}", eServiceId, ex)
         updateEServiceDocumentById400(
           problemOf(
             StatusCodes.BadRequest,
@@ -915,7 +880,7 @@ final case class ProcessApiServiceImpl(
           )
         )
       case Failure(ex: ApiError[_]) if ex.code == 404 =>
-        logger.error("Error while updating e-service by id {} - {}", eServiceId, ex.getMessage)
+        logger.error("Error while updating e-service by id {}", eServiceId, ex)
         updateEServiceDocumentById404(
           problemOf(
             StatusCodes.NotFound,
@@ -925,7 +890,7 @@ final case class ProcessApiServiceImpl(
           )
         )
       case Failure(ex) =>
-        logger.error("Error while updating e-service by id {} - {}", eServiceId, ex.getMessage)
+        logger.error("Error while updating e-service by id {}", eServiceId, ex)
         val error = problemOf(
           StatusCodes.InternalServerError,
           "0025",
@@ -957,7 +922,7 @@ final case class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(res) => cloneEServiceByDescriptor200(res)
       case Failure(ex) =>
-        logger.error("Error while cloning descriptor {} of e-service {} - {}", descriptorId, eServiceId, ex.getMessage)
+        logger.error("Error while cloning descriptor {} of e-service {}", descriptorId, eServiceId, ex)
         val errorResponse: Problem =
           problemOf(
             StatusCodes.BadRequest,
@@ -986,7 +951,7 @@ final case class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_) => deleteEService204
       case Failure(ex) =>
-        logger.error("Error while deleting e-service {} - {}", eServiceId, ex.getMessage)
+        logger.error("Error while deleting e-service {}", eServiceId, ex)
         val error =
           problemOf(StatusCodes.InternalServerError, "0027", ex, s"Error while deleting E-service $eServiceId")
         complete(error.status, error)
@@ -1040,7 +1005,7 @@ final case class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_) => activateDescriptor204
       case Failure(ex: NotValidDescriptor) =>
-        logger.error("Activating descriptor {} for e-service {} - {}", descriptorId, eServiceId, ex.getMessage)
+        logger.error("Activating descriptor {} for e-service {}", descriptorId, eServiceId, ex)
         activateDescriptor400(
           problemOf(
             StatusCodes.BadGateway,
@@ -1050,7 +1015,7 @@ final case class ProcessApiServiceImpl(
           )
         )
       case Failure(ex: ApiError[_]) if ex.code == 400 =>
-        logger.error("Activating descriptor {} for e-service {} - {}", descriptorId, eServiceId, ex.getMessage)
+        logger.error("Activating descriptor {} for e-service {}", descriptorId, eServiceId, ex)
         activateDescriptor400(
           problemOf(
             StatusCodes.BadGateway,
@@ -1060,7 +1025,7 @@ final case class ProcessApiServiceImpl(
           )
         )
       case Failure(ex: ApiError[_]) if ex.code == 404 =>
-        logger.error("Activating descriptor {} for e-service {} - {}", descriptorId, eServiceId, ex.getMessage)
+        logger.error("Activating descriptor {} for e-service {}", descriptorId, eServiceId, ex)
         activateDescriptor404(
           problemOf(
             StatusCodes.NotFound,
@@ -1070,7 +1035,7 @@ final case class ProcessApiServiceImpl(
           )
         )
       case Failure(ex) =>
-        logger.error("Activating descriptor {} for e-service {} - {}", descriptorId, eServiceId, ex.getMessage)
+        logger.error("Activating descriptor {} for e-service {}", descriptorId, eServiceId, ex)
         val error = problemOf(
           StatusCodes.InternalServerError,
           "0031",
@@ -1104,12 +1069,7 @@ final case class ProcessApiServiceImpl(
     onComplete(result) {
       case Success(_) => suspendDescriptor204
       case Failure(ex: NotValidDescriptor) =>
-        logger.error(
-          "Error during suspension of descriptor {} of e-service {} - {}",
-          descriptorId,
-          eServiceId,
-          ex.getMessage
-        )
+        logger.error("Error during suspension of descriptor {} of e-service {}", descriptorId, eServiceId, ex)
         suspendDescriptor400(
           problemOf(
             StatusCodes.BadRequest,
@@ -1119,12 +1079,7 @@ final case class ProcessApiServiceImpl(
           )
         )
       case Failure(ex: ApiError[_]) if ex.code == 400 =>
-        logger.error(
-          "Error during suspension of descriptor {} of e-service {} - {}",
-          descriptorId,
-          eServiceId,
-          ex.getMessage
-        )
+        logger.error("Error during suspension of descriptor {} of e-service {}", descriptorId, eServiceId, ex)
         suspendDescriptor400(
           problemOf(
             StatusCodes.BadRequest,
@@ -1134,12 +1089,7 @@ final case class ProcessApiServiceImpl(
           )
         )
       case Failure(ex: ApiError[_]) if ex.code == 404 =>
-        logger.error(
-          "Error during suspension of descriptor {} of e-service {} - {}",
-          descriptorId,
-          eServiceId,
-          ex.getMessage
-        )
+        logger.error("Error during suspension of descriptor {} of e-service {}", descriptorId, eServiceId, ex)
         suspendDescriptor404(
           problemOf(
             StatusCodes.NotFound,
@@ -1149,12 +1099,7 @@ final case class ProcessApiServiceImpl(
           )
         )
       case Failure(ex) =>
-        logger.error(
-          "Error during suspension of descriptor {} of e-service {} - {}",
-          descriptorId,
-          eServiceId,
-          ex.getMessage
-        )
+        logger.error("Error during suspension of descriptor {} of e-service {}", descriptorId, eServiceId, ex)
         val error = problemOf(
           StatusCodes.InternalServerError,
           "0035",
