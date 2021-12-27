@@ -5,10 +5,11 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import com.nimbusds.jwt.JWTClaimsSet
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
+import it.pagopa.pdnd.interop.commons.utils.SprayCommonFormats.uuidFormat
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl.Converter.convertToApiTechnology
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl._
-import it.pagopa.pdnd.interop.uservice.catalogprocess.api.{HealthApi, ProcessApi, ProcessApiMarshaller}
+import it.pagopa.pdnd.interop.uservice.catalogprocess.api.{HealthApi, ProcessApi}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
 import it.pagopa.pdnd.interop.uservice.catalogprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service._
@@ -22,15 +23,11 @@ import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
-import it.pagopa.pdnd.interop.commons.utils.SprayCommonFormats.uuidFormat
-
 import scala.util.Success
 
 class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndAfterAll with MockFactory {
 
   import CatalogProcessSpec._
-
-  val processApiMarshaller: ProcessApiMarshaller = new ProcessApiMarshallerImpl
 
   var controller: Option[Controller] = None
 
@@ -46,7 +43,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
           fileManager = fileManager,
           jwtReader = jwtReader
         ),
-        processApiMarshaller,
+        ProcessApiMarshallerImpl,
         wrappingDirective
       )
 
