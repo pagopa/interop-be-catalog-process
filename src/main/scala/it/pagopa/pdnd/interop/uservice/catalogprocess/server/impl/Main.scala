@@ -2,15 +2,17 @@ package it.pagopa.pdnd.interop.uservice.catalogprocess.server.impl
 
 import akka.actor.CoordinatedShutdown
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.server.directives.SecurityDirectives
 import akka.management.scaladsl.AkkaManagement
 import it.pagopa.pdnd.interop.commons.files.StorageConfiguration
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
-import it.pagopa.pdnd.interop.commons.jwt.{JWTConfiguration, PublicKeysHolder}
 import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
 import it.pagopa.pdnd.interop.commons.jwt.service.impl.DefaultJWTReader
-import it.pagopa.pdnd.interop.commons.utils.{AkkaUtils, CORSSupport}
+import it.pagopa.pdnd.interop.commons.jwt.{JWTConfiguration, PublicKeysHolder}
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions.TryOps
+import it.pagopa.pdnd.interop.commons.utils.{AkkaUtils, CORSSupport}
 import it.pagopa.pdnd.interop.uservice.agreementmanagement.client.api.AgreementApi
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.api.AttributeApi
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.api.EServiceApi
@@ -18,7 +20,8 @@ import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl.{
   HealthApiMarshallerImpl,
   HealthServiceApiImpl,
   ProcessApiMarshallerImpl,
-  ProcessApiServiceImpl
+  ProcessApiServiceImpl,
+  problemOf
 }
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.{HealthApi, ProcessApi}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system.{
@@ -27,27 +30,22 @@ import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system.{
   executionContext
 }
 import it.pagopa.pdnd.interop.uservice.catalogprocess.server.Controller
+import it.pagopa.pdnd.interop.uservice.catalogprocess.service._
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.impl.{
   AgreementManagementServiceImpl,
   AttributeRegistryManagementServiceImpl,
   CatalogManagementServiceImpl,
   PartyManagementServiceImpl
 }
-import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{
-  AgreementManagementInvoker,
-  AgreementManagementService,
-  AttributeRegistryManagementInvoker,
-  AttributeRegistryManagementService,
-  CatalogManagementInvoker,
-  CatalogManagementService,
-  PartyManagementInvoker,
-  PartyManagementService
-}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import kamon.Kamon
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
+import scala.jdk.OptionConverters._
 import scala.util.{Failure, Success}
+import com.atlassian.oai.validator.report.ValidationReport
 
 //shuts down the actor system in case of startup errors
 case object StartupErrorShutdown extends CoordinatedShutdown.Reason
@@ -89,6 +87,8 @@ object Main
     with PartyManagementDependency
     with CatalogManagementDependency {
 
+  private val logger = LoggerFactory.getLogger(this.getClass)
+
   val dependenciesLoaded: Future[(FileManager, JWTReader)] = for {
     fileManager <- FileManager.getConcreteImplementation(StorageConfiguration.runtimeFileManager).toFuture
     keyset      <- JWTConfiguration.jwtReader.loadKeyset().toFuture
@@ -124,7 +124,7 @@ object Main
 
     val healthApi: HealthApi = new HealthApi(
       new HealthServiceApiImpl(),
-      new HealthApiMarshallerImpl(),
+      HealthApiMarshallerImpl,
       SecurityDirectives.authenticateOAuth2("SecurityRealm", AkkaUtils.Authenticator)
     )
 
@@ -132,11 +132,34 @@ object Main
       AkkaManagement.get(classicActorSystem).start()
     }
 
-    val controller: Controller = new Controller(healthApi, processApi)
+    val controller: Controller = new Controller(
+      healthApi,
+      processApi,
+      validationExceptionToRoute = Some(report => {
+        val error =
+          problemOf(StatusCodes.BadRequest, "0000", defaultMessage = errorFromRequestValidationReport(report))
+        complete(error.status, error)(HealthApiMarshallerImpl.toEntityMarshallerProblem)
+      })
+    )
 
     val server: Future[Http.ServerBinding] =
       Http().newServerAt("0.0.0.0", ApplicationConfiguration.serverPort).bind(corsHandler(controller.routes))
 
     server
+  }
+
+  private def errorFromRequestValidationReport(report: ValidationReport): String = {
+    val messageStrings = report.getMessages.asScala.foldLeft[List[String]](List.empty)((tail, m) => {
+      val context = m.getContext.toScala.map(c =>
+        Seq(c.getRequestMethod.toScala, c.getRequestPath.toScala, c.getLocation.toScala).flatten
+      )
+      s"""${m.getAdditionalInfo.asScala.mkString(",")}
+         |${m.getLevel} - ${m.getMessage}
+         |${context.getOrElse(Seq.empty).mkString(" - ")}
+         |""".stripMargin :: tail
+    })
+
+    logger.error("Request failed: {}", messageStrings.mkString)
+    report.getMessages().asScala.map(_.getMessage).mkString(", ")
   }
 }
