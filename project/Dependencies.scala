@@ -68,9 +68,9 @@ object Dependencies {
     lazy val prometheus = namespace %% "kamon-prometheus" % kamonVersion
   }
 
-  private[this] object openapi4j {
-    lazy val namespace          = "org.openapi4j"
-    lazy val operationValidator = namespace % "openapi-operation-validator" % openapi4jVersion
+  private[this] object atlassian {
+    lazy val namespace        = "com.atlassian.oai"
+    lazy val swaggerValidator = namespace % "swagger-request-validator-core" % swaggerValidatorVersion
   }
 
   private[this] object resilience4j {
@@ -121,13 +121,13 @@ object Dependencies {
       akka.stream                              % Compile,
       akka.http                                % Compile,
       akka.httpJson                            % Compile,
+      atlassian.swaggerValidator               % Compile,
       cats.core                                % Compile,
       awssdk.s3                                % Compile,
       commons.fileUpload                       % Compile,
       mustache.compiler                        % Compile,
       logback.classic                          % Compile,
       akka.slf4j                               % Compile,
-      openapi4j.operationValidator             % Compile,
       resilience4j.rateLimiter                 % Compile,
       kamon.bundle                             % Compile,
       kamon.prometheus                         % Compile,
