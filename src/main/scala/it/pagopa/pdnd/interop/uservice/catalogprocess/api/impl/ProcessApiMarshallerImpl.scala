@@ -23,10 +23,7 @@ import java.io.File
 import java.nio.charset.StandardCharsets
 import scala.io.{BufferedSource, Codec}
 
-final case class ProcessApiMarshallerImpl()
-    extends ProcessApiMarshaller
-    with SprayJsonSupport
-    with DefaultJsonProtocol {
+object ProcessApiMarshallerImpl extends ProcessApiMarshaller with SprayJsonSupport with DefaultJsonProtocol {
 
   override implicit def fromEntityUnmarshallerEServiceSeed: FromEntityUnmarshaller[EServiceSeed] =
     sprayJsonUnmarshaller[EServiceSeed]

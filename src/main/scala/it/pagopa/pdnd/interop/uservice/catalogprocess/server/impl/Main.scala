@@ -112,7 +112,7 @@ object Main
         fileManager = fileManager,
         jwtReader = jwtReader
       ),
-      ProcessApiMarshallerImpl(),
+      ProcessApiMarshallerImpl,
       SecurityDirectives.authenticateOAuth2("SecurityRealm", AkkaUtils.Authenticator)
     )
 
