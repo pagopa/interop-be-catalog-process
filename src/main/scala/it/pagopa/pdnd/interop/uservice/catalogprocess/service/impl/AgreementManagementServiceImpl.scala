@@ -11,7 +11,7 @@ import scala.concurrent.{ExecutionContext, Future}
 final case class AgreementManagementServiceImpl(invoker: AgreementManagementInvoker, api: AgreementApi)
     extends AgreementManagementService {
 
-  val logger: Logger = LoggerFactory.getLogger(this.getClass)
+  implicit val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
   override def getAgreements(
     bearerToken: String,
@@ -21,16 +21,6 @@ final case class AgreementManagementServiceImpl(invoker: AgreementManagementInvo
   )(implicit ec: ExecutionContext): Future[Seq[Agreement]] = {
     val request: ApiRequest[Seq[Agreement]] =
       api.getAgreements(consumerId = consumerId, producerId = producerId, state = state)(BearerToken(bearerToken))
-    invoker
-      .execute(request)
-      .map { result =>
-        logger.info(s"Agreements retrieved for consumer ${consumerId.getOrElse("Unknown")}")
-        result.content
-      }
-      .recoverWith { case ex =>
-        logger.error(s"Error trying to get agreements for consumer ${consumerId.getOrElse("Unknown")}.", ex)
-        Future.failed[Seq[Agreement]](ex)
-      }
-
+    invoker.invoke(request, s"Agreements retrieval for consumer ${consumerId.getOrElse("Unknown")}")
   }
 }
