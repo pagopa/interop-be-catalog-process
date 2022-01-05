@@ -113,13 +113,13 @@ object Main
         jwtReader = jwtReader
       ),
       ProcessApiMarshallerImpl,
-      SecurityDirectives.authenticateOAuth2("SecurityRealm", AkkaUtils.Authenticator)
+      jwtReader.OAuth2JWTValidatorAsContexts
     )
 
     val healthApi: HealthApi = new HealthApi(
       new HealthServiceApiImpl(),
       HealthApiMarshallerImpl,
-      SecurityDirectives.authenticateOAuth2("SecurityRealm", AkkaUtils.Authenticator)
+      SecurityDirectives.authenticateOAuth2("SecurityRealm", AkkaUtils.PassThroughAuthenticator)
     )
 
     locally {
