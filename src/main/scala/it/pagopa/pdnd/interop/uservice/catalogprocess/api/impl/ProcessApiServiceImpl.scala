@@ -332,7 +332,7 @@ final case class ProcessApiServiceImpl(
       for {
         bearer      <- validateBearer(contexts, jwtReader)
         document    <- catalogManagementService.getEServiceDocument(bearer)(eServiceId, descriptorId, documentId)
-        contentType <- extractFile(document)
+        contentType <- getDocumentContentType(document)
         response    <- fileManager.get(ApplicationConfiguration.storageContainer)(document.path)
       } yield DocumentDetails(document.name, contentType, response)
 
@@ -362,6 +362,20 @@ final case class ProcessApiServiceImpl(
         getEServiceDocumentById404(
           problemOf(StatusCodes.NotFound, GetDescriptorDocumentNotFound(documentId, descriptorId, eServiceId))
         )
+      case Failure(ex: ContentTypeParsingError) =>
+        logger.error(
+          "Error while parsing document content type {} for e-service {} and descriptor {} - Document: {}, content type: {}, errors - {}",
+          documentId,
+          eServiceId,
+          descriptorId,
+          ex.documentPath,
+          ex.contentType,
+          ex.errors,
+          ex
+        )
+        val error =
+          problemOf(StatusCodes.InternalServerError, ex)
+        complete(error.status, error)
       case Failure(ex) =>
         logger.error(
           "Error while getting e-service document {} for e-service {} and descriptor {}",
@@ -385,10 +399,13 @@ final case class ProcessApiServiceImpl(
     HttpEntity.fromFile(documentDetails.contentType, file)
   }
 
-  private def extractFile(document: CatalogManagementDependency.EServiceDoc): Future[ContentType] = {
+  private def getDocumentContentType(document: CatalogManagementDependency.EServiceDoc): Future[ContentType] = {
     ContentType
       .parse(document.contentType)
-      .fold(ex => Future.failed(ContentTypeParsingError(document, ex)), Future.successful)
+      .fold(
+        ex => Future.failed(ContentTypeParsingError(document.contentType, document.path, ex.map(_.formatPretty))),
+        Future.successful
+      )
   }
 
   /** Code: 200, Message: A list of flattened E-Services, DataType: Seq[FlatEService]

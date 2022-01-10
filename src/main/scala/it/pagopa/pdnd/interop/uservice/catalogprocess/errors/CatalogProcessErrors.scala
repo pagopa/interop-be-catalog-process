@@ -1,16 +1,11 @@
 package it.pagopa.pdnd.interop.uservice.catalogprocess.errors
 
-import akka.http.scaladsl.model.ErrorInfo
 import it.pagopa.pdnd.interop.commons.utils.errors.ComponentError
-import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.EServiceDoc
 
 object CatalogProcessErrors {
 
-  final case class ContentTypeParsingError(document: EServiceDoc, errors: List[ErrorInfo])
-      extends ComponentError(
-        "0001",
-        s"Error trying to parse content type ${document.contentType} for document ${document.path},reason:\n${errors.map(_.formatPretty).mkString("\n")}"
-      )
+  final case class ContentTypeParsingError(contentType: String, documentPath: String, errors: List[String])
+      extends ComponentError("0001", s"Error trying to parse content type $contentType for document ${documentPath}.")
 
   final case class EServiceDescriptorNotFound(eServiceId: String, descriptorId: String)
       extends ComponentError("0002", s"Descriptor $descriptorId for EService $eServiceId not found")
