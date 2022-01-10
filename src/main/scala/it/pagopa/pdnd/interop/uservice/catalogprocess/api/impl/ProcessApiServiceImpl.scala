@@ -364,17 +364,15 @@ final case class ProcessApiServiceImpl(
         )
       case Failure(ex: ContentTypeParsingError) =>
         logger.error(
-          "Error while parsing document content type {} for e-service {} and descriptor {} - Document: {}, content type: {}, errors - {}",
+          "Error while parsing document {} content type for e-service {} and descriptor {} - Content type: {}, errors - {}",
           documentId,
           eServiceId,
           descriptorId,
-          ex.documentPath,
           ex.contentType,
-          ex.errors,
+          ex.errors.mkString(", "),
           ex
         )
-        val error =
-          problemOf(StatusCodes.InternalServerError, ex)
+        val error = problemOf(StatusCodes.InternalServerError, ex)
         complete(error.status, error)
       case Failure(ex) =>
         logger.error(
