@@ -772,7 +772,6 @@ components:
           format: int32
     UpdateEServiceDescriptorSeed:
       required:
-        - state
         - audience
         - voucherLifespan
       type: object
