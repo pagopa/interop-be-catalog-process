@@ -204,6 +204,9 @@ final case class ProcessApiServiceImpl(
       case Failure(ex: ApiError[_]) if ex.code == 404 =>
         logger.error("Error while publishing descriptor {} for eservice {}", descriptorId, eServiceId, ex)
         publishDescriptor404(problemOf(StatusCodes.NotFound, PublishDescriptorNotFound(descriptorId, eServiceId)))
+      case Failure(ex: EServiceDescriptorWithoutInterface) =>
+        logger.error("Error while publishing descriptor {} for eservice {}", descriptorId, eServiceId, ex)
+        publishDescriptor400(problemOf(StatusCodes.BadRequest, ex))
       case Failure(ex) =>
         logger.error("Error while publishing descriptor {} for eservice {}", descriptorId, eServiceId, ex)
         val error =
