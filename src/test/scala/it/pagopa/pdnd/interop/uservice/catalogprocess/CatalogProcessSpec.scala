@@ -60,7 +60,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
   "flatten e-service filter" must {
     "filter properly" in {
-      //flattenServices.filter(item => status.forall(item.state.contains))
       val flattenServices = Seq(
         FlatEService(
           id = UUID.randomUUID(),
