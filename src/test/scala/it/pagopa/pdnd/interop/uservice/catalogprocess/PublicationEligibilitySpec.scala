@@ -23,6 +23,7 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
         description = None,
         audience = Seq.empty,
         voucherLifespan = 0,
+        dailyCallsMaxNumber = 0,
         interface = Some(
           CatalogManagementDependency.EServiceDoc(
             id = UUID.randomUUID(),
@@ -46,6 +47,7 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
         description = None,
         audience = Seq.empty,
         voucherLifespan = 0,
+        dailyCallsMaxNumber = 0,
         interface = Some(
           CatalogManagementDependency.EServiceDoc(
             id = UUID.randomUUID(),
@@ -69,6 +71,7 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
         description = None,
         audience = Seq.empty,
         voucherLifespan = 0,
+        dailyCallsMaxNumber = 0,
         interface = None,
         docs = Seq.empty,
         state = CatalogManagementDependency.EServiceDescriptorState.DRAFT
