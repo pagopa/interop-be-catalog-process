@@ -759,6 +759,7 @@ components:
       required:
         - audience
         - voucherLifespan
+        - dailyCallsMaxNumber
       type: object
       properties:
         description:
@@ -770,10 +771,16 @@ components:
         voucherLifespan:
           type: integer
           format: int32
+        dailyCallsMaxNumber:
+          description: 'maximum number of daily calls that this descriptor can afford.'
+          type: integer
+          format: int32
+          minimum: 0
     UpdateEServiceDescriptorSeed:
       required:
         - audience
         - voucherLifespan
+        - dailyCallsMaxNumber
       type: object
       properties:
         description:
@@ -785,6 +792,11 @@ components:
         voucherLifespan:
           type: integer
           format: int32
+        dailyCallsMaxNumber:
+          description: 'maximum number of daily calls that this descriptor can afford.'
+          type: integer
+          format: int32
+          minimum: 0
     UpdateEServiceDescriptorDocumentSeed:
       required:
         - description
@@ -899,6 +911,7 @@ components:
         - creationDate
         - audience
         - voucherLifespan
+        - dailyCallsMaxNumber
       properties:
         id:
           type: string
@@ -922,6 +935,11 @@ components:
         voucherLifespan:
           type: integer
           format: int32
+        dailyCallsMaxNumber:
+          description: 'maximum number of daily calls that this descriptor can afford.'
+          type: integer
+          format: int32
+          minimum: 0
     AttributeValue:
       type: object
       properties:
