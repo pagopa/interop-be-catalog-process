@@ -10,6 +10,7 @@ import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.{model => Catalo
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl.Converter.convertToApiTechnology
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl._
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.{HealthApi, ProcessApi}
+import it.pagopa.pdnd.interop.uservice.catalogprocess.model.EServiceDescriptorState._
 import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
 import it.pagopa.pdnd.interop.uservice.catalogprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service._
@@ -55,6 +56,55 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
   override def afterAll(): Unit = {
     shutDownServer()
     super.afterAll()
+  }
+
+  "flatten e-service filter" must {
+    "filter properly" in {
+      val flattenServices = Seq(
+        FlatEService(
+          id = UUID.randomUUID(),
+          producerId = UUID.randomUUID(),
+          producerName = "test",
+          name = "test",
+          version = None,
+          state = Some(PUBLISHED),
+          descriptorId = Some("1d"),
+          callerSubscribed = None,
+          certifiedAttributes = Seq.empty
+        ),
+        FlatEService(
+          id = UUID.randomUUID(),
+          producerId = UUID.randomUUID(),
+          producerName = "test2",
+          name = "test2",
+          version = None,
+          state = Some(SUSPENDED),
+          descriptorId = Some("2d"),
+          callerSubscribed = None,
+          certifiedAttributes = Seq.empty
+        ),
+        FlatEService(
+          id = UUID.randomUUID(),
+          producerId = UUID.randomUUID(),
+          producerName = "test3",
+          name = "test3",
+          version = None,
+          state = Some(SUSPENDED),
+          descriptorId = Some("3d"),
+          callerSubscribed = None,
+          certifiedAttributes = Seq.empty
+        )
+      )
+
+      val published = EServiceDescriptorState.fromValue("PUBLISHED").toOption
+      flattenServices.filter(item => published.forall(item.state.contains)) should have size 1
+
+      val draft = EServiceDescriptorState.fromValue("DRAFT").toOption
+      flattenServices.filter(item => draft.forall(item.state.contains)) should have size 0
+
+      val suspended = EServiceDescriptorState.fromValue("SUSPENDED").toOption
+      flattenServices.filter(item => suspended.forall(item.state.contains)) should have size 2
+    }
   }
 
   "EService creation" must {

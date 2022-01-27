@@ -416,7 +416,7 @@ final case class ProcessApiServiceImpl(
     callerId: String,
     producerId: Option[String],
     consumerId: Option[String],
-    status: Option[String],
+    state: Option[String],
     latestPublishedOnly: Option[Boolean]
   )(implicit
     contexts: Seq[(String, String)],
@@ -427,13 +427,13 @@ final case class ProcessApiServiceImpl(
       callerId,
       producerId,
       consumerId,
-      status,
+      state,
       latestPublishedOnly
     )
     val result =
       for {
         bearer                    <- validateBearer(contexts, jwtReader)
-        statusEnum                <- status.traverse(CatalogManagementDependency.EServiceDescriptorState.fromValue).toFuture
+        statusEnum                <- state.traverse(CatalogManagementDependency.EServiceDescriptorState.fromValue).toFuture
         callerSubscribedEservices <- agreementManagementService.getAgreementsByConsumerId(bearer)(callerId)
         retrievedEservices        <- retrieveEservices(bearer, producerId, consumerId, statusEnum)
         eservices                 <- processEservicesWithLatestFilter(retrievedEservices, latestPublishedOnly)
@@ -443,7 +443,8 @@ final case class ProcessApiServiceImpl(
         flattenServices = eservices.flatMap(service =>
           convertToFlattenEservice(service, callerSubscribedEservices, organizationsDetails)
         )
-        filteredDescriptors = flattenServices.filter(item => status.forall(item.state.contains))
+        stateProcessEnum <- state.traverse(EServiceDescriptorState.fromValue).toFuture
+        filteredDescriptors = flattenServices.filter(item => stateProcessEnum.forall(item.state.contains))
       } yield filteredDescriptors
 
     onComplete(result) {
@@ -454,7 +455,7 @@ final case class ProcessApiServiceImpl(
           callerId,
           producerId,
           consumerId,
-          status,
+          state,
           latestPublishedOnly,
           ex
         )
