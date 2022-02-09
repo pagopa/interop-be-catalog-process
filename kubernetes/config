@@ -26,6 +26,7 @@ storageContainer=$STORAGE_CONTAINER
 storageEndpoint=$STORAGE_ENDPOINT
 
 wellKnownURL=$WELL_KNOWN_URL
+mainAudience=$MAIN_AUDIENCE
 
 name=$(cat $SCRIPT_PATH/../build.sbt | grep "name :=" | awk -F:= '{ print $2 }' | sed 's/\"//' | sed 's/\",//' | sed 's/ //' | tr '[:upper:]' '[:lower:]' | grep -v client)
 
