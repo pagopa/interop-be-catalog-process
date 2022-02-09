@@ -20,6 +20,6 @@ object ApplicationConfiguration {
 
   lazy val jwtAudience: Set[String] = config.getStringList("catalog-process.jwt.audience").asScala.toSet
 
-  lazy val storageContainer: String = config.getString("catalog-process..storage.container")
+  lazy val storageContainer: String = config.getString("catalog-process.storage.container")
 
 }
