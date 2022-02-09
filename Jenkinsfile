@@ -56,6 +56,7 @@ pipeline {
       environment {
         DOCKER_REPO = 'gateway.interop.pdnd.dev'
         STORAGE = credentials('jenkins-aws')
+        MAIN_AUDIENCE = "${env.MAIN_AUDIENCE}"
         REPLICAS_NR = 3
       }
       steps {
