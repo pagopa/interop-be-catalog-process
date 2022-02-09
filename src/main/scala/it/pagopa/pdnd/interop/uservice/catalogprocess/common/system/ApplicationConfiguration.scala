@@ -2,15 +2,24 @@ package it.pagopa.pdnd.interop.uservice.catalogprocess.common.system
 
 import com.typesafe.config.{Config, ConfigFactory}
 
+import scala.jdk.CollectionConverters.CollectionHasAsScala
+
 object ApplicationConfiguration {
   lazy val config: Config = ConfigFactory.load()
 
-  def serverPort: Int = config.getInt("application.port")
+  lazy val serverPort: Int = config.getInt("catalog-process.port")
 
-  def catalogManagementUrl: String           = config.getString("services.catalog-management")
-  def agreementManagementUrl: String         = config.getString("services.agreement-management")
-  def attributeRegistryManagementUrl: String = config.getString("services.attribute-registry-management")
-  def partyManagementUrl: String             = config.getString("services.party-management")
-  def storageContainer: String               = config.getString("pdnd-interop-commons.storage.container")
+  lazy val catalogManagementUrl: String = config.getString("catalog-process.services.catalog-management")
+
+  lazy val agreementManagementUrl: String = config.getString("catalog-process.services.agreement-management")
+
+  lazy val attributeRegistryManagementUrl: String =
+    config.getString("catalog-process.services.attribute-registry-management")
+
+  lazy val partyManagementUrl: String = config.getString("catalog-process.services.party-management")
+
+  lazy val jwtAudience: Set[String] = config.getStringList("catalog-process.jwt.audience").asScala.toSet
+
+  lazy val storageContainer: String = config.getString("catalog-process.storage.container")
 
 }

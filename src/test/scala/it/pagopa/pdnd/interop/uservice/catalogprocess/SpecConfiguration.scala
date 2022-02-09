@@ -18,12 +18,13 @@ trait SpecConfiguration {
   System.setProperty("STORAGE_ENDPOINT", "localhost")
   System.setProperty("STORAGE_CREDENTIAL_ID", "localhost")
   System.setProperty("STORAGE_CREDENTIAL_SECRET", "localhost")
+  System.setProperty("MAIN_AUDIENCE", "audience")
 
   val config: Config = ConfigFactory
     .parseResourcesAnySyntax("application-test")
 
-  def serviceURL: String = s"${config.getString("application.url")}/${buildinfo.BuildInfo.interfaceVersion}"
-  def servicePort: Int   = config.getInt("application.port")
+  def serviceURL: String = s"${config.getString("catalog-process.url")}/${buildinfo.BuildInfo.interfaceVersion}"
+  def servicePort: Int   = config.getInt("catalog-process.port")
 }
 
 object SpecConfiguration extends SpecConfiguration
