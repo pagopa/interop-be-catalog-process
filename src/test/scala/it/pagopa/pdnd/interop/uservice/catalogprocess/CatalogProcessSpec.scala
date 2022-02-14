@@ -14,7 +14,14 @@ import it.pagopa.pdnd.interop.uservice.catalogprocess.model.EServiceDescriptorSt
 import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
 import it.pagopa.pdnd.interop.uservice.catalogprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service._
-import it.pagopa.pdnd.interop.uservice.{attributeregistrymanagement, partymanagement}
+import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
+  Organization => PartyManagementApiOrganization,
+  Attribute => PartyManagementApiAttribute
+}
+import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{
+  Attribute => AttributeRegistryManagementApiAttribute,
+  AttributeKind => AttributeRegistryManagementApiAttributeKind
+}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -165,12 +172,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         )
       )
 
-      val organization = partymanagement.client.model.Organization(
+      val organization = PartyManagementApiOrganization(
         id = seed.producerId,
         institutionId = "institutionId",
         description = "organization description",
         digitalAddress = "digitalAddress",
-        attributes = Seq.empty[String],
+        attributes = Seq.empty[PartyManagementApiAttribute],
         taxCode = "code"
       )
 
@@ -178,28 +185,28 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val attributeId2: String = "0002"
       val attributeId3: String = "0003"
 
-      val attribute1 = attributeregistrymanagement.client.model.Attribute(
+      val attribute1 = AttributeRegistryManagementApiAttribute(
         id = attributeId1,
         code = None,
-        certified = true,
+        kind = AttributeRegistryManagementApiAttributeKind.CERTIFIED,
         description = s"$attributeId1-description",
         origin = None,
         name = s"$attributeId1-name",
         creationTime = OffsetDateTime.now()
       )
-      val attribute2 = attributeregistrymanagement.client.model.Attribute(
+      val attribute2 = AttributeRegistryManagementApiAttribute(
         id = attributeId2,
         code = None,
-        certified = false,
+        kind = AttributeRegistryManagementApiAttributeKind.CERTIFIED,
         description = s"$attributeId2-description",
         origin = None,
         name = s"$attributeId2-name",
         creationTime = OffsetDateTime.now()
       )
-      val attribute3 = attributeregistrymanagement.client.model.Attribute(
+      val attribute3 = AttributeRegistryManagementApiAttribute(
         id = attributeId3,
         code = None,
-        certified = false,
+        kind = AttributeRegistryManagementApiAttributeKind.CERTIFIED,
         description = s"$attributeId3-description",
         origin = None,
         name = s"$attributeId3-name",

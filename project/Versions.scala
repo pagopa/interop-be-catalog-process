@@ -30,5 +30,5 @@ object PDNDVersions {
   lazy val attributeRegistryManagementVersion = "0.1.1-SNAPSHOT"
   lazy val catalogManagementClientVersion     = "0.1.1-SNAPSHOT"
   lazy val commonsVersion                     = "0.1.1-SNAPSHOT"
-  lazy val partyManagementClientVersion       = "0.1.1-SNAPSHOT"
+  lazy val partyManagementClientVersion       = "0.1.3-SNAPSHOT"
 }
