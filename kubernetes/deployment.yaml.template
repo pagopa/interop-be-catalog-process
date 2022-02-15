@@ -69,6 +69,8 @@ spec:
               value: "{{agreementManagementUrl}}"
             - name: PARTY_MANAGEMENT_URL
               value: "{{partyManagementUrl}}"
+            - name: AUTHORIZATION_MANAGEMENT_URL
+              value: "{{authorizationManagementUrl}}"
             - name: ATTRIBUTE_REGISTRY_MANAGEMENT_URL
               value: "{{attributeRegistryManagementUrl}}"
             - name: STORAGE_TYPE

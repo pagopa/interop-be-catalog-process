@@ -87,16 +87,19 @@ object Dependencies {
     lazy val namespace = "it.pagopa"
 
     lazy val catalogManagementClient =
-      namespace %% "pdnd-interop-uservice-catalog-management-client" % catalogManagementClientVersion
+      namespace %% "pdnd-interop-uservice-catalog-management-client" % catalogManagementVersion
 
     lazy val agreementManagementClient =
-      namespace %% "pdnd-interop-uservice-agreement-management-client" % agreementManagementClientVersion
+      namespace %% "pdnd-interop-uservice-agreement-management-client" % agreementManagementVersion
 
     lazy val partyManagementClient =
-      namespace %% "pdnd-interop-uservice-party-management-client" % partyManagementClientVersion
+      namespace %% "pdnd-interop-uservice-party-management-client" % partyManagementVersion
 
     lazy val attributeRegistryManagementClient =
       namespace %% "pdnd-interop-uservice-attribute-registry-management-client" % attributeRegistryManagementVersion
+
+    lazy val authorizationManagementClient =
+      namespace %% "pdnd-interop-uservice-key-management-client" % authorizationManagementVersion
 
     lazy val commons     = namespace %% "pdnd-interop-commons-utils"        % commonsVersion
     lazy val fileManager = namespace %% "pdnd-interop-commons-file-manager" % commonsVersion
@@ -129,6 +132,7 @@ object Dependencies {
       pagopa.agreementManagementClient         % Compile,
       pagopa.partyManagementClient             % Compile,
       pagopa.attributeRegistryManagementClient % Compile,
+      pagopa.authorizationManagementClient     % Compile,
       pagopa.commons                           % Compile,
       pagopa.fileManager                       % Compile,
       pagopa.commonsJWT                        % Compile,

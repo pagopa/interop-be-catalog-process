@@ -7,6 +7,7 @@ import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
 import it.pagopa.pdnd.interop.commons.utils.SprayCommonFormats.uuidFormat
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.{model => CatalogManagementDependency}
+import it.pagopa.pdnd.interop.uservice.keymanagement.client.{model => AuthorizationManagementDependency}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl.Converter.convertToApiTechnology
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl._
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.{HealthApi, ProcessApi}
@@ -48,6 +49,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
           partyManagementService = partyManagementService,
           attributeRegistryManagementService = attributeRegistryManagementService,
           agreementManagementService = agreementManagementService,
+          authorizationManagementService = authorizationManagementService,
           fileManager = fileManager,
           jwtReader = jwtReader
         ),
@@ -335,7 +337,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     "succeed if descriptor is Published" in {
       val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED)
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
-      val eServiceId   = eService.id.toString
+      val eServiceUuid = eService.id
+      val eServiceId   = eServiceUuid.toString
       val descriptorId = descriptor.id.toString
 
       (jwtReader
@@ -356,6 +359,23 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .returning(Future.successful(()))
         .once()
 
+      (authorizationManagementService
+        .updateStateOnClients(_: String)(
+          _: UUID,
+          _: AuthorizationManagementDependency.ClientComponentState,
+          _: Seq[String],
+          _: Int
+        ))
+        .expects(
+          bearerToken,
+          eServiceUuid,
+          AuthorizationManagementDependency.ClientComponentState.INACTIVE,
+          descriptor.audience,
+          descriptor.voucherLifespan
+        )
+        .returning(Future.successful(()))
+        .once()
+
       val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/suspend", HttpMethods.POST)
 
       response.status shouldBe StatusCodes.NoContent
@@ -364,7 +384,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     "succeed if descriptor is Deprecated" in {
       val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED)
       val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
-      val eServiceId   = eService.id.toString
+      val eServiceUuid = eService.id
+      val eServiceId   = eServiceUuid.toString
       val descriptorId = descriptor.id.toString
 
       (jwtReader
@@ -382,6 +403,23 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       (catalogManagementService
         .suspendDescriptor(_: String)(_: String, _: String))
         .expects(bearerToken, eServiceId, descriptorId)
+        .returning(Future.successful(()))
+        .once()
+
+      (authorizationManagementService
+        .updateStateOnClients(_: String)(
+          _: UUID,
+          _: AuthorizationManagementDependency.ClientComponentState,
+          _: Seq[String],
+          _: Int
+        ))
+        .expects(
+          bearerToken,
+          eServiceUuid,
+          AuthorizationManagementDependency.ClientComponentState.INACTIVE,
+          descriptor.audience,
+          descriptor.voucherLifespan
+        )
         .returning(Future.successful(()))
         .once()
 
@@ -478,8 +516,10 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
     "activate Deprecated descriptor - case 1" in {
       val eService     = eService1
-      val eServiceId   = eService.id.toString
-      val descriptorId = eService.descriptors.find(_.version == "3").get.id.toString
+      val eServiceUuid = eService.id
+      val eServiceId   = eServiceUuid.toString
+      val descriptor   = eService.descriptors.find(_.version == "3").get
+      val descriptorId = descriptor.id.toString
 
       (jwtReader
         .getClaims(_: String))
@@ -496,6 +536,23 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       (catalogManagementService
         .deprecateDescriptor(_: String)(_: String, _: String))
         .expects(bearerToken, eServiceId, descriptorId)
+        .returning(Future.successful(()))
+        .once()
+
+      (authorizationManagementService
+        .updateStateOnClients(_: String)(
+          _: UUID,
+          _: AuthorizationManagementDependency.ClientComponentState,
+          _: Seq[String],
+          _: Int
+        ))
+        .expects(
+          bearerToken,
+          eServiceUuid,
+          AuthorizationManagementDependency.ClientComponentState.ACTIVE,
+          descriptor.audience,
+          descriptor.voucherLifespan
+        )
         .returning(Future.successful(()))
         .once()
 
@@ -506,8 +563,10 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
     "activate Deprecated descriptor - case 2" in {
       val eService     = eService2
-      val eServiceId   = eService.id.toString
-      val descriptorId = eService.descriptors.find(_.version == "3").get.id.toString
+      val eServiceUuid = eService.id
+      val eServiceId   = eServiceUuid.toString
+      val descriptor   = eService.descriptors.find(_.version == "3").get
+      val descriptorId = descriptor.id.toString
 
       (jwtReader
         .getClaims(_: String))
@@ -527,6 +586,23 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .returning(Future.successful(()))
         .once()
 
+      (authorizationManagementService
+        .updateStateOnClients(_: String)(
+          _: UUID,
+          _: AuthorizationManagementDependency.ClientComponentState,
+          _: Seq[String],
+          _: Int
+        ))
+        .expects(
+          bearerToken,
+          eServiceUuid,
+          AuthorizationManagementDependency.ClientComponentState.ACTIVE,
+          descriptor.audience,
+          descriptor.voucherLifespan
+        )
+        .returning(Future.successful(()))
+        .once()
+
       val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/activate", HttpMethods.POST)
 
       response.status shouldBe StatusCodes.NoContent
@@ -534,8 +610,10 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
     "activate Published descriptor - case 1" in {
       val eService     = eService1
-      val eServiceId   = eService.id.toString
-      val descriptorId = eService.descriptors.find(_.version == "4").get.id.toString
+      val eServiceUuid = eService.id
+      val eServiceId   = eServiceUuid.toString
+      val descriptor   = eService.descriptors.find(_.version == "4").get
+      val descriptorId = descriptor.id.toString
 
       (jwtReader
         .getClaims(_: String))
@@ -555,6 +633,23 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .returning(Future.successful(()))
         .once()
 
+      (authorizationManagementService
+        .updateStateOnClients(_: String)(
+          _: UUID,
+          _: AuthorizationManagementDependency.ClientComponentState,
+          _: Seq[String],
+          _: Int
+        ))
+        .expects(
+          bearerToken,
+          eServiceUuid,
+          AuthorizationManagementDependency.ClientComponentState.ACTIVE,
+          descriptor.audience,
+          descriptor.voucherLifespan
+        )
+        .returning(Future.successful(()))
+        .once()
+
       val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/activate", HttpMethods.POST)
 
       response.status shouldBe StatusCodes.NoContent
@@ -562,8 +657,10 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
     "activate Published descriptor - case 2" in {
       val eService     = eService3
-      val eServiceId   = eService.id.toString
-      val descriptorId = eService.descriptors.find(_.version == "3").get.id.toString
+      val eServiceUuid = eService.id
+      val eServiceId   = eServiceUuid.toString
+      val descriptor   = eService.descriptors.find(_.version == "3").get
+      val descriptorId = descriptor.id.toString
 
       (jwtReader
         .getClaims(_: String))
@@ -580,6 +677,23 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       (catalogManagementService
         .publishDescriptor(_: String)(_: String, _: String))
         .expects(bearerToken, eServiceId, descriptorId)
+        .returning(Future.successful(()))
+        .once()
+
+      (authorizationManagementService
+        .updateStateOnClients(_: String)(
+          _: UUID,
+          _: AuthorizationManagementDependency.ClientComponentState,
+          _: Seq[String],
+          _: Int
+        ))
+        .expects(
+          bearerToken,
+          eServiceUuid,
+          AuthorizationManagementDependency.ClientComponentState.ACTIVE,
+          descriptor.audience,
+          descriptor.voucherLifespan
+        )
         .returning(Future.successful(()))
         .once()
 
@@ -711,9 +825,10 @@ object CatalogProcessSpec extends MockFactory {
   val mockHealthApi: HealthApi                                               = mock[HealthApi]
   val catalogManagementService: CatalogManagementService                     = mock[CatalogManagementService]
   val agreementManagementService: AgreementManagementService                 = mock[AgreementManagementService]
+  val authorizationManagementService: AuthorizationManagementService         = mock[AuthorizationManagementService]
   val attributeRegistryManagementService: AttributeRegistryManagementService = mock[AttributeRegistryManagementService]
   val partyManagementService: PartyManagementService                         = mock[PartyManagementService]
   val fileManager: FileManager                                               = mock[FileManager]
   val jwtReader: JWTReader                                                   = mock[JWTReader]
-  def mockSubject(uuid: String)                                              = Success(new JWTClaimsSet.Builder().subject(uuid).build())
+  def mockSubject(uuid: String): Success[JWTClaimsSet]                       = Success(new JWTClaimsSet.Builder().subject(uuid).build())
 }

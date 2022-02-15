@@ -13,6 +13,8 @@ object ApplicationConfiguration {
 
   lazy val agreementManagementUrl: String = config.getString("catalog-process.services.agreement-management")
 
+  lazy val authorizationManagementUrl: String = config.getString("catalog-process.services.authorization-management")
+
   lazy val attributeRegistryManagementUrl: String =
     config.getString("catalog-process.services.attribute-registry-management")
 
