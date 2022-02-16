@@ -6,7 +6,7 @@ import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
-import com.typesafe.scalalogging.Logger
+import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
 import it.pagopa.pdnd.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
@@ -19,6 +19,7 @@ import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.{
   EServiceDescriptor => ManagementDescriptor
 }
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.{model => CatalogManagementDependency}
+import it.pagopa.pdnd.interop.uservice.keymanagement.client.{model => AuthorizationManagementDependency}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.ProcessApiService
 import it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl.Converter.convertToApiDescriptorState
 import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system.{ApplicationConfiguration, validateBearer}
@@ -38,6 +39,7 @@ final case class ProcessApiServiceImpl(
   partyManagementService: PartyManagementService,
   attributeRegistryManagementService: AttributeRegistryManagementService,
   agreementManagementService: AgreementManagementService,
+  authorizationManagementService: AuthorizationManagementService,
   fileManager: FileManager,
   jwtReader: JWTReader
 )(implicit ec: ExecutionContext)
@@ -45,7 +47,8 @@ final case class ProcessApiServiceImpl(
 
   import ProcessApiServiceImpl._
 
-  val logger = Logger.takingImplicit[ContextFieldsToLog](LoggerFactory.getLogger(this.getClass))
+  val logger: LoggerTakingImplicit[ContextFieldsToLog] =
+    Logger.takingImplicit[ContextFieldsToLog](LoggerFactory.getLogger(this.getClass))
 
   /** Code: 200, Message: EService created, DataType: EService
     * Code: 400, Message: Invalid input, DataType: Problem
@@ -194,6 +197,12 @@ final case class ProcessApiServiceImpl(
             )
           )
           .sequence
+        _ <- authorizationManagementService.updateStateOnClients(bearer)(
+          currentEService.id,
+          AuthorizationManagementDependency.ClientComponentState.ACTIVE,
+          descriptor.audience,
+          descriptor.voucherLifespan
+        )
       } yield ()
 
     onComplete(result) {
@@ -923,6 +932,12 @@ final case class ProcessApiServiceImpl(
           .toFuture(EServiceDescriptorNotFound(eServiceId, descriptorId))
         _ <- descriptorCanBeActivated(descriptor)
         _ <- activateDescriptor(bearer)(eService, descriptor)
+        _ <- authorizationManagementService.updateStateOnClients(bearer)(
+          eService.id,
+          AuthorizationManagementDependency.ClientComponentState.ACTIVE,
+          descriptor.audience,
+          descriptor.voucherLifespan
+        )
       } yield ()
 
     onComplete(result) {
@@ -966,6 +981,12 @@ final case class ProcessApiServiceImpl(
           .toFuture(EServiceDescriptorNotFound(eServiceId, descriptorId))
         _ <- descriptorCanBeSuspended(descriptor)
         _ <- catalogManagementService.suspendDescriptor(bearer)(eServiceId, descriptorId)
+        _ <- authorizationManagementService.updateStateOnClients(bearer)(
+          eService.id,
+          AuthorizationManagementDependency.ClientComponentState.INACTIVE,
+          descriptor.audience,
+          descriptor.voucherLifespan
+        )
       } yield ()
 
     onComplete(result) {

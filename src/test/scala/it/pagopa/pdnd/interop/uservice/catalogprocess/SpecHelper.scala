@@ -64,10 +64,8 @@ abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.co
   }
 
   def shutDownServer(): Unit = {
-    println("****** Cleaning resources ********")
     bindServer.foreach(_.foreach(_.unbind()))
     ActorTestKit.shutdown(httpSystem, 5.seconds)
-    println("Resources cleaned")
   }
 
   def request(path: String, verb: HttpMethod, data: Option[String] = None): HttpResponse = {

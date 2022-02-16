@@ -12,7 +12,7 @@ import it.pagopa.pdnd.interop.commons.files.StorageConfiguration
 import it.pagopa.pdnd.interop.commons.files.service.FileManager
 import it.pagopa.pdnd.interop.commons.jwt.service.JWTReader
 import it.pagopa.pdnd.interop.commons.jwt.service.impl.{DefaultJWTReader, getClaimsVerifier}
-import it.pagopa.pdnd.interop.commons.jwt.{JWTConfiguration, PublicKeysHolder}
+import it.pagopa.pdnd.interop.commons.jwt.{JWTConfiguration, KID, PublicKeysHolder, SerializedKey}
 import it.pagopa.pdnd.interop.commons.utils.TypeConversions.TryOps
 import it.pagopa.pdnd.interop.commons.utils.errors.GenericComponentErrors.ValidationRequestError
 import it.pagopa.pdnd.interop.commons.utils.{AkkaUtils, CORSSupport, OpenapiUtils}
@@ -37,9 +37,11 @@ import it.pagopa.pdnd.interop.uservice.catalogprocess.service._
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.impl.{
   AgreementManagementServiceImpl,
   AttributeRegistryManagementServiceImpl,
+  AuthorizationManagementServiceImpl,
   CatalogManagementServiceImpl,
   PartyManagementServiceImpl
 }
+import it.pagopa.pdnd.interop.uservice.keymanagement.client.api.PurposeApi
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.api.PartyApi
 import kamon.Kamon
 
@@ -54,6 +56,14 @@ trait AgreementManagementDependency {
   private final val agreementApi: AgreementApi                             = AgreementApi(ApplicationConfiguration.agreementManagementUrl)
   val agreementManagementService: AgreementManagementService =
     AgreementManagementServiceImpl(agreementManagementInvoker, agreementApi)
+}
+
+trait AuthorizationManagementDependency {
+  private final val authorizationManagementInvoker: AuthorizationManagementInvoker = AuthorizationManagementInvoker()
+  private final val authorizationPurposeApi: PurposeApi =
+    PurposeApi(ApplicationConfiguration.authorizationManagementUrl)
+  val authorizationManagementService: AuthorizationManagementService =
+    AuthorizationManagementServiceImpl(authorizationManagementInvoker, authorizationPurposeApi)
 }
 
 trait AttributeRegistryManagementDependency {
@@ -83,6 +93,7 @@ object Main
     with CORSSupport
     with AgreementManagementDependency
     with AttributeRegistryManagementDependency
+    with AuthorizationManagementDependency
     with PartyManagementDependency
     with CatalogManagementDependency {
 
@@ -90,7 +101,7 @@ object Main
     fileManager <- FileManager.getConcreteImplementation(StorageConfiguration.runtimeFileManager).toFuture
     keyset      <- JWTConfiguration.jwtReader.loadKeyset().toFuture
     jwtValidator = new DefaultJWTReader with PublicKeysHolder {
-      var publicKeyset = keyset
+      var publicKeyset: Map[KID, SerializedKey] = keyset
       override protected val claimsVerifier: DefaultJWTClaimsVerifier[SecurityContext] =
         getClaimsVerifier(audience = ApplicationConfiguration.jwtAudience)
     }
@@ -98,11 +109,10 @@ object Main
 
   dependenciesLoaded.transformWith {
     case Success((fileManager, jwtValidator)) => launchApp(fileManager, jwtValidator)
-    case Failure(ex) => {
+    case Failure(ex) =>
       classicActorSystem.log.error("Startup error: {}", ex.getMessage)
       classicActorSystem.log.error(ex.getStackTrace.mkString("\n"))
       CoordinatedShutdown(classicActorSystem).run(StartupErrorShutdown)
-    }
   }
 
   private def launchApp(fileManager: FileManager, jwtReader: JWTReader): Future[Http.ServerBinding] = {
@@ -114,6 +124,7 @@ object Main
         partyManagementService = partyManagementService,
         attributeRegistryManagementService = attributeRegistryManagementService,
         agreementManagementService = agreementManagementService,
+        authorizationManagementService = authorizationManagementService,
         fileManager = fileManager,
         jwtReader = jwtReader
       ),

@@ -5,7 +5,8 @@ import it.pagopa.pdnd.interop.uservice.{
   agreementmanagement,
   attributeregistrymanagement,
   catalogmanagement,
-  partymanagement
+  partymanagement,
+  keymanagement
 }
 
 package object service {
@@ -13,10 +14,16 @@ package object service {
   type AttributeRegistryManagementInvoker = attributeregistrymanagement.client.invoker.ApiInvoker
   type PartyManagementInvoker             = partymanagement.client.invoker.ApiInvoker
   type AgreementManagementInvoker         = agreementmanagement.client.invoker.ApiInvoker
+  type AuthorizationManagementInvoker     = keymanagement.client.invoker.ApiInvoker
 
   object AgreementManagementInvoker {
     def apply()(implicit actorSystem: ActorSystem): AgreementManagementInvoker =
       agreementmanagement.client.invoker.ApiInvoker(agreementmanagement.client.api.EnumsSerializers.all)
+  }
+
+  object AuthorizationManagementInvoker {
+    def apply()(implicit actorSystem: ActorSystem): AuthorizationManagementInvoker =
+      keymanagement.client.invoker.ApiInvoker(keymanagement.client.api.EnumsSerializers.all)
   }
 
   object CatalogManagementInvoker {
