@@ -59,7 +59,7 @@ final case class ProcessApiServiceImpl(
     val result =
       for {
         bearer <- validateBearer(contexts, jwtReader)
-        clientSeed = Converter.convertToClientEServiceSeed(eServiceSeed)
+        clientSeed = Converter.convertToClientPublicEServiceSeed(eServiceSeed)
         createdEService <- catalogManagementService.createEService(bearer)(clientSeed)
         apiEservice     <- convertToApiEservice(bearer, createdEService)
       } yield apiEservice

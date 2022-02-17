@@ -1,12 +1,12 @@
 package it.pagopa.pdnd.interop.uservice.catalogprocess.service.impl
 
 import akka.http.scaladsl.server.directives.FileInfo
+import it.pagopa.pdnd.interop.commons.utils.TypeConversions.{EitherOps, StringOps}
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.api.EServiceApi
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.invoker.{ApiRequest, BearerToken}
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model._
 import it.pagopa.pdnd.interop.uservice.catalogprocess.common.system._
-import it.pagopa.pdnd.interop.commons.utils.TypeConversions.{StringOps, EitherOps}
 import it.pagopa.pdnd.interop.uservice.catalogprocess.errors.ForbiddenOperation
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service.{CatalogManagementInvoker, CatalogManagementService}
 import org.slf4j.{Logger, LoggerFactory}

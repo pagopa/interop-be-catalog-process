@@ -10,6 +10,7 @@ import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, SecurityDirectives}
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.pdnd.interop.commons.utils.AkkaUtils.Authenticator
+import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.EServiceKind.PUBLIC
 import it.pagopa.pdnd.interop.uservice.catalogprocess.server.Controller
 
 import java.util.UUID
@@ -50,7 +51,8 @@ abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.co
     description = "",
     technology = CatalogManagementDependency.EServiceTechnology.REST,
     attributes = CatalogManagementDependency.Attributes(Seq.empty, Seq.empty, Seq.empty),
-    descriptors = Seq.empty
+    descriptors = Seq.empty,
+    kind = PUBLIC
   )
 
   def startServer(controller: Controller): Http.ServerBinding = {

@@ -15,8 +15,8 @@ import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
 import it.pagopa.pdnd.interop.uservice.catalogprocess.server.Controller
 import it.pagopa.pdnd.interop.uservice.catalogprocess.service._
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.model.{
-  Organization => PartyManagementApiOrganization,
-  Attribute => PartyManagementApiAttribute
+  Attribute => PartyManagementApiAttribute,
+  Organization => PartyManagementApiOrganization
 }
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.model.{
   Attribute => AttributeRegistryManagementApiAttribute,
@@ -123,6 +123,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         name = "MyService",
         description = "My Service",
         technology = CatalogManagementDependency.EServiceTechnology.REST,
+        kind = CatalogManagementDependency.EServiceKind.PUBLIC,
         attributes = CatalogManagementDependency.Attributes(
           certified = List(
             CatalogManagementDependency
@@ -157,6 +158,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         description = seed.description,
         technology = seed.technology,
         attributes = seed.attributes,
+        kind = CatalogManagementDependency.EServiceKind.PUBLIC,
         descriptors = List(
           CatalogManagementDependency.EServiceDescriptor(
             id = UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824302"),
@@ -254,6 +256,23 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
             }
         }
 
+      implicit val kindFormat: JsonFormat[CatalogManagementDependency.EServiceKind] =
+        new JsonFormat[CatalogManagementDependency.EServiceKind] {
+          override def write(obj: CatalogManagementDependency.EServiceKind): JsValue =
+            obj match {
+              case CatalogManagementDependency.EServiceKind.PUBLIC  => JsString("PUBLIC")
+              case CatalogManagementDependency.EServiceKind.PRIVATE => JsString("PRIVATE")
+            }
+
+          override def read(json: JsValue): CatalogManagementDependency.EServiceKind =
+            json match {
+              case JsString("PUBLIC")  => CatalogManagementDependency.EServiceKind.PUBLIC
+              case JsString("PRIVATE") => CatalogManagementDependency.EServiceKind.PRIVATE
+              case unrecognized =>
+                deserializationError(s"EServiceKind serialization error ${unrecognized.toString}")
+            }
+        }
+
       implicit val attributeValueFormat: RootJsonFormat[CatalogManagementDependency.AttributeValue] =
         jsonFormat2(CatalogManagementDependency.AttributeValue)
 
@@ -264,7 +283,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         jsonFormat3(CatalogManagementDependency.Attributes)
 
       implicit val eServiceSeedFormat: RootJsonFormat[CatalogManagementDependency.EServiceSeed] =
-        jsonFormat5(CatalogManagementDependency.EServiceSeed)
+        jsonFormat6(CatalogManagementDependency.EServiceSeed)
 
       val requestData = seed.toJson.toString
 

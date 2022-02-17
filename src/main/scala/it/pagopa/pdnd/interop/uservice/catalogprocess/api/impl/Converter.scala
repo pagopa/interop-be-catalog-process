@@ -3,6 +3,7 @@ package it.pagopa.pdnd.interop.uservice.catalogprocess.api.impl
 import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.pdnd.interop.uservice.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.pdnd.interop.uservice.attributeregistrymanagement.client.{model => AttributeManagementDependency}
+import it.pagopa.pdnd.interop.uservice.catalogmanagement.client.model.EServiceKind.PUBLIC
 import it.pagopa.pdnd.interop.uservice.catalogprocess.model._
 
 import scala.concurrent.Future
@@ -87,13 +88,14 @@ object Converter {
       explicitAttributeVerification = value.explicitAttributeVerification
     )
 
-  def convertToClientEServiceSeed(eServiceSeed: EServiceSeed): CatalogManagementDependency.EServiceSeed =
+  def convertToClientPublicEServiceSeed(eServiceSeed: EServiceSeed): CatalogManagementDependency.EServiceSeed =
     CatalogManagementDependency.EServiceSeed(
       producerId = eServiceSeed.producerId,
       name = eServiceSeed.name,
       description = eServiceSeed.description,
       technology = convertFromApiTechnology(eServiceSeed.technology),
-      attributes = convertToCatalogClientAttributes(eServiceSeed.attributes)
+      attributes = convertToCatalogClientAttributes(eServiceSeed.attributes),
+      kind = PUBLIC
     )
 
   def convertToClientEServiceDescriptorSeed(
