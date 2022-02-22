@@ -6,7 +6,7 @@ metadata:
   name: {{name}}
   namespace: {{name}}
 spec:
-  replicas: 1
+  replicas: {{replicas}}
   selector:
     matchLabels:
       app: {{name}}
@@ -18,16 +18,11 @@ spec:
     spec:
       imagePullSecrets:
         - name: regcred
-      volumes:
-        - name: application-conf
-          secret:
-            secretName: application.conf
-            defaultMode: 420
       containers:
         - name: {{name}}
-          image: {{repository}}/services/{{name}}:{{version}}
+          image: {{repository}}/{{imageName}}:{{version}}
           command: ["bin/{{name}}"]
-          args: ["-Dconfig.file=etc/application.conf", "-Dconfig.override_with_env_vars=true"]
+          args: ["-Dconfig.override_with_env_vars=true"]
           imagePullPolicy: Always
           readinessProbe:
             httpGet:
@@ -93,9 +88,6 @@ spec:
                 secretKeyRef:
                   name: storage
                   key: STORAGE_PSW
-          volumeMounts:
-            - name: application-conf
-              mountPath: /opt/docker/etc
 ---
 apiVersion: v1
 kind: Service
@@ -153,7 +145,7 @@ metadata:
   namespace: {{name}}
 spec:
   rules:
-    - host: gateway.interop.pdnd.dev
+    - host: {{repository}}
       http:
         paths:
           - path: /{{name}}
