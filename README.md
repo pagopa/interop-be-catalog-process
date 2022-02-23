@@ -1,4 +1,4 @@
-# PDND Interoperability - Catalog Process Micro Service
+# Interoperability - Catalog Process Micro Service
 
 ## How to start
 1. Generate boilerplate
