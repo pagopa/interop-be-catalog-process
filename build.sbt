@@ -27,7 +27,7 @@ packagePrefix := name.value
 
 val projectName = settingKey[String]("The project name prefix derived from the uservice name")
 
-projectName:= name.value
+projectName := name.value
   .replaceFirst("interop-", "")
   .replaceFirst("be-", "")
 
@@ -71,7 +71,7 @@ cleanFiles += baseDirectory.value / "client" / "target"
 
 lazy val generated = project
   .in(file("generated"))
-  .settings(scalacOptions := Seq())
+  .settings(scalacOptions := Seq(), scalafmtOnCompile := true)
   .setupBuildInfo
 
 lazy val client = project
