@@ -623,7 +623,7 @@ final case class ProcessApiServiceImpl(
     status: Option[CatalogManagementDependency.EServiceDescriptorState]
   ): Future[Seq[CatalogManagementDependency.EService]] = {
     if (consumerId.isEmpty) catalogManagementService.listEServices(bearer)(producerId, status)
-    else {
+    else
       for {
         agreements <- agreementManagementService.getAgreements(bearer, consumerId, producerId, None)
         eservices <- agreements.traverse(agreement =>
@@ -635,7 +635,6 @@ final case class ProcessApiServiceImpl(
             status.forall(s => eService.descriptors.exists(_.state == s))
         )
         .distinctBy(_.id)
-    }
   }
 
   private[this] def deprecateDescriptorOrCancelPublication(
