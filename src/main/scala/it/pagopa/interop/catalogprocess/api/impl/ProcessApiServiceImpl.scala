@@ -7,7 +7,7 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
 import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
-import it.pagopa.interop.agreementmanagement.client.model.Agreement
+import it.pagopa.interop.agreementmanagement.client.{model => AgreementManagementDependency}
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
 import it.pagopa.interop.catalogmanagement.client
 import it.pagopa.interop.catalogmanagement.client.invoker.ApiError
@@ -17,7 +17,7 @@ import it.pagopa.interop.catalogmanagement.client.model.{
 }
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.catalogprocess.api.ProcessApiService
-import it.pagopa.interop.catalogprocess.api.impl.Converter.convertToApiDescriptorState
+import it.pagopa.interop.catalogprocess.api.impl.Converter.{convertToApiDescriptorState, convertToApiAgreementState}
 import it.pagopa.interop.catalogprocess.common.system.{ApplicationConfiguration, validateBearer}
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors._
 import it.pagopa.interop.catalogprocess.model._
@@ -26,6 +26,7 @@ import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.interop.commons.utils.TypeConversions.{EitherOps, OptionOps}
+import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.partymanagement.client.model.{BulkOrganizations, BulkPartiesSeed}
 import org.slf4j.LoggerFactory
 
@@ -140,17 +141,23 @@ final case class ProcessApiServiceImpl(
   /** Code: 200, Message: A list of E-Service, DataType: Seq[EService]
     * Code: 500, Message: Internal Server Error, DataType: Problem
     */
-  override def getEServices(producerId: Option[String], consumerId: Option[String], status: Option[String])(implicit
+  override def getEServices(
+    producerId: Option[String],
+    consumerId: Option[String],
+    agreementState: String,
+    status: Option[String]
+  )(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerEServicearray: ToEntityMarshaller[Seq[EService]]
   ): Route = {
     logger.info("Getting e-service with producer = {}, consumer = {} and state = {}", producerId, consumerId, status)
     val result =
       for {
-        bearer       <- validateBearer(contexts, jwtReader)
-        statusEnum   <- status.traverse(CatalogManagementDependency.EServiceDescriptorState.fromValue).toFuture
-        eservices    <- retrieveEservices(bearer, producerId, consumerId, statusEnum)
-        apiEservices <- eservices.traverse(service => convertToApiEservice(bearer, service))
+        bearer          <- validateBearer(contexts, jwtReader)
+        statusEnum      <- status.traverse(CatalogManagementDependency.EServiceDescriptorState.fromValue).toFuture
+        agreementStates <- parseArrayParameters(agreementState).traverse(AgreementState.fromValue).toFuture
+        eservices       <- retrieveEservices(bearer, producerId, consumerId, statusEnum, agreementStates)
+        apiEservices    <- eservices.traverse(service => convertToApiEservice(bearer, service))
       } yield apiEservices
 
     onComplete(result) {
@@ -397,6 +404,7 @@ final case class ProcessApiServiceImpl(
     callerId: String,
     producerId: Option[String],
     consumerId: Option[String],
+    agreementState: String,
     state: Option[String],
     latestPublishedOnly: Option[Boolean]
   )(implicit
@@ -416,7 +424,8 @@ final case class ProcessApiServiceImpl(
         bearer                    <- validateBearer(contexts, jwtReader)
         statusEnum                <- state.traverse(CatalogManagementDependency.EServiceDescriptorState.fromValue).toFuture
         callerSubscribedEservices <- agreementManagementService.getAgreementsByConsumerId(bearer)(callerId)
-        retrievedEservices        <- retrieveEservices(bearer, producerId, consumerId, statusEnum)
+        agreementStates           <- parseArrayParameters(agreementState).traverse(AgreementState.fromValue).toFuture
+        retrievedEservices        <- retrieveEservices(bearer, producerId, consumerId, statusEnum, agreementStates)
         eservices                 <- processEservicesWithLatestFilter(retrievedEservices, latestPublishedOnly)
         organizationsDetails <- partyManagementService.getBulkOrganizations(
           BulkPartiesSeed(partyIdentifiers = eservices.map(_.producerId))
@@ -588,23 +597,25 @@ final case class ProcessApiServiceImpl(
     bearer: String,
     producerId: Option[String],
     consumerId: Option[String],
-    status: Option[CatalogManagementDependency.EServiceDescriptorState]
-  ): Future[Seq[CatalogManagementDependency.EService]] = {
-    if (consumerId.isEmpty) catalogManagementService.listEServices(bearer)(producerId, status)
+    status: Option[CatalogManagementDependency.EServiceDescriptorState],
+    agreementStates: List[AgreementState]
+  ): Future[Seq[CatalogManagementDependency.EService]] =
+    if (agreementStates.isEmpty && consumerId.isEmpty)
+      catalogManagementService.listEServices(bearer)(producerId, status)
     else
       for {
-        agreements <- agreementManagementService.getAgreements(bearer, consumerId, producerId, None)
+        agreements <- agreementStates.distinct
+          .map(convertToApiAgreementState)
+          .map(Some(_))
+          .flatTraverse(agreementManagementService.getAgreements(bearer, consumerId, producerId, _).map(_.toList))
         eservices <- agreements
-          .distinctBy(_.eserviceId)
-          .traverse(agreement =>
-            catalogManagementService.getEService(bearer)(eServiceId = agreement.eserviceId.toString)
-          )
-      } yield eservices
-        .filter(eService =>
-          producerId.forall(_ == eService.producerId.toString) &&
-            status.forall(s => eService.descriptors.exists(_.state == s))
-        )
-  }
+          .map(_.eserviceId.toString)
+          .distinct
+          .traverse(catalogManagementService.getEService(bearer)(_))
+      } yield eservices.filter(eService =>
+        producerId.forall(_ == eService.producerId.toString) &&
+          status.forall(s => eService.descriptors.exists(_.state == s))
+      )
 
   private[this] def deprecateDescriptorOrCancelPublication(
     bearer: String,
@@ -644,7 +655,7 @@ final case class ProcessApiServiceImpl(
 
   private def convertToFlattenEservice(
     eservice: client.model.EService,
-    agreementSubscribedEservices: Seq[Agreement],
+    agreementSubscribedEservices: Seq[AgreementManagementDependency.Agreement],
     organizationDetails: BulkOrganizations
   ): Seq[FlatEService] = {
 

@@ -9,6 +9,7 @@ import it.pagopa.interop.attributeregistrymanagement.client.model.{
 }
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
+import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.catalogprocess.api.impl.Converter.convertToApiTechnology
 import it.pagopa.interop.catalogprocess.api.impl._
 import it.pagopa.interop.catalogprocess.api.{HealthApi, ProcessApi}
@@ -33,6 +34,7 @@ import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.util.Success
+import it.pagopa.interop.agreementmanagement.client.model.{Agreement, AgreementState}
 
 class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndAfterAll with MockFactory {
 
@@ -113,6 +115,88 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       val suspended = EServiceDescriptorState.fromValue("SUSPENDED").toOption
       flattenServices.filter(item => suspended.forall(item.state.contains)) should have size 2
+    }
+  }
+
+  "Eservice listing" must {
+    "return eservices related to an active agreement" in {
+
+      val consumerId: UUID = UUID.randomUUID()
+      val eserviceId1      = UUID.randomUUID()
+      val descriptorId1    = UUID.randomUUID()
+      val producerId1      = UUID.randomUUID()
+
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
+
+      val activeAgreement = Agreement(
+        UUID.randomUUID(),
+        eserviceId1,
+        descriptorId1,
+        UUID.randomUUID(),
+        consumerId,
+        AgreementState.ACTIVE,
+        Seq.empty,
+        None,
+        None,
+        OffsetDateTime.now()
+      )
+
+      (agreementManagementService
+        .getAgreements(_: String, _: Option[String], _: Option[String], _: Option[AgreementState]))
+        .expects(bearerToken, Some(consumerId.toString), None, Some(AgreementState.ACTIVE))
+        .returning(Future.successful(Seq(activeAgreement)))
+        .once()
+
+      val eservice1 = CatalogManagementDependency.EService(
+        eserviceId1,
+        producerId1,
+        "eservice1",
+        "eservice1",
+        CatalogManagementDependency.EServiceTechnology.REST,
+        CatalogManagementDependency.Attributes(Seq.empty, Seq.empty, Seq.empty),
+        Seq.empty
+      )
+
+      (catalogManagementService
+        .getEService(_: String)(_: String))
+        .expects(bearerToken, eserviceId1.toString)
+        .returning(Future.successful(eservice1))
+        .once()
+
+      val org1 =
+        PartyManagementDependency.Organization(producerId1, "", "description1", "", "", "", "", Seq.empty)
+
+      (partyManagementService
+        .getOrganization(_: UUID)(_: String))
+        .expects(producerId1, bearerToken)
+        .returning(Future.successful(org1))
+        .once()
+
+      (attributeRegistryManagementService
+        .getAttributesBulk(_: Seq[String])(_: String))
+        .expects(Seq.empty, bearerToken)
+        .returning(Future.successful(Seq.empty))
+        .once()
+
+      val response = request(s"eservices?consumerId=${consumerId}&agreementStates=ACTIVE", HttpMethods.GET)
+
+      response.status shouldBe StatusCodes.OK
+      val body = Await.result(Unmarshal(response.entity).to[Seq[EService]], Duration.Inf)
+      body shouldBe Seq(
+        EService(
+          eserviceId1,
+          Organization(producerId1, "description1"),
+          "eservice1",
+          "eservice1",
+          EServiceTechnology.REST,
+          Attributes(Seq.empty, Seq.empty, Seq.empty),
+          Seq.empty
+        )
+      )
     }
   }
 

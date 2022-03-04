@@ -2,7 +2,7 @@ package it.pagopa.interop.catalogprocess.service
 
 import it.pagopa.interop.agreementmanagement.client.model.{Agreement, AgreementState}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 trait AgreementManagementService {
   def getAgreements(
@@ -10,7 +10,7 @@ trait AgreementManagementService {
     consumerId: Option[String],
     producerId: Option[String],
     status: Option[AgreementState]
-  )(implicit ec: ExecutionContext): Future[Seq[Agreement]]
+  ): Future[Seq[Agreement]]
 
   /** Returns the agreements related to the consumer passed in input.
     * @param bearerToken
@@ -18,11 +18,7 @@ trait AgreementManagementService {
     * @param ec
     * @return
     */
-  def getAgreementsByConsumerId(
-    bearerToken: String
-  )(consumerId: String)(implicit ec: ExecutionContext): Future[Seq[Agreement]] = {
-    for {
-      agreements <- getAgreements(bearerToken, Some(consumerId), None, None)
-    } yield agreements
-  }
+  def getAgreementsByConsumerId(bearerToken: String)(consumerId: String): Future[Seq[Agreement]] =
+    getAgreements(bearerToken, Some(consumerId), None, None)
+
 }

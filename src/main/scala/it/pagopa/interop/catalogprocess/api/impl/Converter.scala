@@ -3,6 +3,7 @@ package it.pagopa.interop.catalogprocess.api.impl
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.attributeregistrymanagement.client.{model => AttributeManagementDependency}
+import it.pagopa.interop.agreementmanagement.client.{model => AgreementManagementDependency}
 import it.pagopa.interop.catalogprocess.model._
 
 import scala.concurrent.Future
@@ -48,6 +49,14 @@ object Converter {
       description = document.description
     )
   }
+
+  def convertToApiAgreementState(state: AgreementState): AgreementManagementDependency.AgreementState =
+    state match {
+      case AgreementState.ACTIVE    => AgreementManagementDependency.AgreementState.ACTIVE
+      case AgreementState.INACTIVE  => AgreementManagementDependency.AgreementState.INACTIVE
+      case AgreementState.PENDING   => AgreementManagementDependency.AgreementState.PENDING
+      case AgreementState.SUSPENDED => AgreementManagementDependency.AgreementState.SUSPENDED
+    }
 
   private def convertToApiAttributes(
     currentAttributes: CatalogManagementDependency.Attributes,
