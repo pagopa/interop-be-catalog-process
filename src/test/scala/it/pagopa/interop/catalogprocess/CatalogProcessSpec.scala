@@ -182,7 +182,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .returning(Future.successful(Seq.empty))
         .once()
 
-      val response = request(s"eservices?consumerId=${consumerId}&agreementState=ACTIVE", HttpMethods.GET)
+      val response = request(s"eservices?consumerId=${consumerId}&agreementStates=ACTIVE", HttpMethods.GET)
 
       response.status shouldBe StatusCodes.OK
       val body = Await.result(Unmarshal(response.entity).to[Seq[EService]], Duration.Inf)

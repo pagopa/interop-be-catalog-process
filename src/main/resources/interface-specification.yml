@@ -45,7 +45,7 @@ paths:
           schema:
             type: string
         - in: query
-          name: agreementState
+          name: agreementStates
           description: comma separated sequence of agreement states to filter the response with
           schema:
             type: array
@@ -115,7 +115,7 @@ paths:
           schema:
             type: string
         - in: query
-          name: agreementState
+          name: agreementStates
           description: comma separated sequence of agreement states to filter the response with
           schema:
             type: array
@@ -666,8 +666,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  ? /eservices/{eServiceId}/descriptors/{descriptorId}/documents/{documentId}/update
-  : post:
+  /eservices/{eServiceId}/descriptors/{descriptorId}/documents/{documentId}/update: 
+    post:
       security:
         - bearerAuth: []
       tags:
