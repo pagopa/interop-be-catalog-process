@@ -6,7 +6,7 @@ import it.pagopa.interop.agreementmanagement.client.model.{Agreement, AgreementS
 import it.pagopa.interop.catalogprocess.service.{AgreementManagementInvoker, AgreementManagementService}
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 final case class AgreementManagementServiceImpl(invoker: AgreementManagementInvoker, api: AgreementApi)
     extends AgreementManagementService {
@@ -18,7 +18,7 @@ final case class AgreementManagementServiceImpl(invoker: AgreementManagementInvo
     consumerId: Option[String],
     producerId: Option[String],
     state: Option[AgreementState]
-  )(implicit ec: ExecutionContext): Future[Seq[Agreement]] = {
+  ): Future[Seq[Agreement]] = {
     val request: ApiRequest[Seq[Agreement]] =
       api.getAgreements(consumerId = consumerId, producerId = producerId, state = state)(BearerToken(bearerToken))
     invoker.invoke(request, s"Agreements retrieval for consumer ${consumerId.getOrElse("Unknown")}")
