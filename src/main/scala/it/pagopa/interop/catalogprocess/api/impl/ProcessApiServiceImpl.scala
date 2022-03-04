@@ -17,7 +17,7 @@ import it.pagopa.interop.catalogmanagement.client.model.{
 }
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.catalogprocess.api.ProcessApiService
-import it.pagopa.interop.catalogprocess.api.impl.Converter.convertToApiDescriptorState
+import it.pagopa.interop.catalogprocess.api.impl.Converter.{convertToApiDescriptorState, convertToApiAgreementState}
 import it.pagopa.interop.catalogprocess.common.system.{ApplicationConfiguration, validateBearer}
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors._
 import it.pagopa.interop.catalogprocess.model._
@@ -34,7 +34,6 @@ import java.io.{File, FileOutputStream}
 import java.nio.file.{Files, Path}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
-import it.pagopa.interop.catalogprocess.model.AgreementState._
 
 final case class ProcessApiServiceImpl(
   catalogManagementService: CatalogManagementService,
@@ -606,7 +605,7 @@ final case class ProcessApiServiceImpl(
     else
       for {
         agreements <- agreementStates.distinct
-          .map(agreementStateToDependency)
+          .map(convertToApiAgreementState)
           .map(Some(_))
           .flatTraverse(agreementManagementService.getAgreements(bearer, consumerId, producerId, _).map(_.toList))
         eservices <- agreements
@@ -617,14 +616,6 @@ final case class ProcessApiServiceImpl(
         producerId.forall(_ == eService.producerId.toString) &&
           status.forall(s => eService.descriptors.exists(_.state == s))
       )
-
-  private def agreementStateToDependency(state: AgreementState): AgreementManagementDependency.AgreementState =
-    state match {
-      case ACTIVE    => AgreementManagementDependency.AgreementState.ACTIVE
-      case INACTIVE  => AgreementManagementDependency.AgreementState.INACTIVE
-      case PENDING   => AgreementManagementDependency.AgreementState.PENDING
-      case SUSPENDED => AgreementManagementDependency.AgreementState.SUSPENDED
-    }
 
   private[this] def deprecateDescriptorOrCancelPublication(
     bearer: String,
