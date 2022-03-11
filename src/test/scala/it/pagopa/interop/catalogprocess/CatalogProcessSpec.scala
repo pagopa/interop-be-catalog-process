@@ -3,14 +3,9 @@ package it.pagopa.interop.catalogprocess
 import akka.http.scaladsl.model.{HttpMethods, StatusCodes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import com.nimbusds.jwt.JWTClaimsSet
-import it.pagopa.interop.attributeregistrymanagement.client.model.{
-  Attribute => AttributeRegistryManagementApiAttribute,
-  AttributeKind => AttributeRegistryManagementApiAttributeKind
-}
+import it.pagopa.interop.agreementmanagement.client.model.{Agreement, AgreementState}
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
-import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
-import it.pagopa.interop.catalogprocess.api.impl.Converter.convertToApiTechnology
 import it.pagopa.interop.catalogprocess.api.impl._
 import it.pagopa.interop.catalogprocess.api.{HealthApi, ProcessApi}
 import it.pagopa.interop.catalogprocess.model.EServiceDescriptorState._
@@ -19,22 +14,17 @@ import it.pagopa.interop.catalogprocess.server.Controller
 import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt.service.JWTReader
-import it.pagopa.interop.commons.utils.SprayCommonFormats.uuidFormat
-import it.pagopa.interop.partymanagement.client.model.{
-  Attribute => PartyManagementApiAttribute,
-  Organization => PartyManagementApiOrganization
-}
+import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpecLike
 import spray.json._
 
-import java.time.OffsetDateTime
+import java.time.{Instant, OffsetDateTime}
 import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.util.Success
-import it.pagopa.interop.agreementmanagement.client.model.{Agreement, AgreementState}
 
 class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndAfterAll with MockFactory {
 
@@ -182,7 +172,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .returning(Future.successful(Seq.empty))
         .once()
 
-      val response = request(s"eservices?consumerId=${consumerId}&agreementStates=ACTIVE", HttpMethods.GET)
+      val response = request(s"eservices?consumerId=$consumerId&agreementStates=ACTIVE", HttpMethods.GET)
 
       response.status shouldBe StatusCodes.OK
       val body = Await.result(Unmarshal(response.entity).to[Seq[EService]], Duration.Inf)
@@ -204,107 +194,28 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
     "succeed" in {
 
-      val seed = CatalogManagementDependency.EServiceSeed(
-        producerId = UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824300"),
-        name = "MyService",
-        description = "My Service",
-        technology = CatalogManagementDependency.EServiceTechnology.REST,
-        attributes = CatalogManagementDependency.Attributes(
-          certified = List(
-            CatalogManagementDependency
-              .Attribute(
-                single =
-                  Some(CatalogManagementDependency.AttributeValue("0001", explicitAttributeVerification = false)),
-                group = None
-              )
-          ),
-          declared = List(
-            CatalogManagementDependency
-              .Attribute(
-                single = None,
-                group =
-                  Some(List(CatalogManagementDependency.AttributeValue("0002", explicitAttributeVerification = false)))
-              )
-          ),
-          verified = List(
-            CatalogManagementDependency
-              .Attribute(
-                single = Some(CatalogManagementDependency.AttributeValue("0003", explicitAttributeVerification = true)),
-                group = None
-              )
-          )
-        )
-      )
+      val (attribute1, attribute2, attribute3)       = EserviceCreationTestData.getAttributes
+      val (attributeId1, attributeId2, attributeId3) = (attribute1.id, attribute2.id, attribute3.id)
 
-      val eservice = CatalogManagementDependency.EService(
-        id = UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824301"),
-        producerId = seed.producerId,
-        name = seed.name,
-        description = seed.description,
-        technology = seed.technology,
-        attributes = seed.attributes,
-        descriptors = List(
-          CatalogManagementDependency.EServiceDescriptor(
-            id = UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824302"),
-            version = "1",
-            description = None,
-            interface = None,
-            docs = Nil,
-            state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
-            audience = List("aud1"),
-            voucherLifespan = 1000,
-            dailyCallsMaxNumber = 1000
-          )
-        )
-      )
-
-      val organization = PartyManagementApiOrganization(
-        id = seed.producerId,
-        institutionId = "institutionId",
-        description = "organization description",
-        digitalAddress = "digitalAddress",
-        attributes = Seq.empty[PartyManagementApiAttribute],
-        taxCode = "code",
-        address = "address",
-        zipCode = "zipCode"
-      )
-
-      val attributeId1: String = "0001"
-      val attributeId2: String = "0002"
-      val attributeId3: String = "0003"
-
-      val attribute1 = AttributeRegistryManagementApiAttribute(
-        id = attributeId1,
-        code = None,
-        kind = AttributeRegistryManagementApiAttributeKind.CERTIFIED,
-        description = s"$attributeId1-description",
-        origin = None,
-        name = s"$attributeId1-name",
-        creationTime = OffsetDateTime.now()
-      )
-      val attribute2 = AttributeRegistryManagementApiAttribute(
-        id = attributeId2,
-        code = None,
-        kind = AttributeRegistryManagementApiAttributeKind.CERTIFIED,
-        description = s"$attributeId2-description",
-        origin = None,
-        name = s"$attributeId2-name",
-        creationTime = OffsetDateTime.now()
-      )
-      val attribute3 = AttributeRegistryManagementApiAttribute(
-        id = attributeId3,
-        code = None,
-        kind = AttributeRegistryManagementApiAttributeKind.CERTIFIED,
-        description = s"$attributeId3-description",
-        origin = None,
-        name = s"$attributeId3-name",
-        creationTime = OffsetDateTime.now()
-      )
+      val attributeValue1 = (attributeId1, false)
+      val attributeValue2 = (attributeId2, false)
+      val attributeValue3 = (attributeId3, true)
+      val seed            = EserviceCreationTestData.getSeed(attributeValue1, attributeValue2, attributeValue3)
+      val eserviceId      = UUID.randomUUID()
+      val descriptorId    = UUID.randomUUID()
+      val eservice        = EserviceCreationTestData.getEservice(eserviceId, descriptorId, seed)
+      val organization    = EserviceCreationTestData.getOrganization(seed)
 
       (jwtReader
         .getClaims(_: String))
         .expects(bearerToken)
         .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
+
+      (agreementManagementService
+        .getAgreements(_: String, _: Option[String], _: Option[String], _: Option[AgreementState]))
+        .expects(bearerToken, None, None, None)
+        .returning(Future.successful(Seq.empty))
         .once()
 
       (catalogManagementService
@@ -325,89 +236,18 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .returning(Future.successful(Seq(attribute1, attribute2, attribute3)))
         .once()
 
-      implicit val seedFormat: JsonFormat[CatalogManagementDependency.EServiceTechnology] =
-        new JsonFormat[CatalogManagementDependency.EServiceTechnology] {
-          override def write(obj: CatalogManagementDependency.EServiceTechnology): JsValue =
-            obj match {
-              case CatalogManagementDependency.EServiceTechnology.REST => JsString("REST")
-              case CatalogManagementDependency.EServiceTechnology.SOAP => JsString("SOAP")
-            }
-
-          override def read(json: JsValue): CatalogManagementDependency.EServiceTechnology =
-            json match {
-              case JsString("REST") => CatalogManagementDependency.EServiceTechnology.REST
-              case JsString("SOAP") => CatalogManagementDependency.EServiceTechnology.SOAP
-              case unrecognized =>
-                deserializationError(s"EServiceTechnology serialization error ${unrecognized.toString}")
-            }
-        }
-
-      implicit val attributeValueFormat: RootJsonFormat[CatalogManagementDependency.AttributeValue] =
-        jsonFormat2(CatalogManagementDependency.AttributeValue)
-
-      implicit val attributeFormat: RootJsonFormat[CatalogManagementDependency.Attribute] =
-        jsonFormat2(CatalogManagementDependency.Attribute)
-
-      implicit val attributesFormat: RootJsonFormat[CatalogManagementDependency.Attributes] =
-        jsonFormat3(CatalogManagementDependency.Attributes)
-
-      implicit val eServiceSeedFormat: RootJsonFormat[CatalogManagementDependency.EServiceSeed] =
-        jsonFormat5(CatalogManagementDependency.EServiceSeed)
-
       val requestData = seed.toJson.toString
 
       val response = request("eservices", HttpMethods.POST, Some(requestData))
 
-      val expected = EService(
-        id = UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824301"),
-        producer = Organization(id = organization.id, name = organization.description),
-        name = seed.name,
-        description = seed.description,
-        technology = convertToApiTechnology(seed.technology),
-        attributes = Attributes(
-          certified = Seq(
-            Attribute(
-              single = Some(
-                AttributeValue(
-                  id = attributeId1,
-                  name = s"$attributeId1-name",
-                  description = s"$attributeId1-description",
-                  explicitAttributeVerification = false
-                )
-              ),
-              group = None
-            )
-          ),
-          declared = Seq(
-            Attribute(
-              single = None,
-              group = Some(
-                Seq(
-                  AttributeValue(
-                    id = attributeId2,
-                    name = s"$attributeId2-name",
-                    description = s"$attributeId2-description",
-                    explicitAttributeVerification = false
-                  )
-                )
-              )
-            )
-          ),
-          verified = Seq(
-            Attribute(
-              single = Some(
-                AttributeValue(
-                  id = attributeId3,
-                  name = s"$attributeId3-name",
-                  description = s"$attributeId3-description",
-                  explicitAttributeVerification = true
-                )
-              ),
-              group = None
-            )
-          )
-        ),
-        descriptors = eservice.descriptors.map(Converter.convertToApiDescriptor)
+      val expected = EserviceCreationTestData.getEserviceExpected(
+        eserviceId,
+        descriptorId,
+        seed,
+        organization,
+        attributeValue1,
+        attributeValue2,
+        attributeValue3
       )
 
       response.status shouldBe StatusCodes.OK
@@ -415,6 +255,232 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val body = Await.result(Unmarshal(response.entity).to[EService], Duration.Inf)
 
       body shouldBe expected
+
+    }
+
+    "succeed for implicit attribute verification when attribute is already verified and valid" in {
+
+      val (attribute1, attribute2, attribute3)       = EserviceCreationTestData.getAttributes
+      val (attributeId1, attributeId2, attributeId3) = (attribute1.id, attribute2.id, attribute3.id)
+
+      val attributeValue1 = (attributeId1, false)
+      val attributeValue2 = (attributeId2, false)
+      val attributeValue3 = (attributeId3, false)
+      val seed            = EserviceCreationTestData.getSeed(attributeValue1, attributeValue2, attributeValue3)
+      val eserviceId      = UUID.randomUUID()
+      val descriptorId    = UUID.randomUUID()
+      val eservice        = EserviceCreationTestData.getEservice(eserviceId, descriptorId, seed)
+      val organization    = EserviceCreationTestData.getOrganization(seed)
+      val agreement = EserviceCreationTestData.getAgreement(
+        attributeId3,
+        Some(true),
+        Some(Instant.now().plusSeconds(60).getEpochSecond)
+      )
+
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
+
+      (agreementManagementService
+        .getAgreements(_: String, _: Option[String], _: Option[String], _: Option[AgreementState]))
+        .expects(bearerToken, None, None, None)
+        .returning(Future.successful(Seq(agreement)))
+        .once()
+
+      (catalogManagementService
+        .createEService(_: String)(_: CatalogManagementDependency.EServiceSeed))
+        .expects(bearerToken, seed)
+        .returning(Future.successful(eservice))
+        .once()
+
+      (partyManagementService
+        .getOrganization(_: UUID)(_: String))
+        .expects(seed.producerId, bearerToken)
+        .returning(Future.successful(organization))
+        .once()
+
+      (attributeRegistryManagementService
+        .getAttributesBulk(_: Seq[String])(_: String))
+        .expects(Seq(attributeId1, attributeId2, attributeId3), bearerToken)
+        .returning(Future.successful(Seq(attribute1, attribute2, attribute3)))
+        .once()
+
+      val requestData = seed.toJson.toString
+
+      val response = request("eservices", HttpMethods.POST, Some(requestData))
+      val expected = EserviceCreationTestData.getEserviceExpected(
+        eserviceId,
+        descriptorId,
+        seed,
+        organization,
+        attributeValue1,
+        attributeValue2,
+        attributeValue3
+      )
+
+      response.status shouldBe StatusCodes.OK
+
+      val body = Await.result(Unmarshal(response.entity).to[EService], Duration.Inf)
+
+      body shouldBe expected
+
+    }
+
+    "fail for implicit attribute verification when attribute is not already verified" in {
+
+      val (attribute1, attribute2, attribute3)       = EserviceCreationTestData.getAttributes
+      val (attributeId1, attributeId2, attributeId3) = (attribute1.id, attribute2.id, attribute3.id)
+
+      val seed         = EserviceCreationTestData.getSeed((attributeId1, false), (attributeId2, false), (attributeId3, false))
+      val eserviceId   = UUID.randomUUID()
+      val descriptorId = UUID.randomUUID()
+      val eservice     = EserviceCreationTestData.getEservice(eserviceId, descriptorId, seed)
+      val organization = EserviceCreationTestData.getOrganization(seed)
+
+      val agreement = EserviceCreationTestData.getAgreement(attributeId3, None, None)
+
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
+
+      (agreementManagementService
+        .getAgreements(_: String, _: Option[String], _: Option[String], _: Option[AgreementState]))
+        .expects(bearerToken, None, None, None)
+        .returning(Future.successful(Seq(agreement)))
+        .once()
+
+      (catalogManagementService
+        .createEService(_: String)(_: CatalogManagementDependency.EServiceSeed))
+        .expects(bearerToken, seed)
+        .returning(Future.successful(eservice))
+        .once()
+
+      (partyManagementService
+        .getOrganization(_: UUID)(_: String))
+        .expects(seed.producerId, bearerToken)
+        .returning(Future.successful(organization))
+        .once()
+
+      (attributeRegistryManagementService
+        .getAttributesBulk(_: Seq[String])(_: String))
+        .expects(Seq(attributeId1, attributeId2, attributeId3), bearerToken)
+        .returning(Future.successful(Seq(attribute1, attribute2, attribute3)))
+        .once()
+
+      val requestData = seed.toJson.toString
+
+      val response = request("eservices", HttpMethods.POST, Some(requestData))
+
+      response.status shouldBe StatusCodes.BadRequest
+
+    }
+
+    "fail for implicit attribute verification when a verified attribute is set false" in {
+
+      val (attribute1, attribute2, attribute3)       = EserviceCreationTestData.getAttributes
+      val (attributeId1, attributeId2, attributeId3) = (attribute1.id, attribute2.id, attribute3.id)
+
+      val seed         = EserviceCreationTestData.getSeed((attributeId1, false), (attributeId2, false), (attributeId3, false))
+      val eserviceId   = UUID.randomUUID()
+      val descriptorId = UUID.randomUUID()
+      val eservice     = EserviceCreationTestData.getEservice(eserviceId, descriptorId, seed)
+      val organization = EserviceCreationTestData.getOrganization(seed)
+      val agreement    = EserviceCreationTestData.getAgreement(attributeId3, Some(false), None)
+
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
+
+      (agreementManagementService
+        .getAgreements(_: String, _: Option[String], _: Option[String], _: Option[AgreementState]))
+        .expects(bearerToken, None, None, None)
+        .returning(Future.successful(Seq(agreement)))
+        .once()
+
+      (catalogManagementService
+        .createEService(_: String)(_: CatalogManagementDependency.EServiceSeed))
+        .expects(bearerToken, seed)
+        .returning(Future.successful(eservice))
+        .once()
+
+      (partyManagementService
+        .getOrganization(_: UUID)(_: String))
+        .expects(seed.producerId, bearerToken)
+        .returning(Future.successful(organization))
+        .once()
+
+      (attributeRegistryManagementService
+        .getAttributesBulk(_: Seq[String])(_: String))
+        .expects(Seq(attributeId1, attributeId2, attributeId3), bearerToken)
+        .returning(Future.successful(Seq(attribute1, attribute2, attribute3)))
+        .once()
+
+      val requestData = seed.toJson.toString
+
+      val response = request("eservices", HttpMethods.POST, Some(requestData))
+
+      response.status shouldBe StatusCodes.BadRequest
+
+    }
+
+    "fail for implicit attribute verification when verified attribute is no more valid" in {
+
+      val (attribute1, attribute2, attribute3)       = EserviceCreationTestData.getAttributes
+      val (attributeId1, attributeId2, attributeId3) = (attribute1.id, attribute2.id, attribute3.id)
+
+      val seed         = EserviceCreationTestData.getSeed((attributeId1, false), (attributeId2, false), (attributeId3, false))
+      val eserviceId   = UUID.randomUUID()
+      val descriptorId = UUID.randomUUID()
+      val eservice     = EserviceCreationTestData.getEservice(eserviceId, descriptorId, seed)
+      val organization = EserviceCreationTestData.getOrganization(seed)
+
+      val agreement = EserviceCreationTestData.getAgreement(
+        attributeId3,
+        Some(true),
+        Some(Instant.now().minusSeconds(60).getEpochSecond)
+      )
+
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
+
+      (agreementManagementService
+        .getAgreements(_: String, _: Option[String], _: Option[String], _: Option[AgreementState]))
+        .expects(bearerToken, None, None, None)
+        .returning(Future.successful(Seq(agreement)))
+        .once()
+
+      (catalogManagementService
+        .createEService(_: String)(_: CatalogManagementDependency.EServiceSeed))
+        .expects(bearerToken, seed)
+        .returning(Future.successful(eservice))
+        .once()
+
+      (partyManagementService
+        .getOrganization(_: UUID)(_: String))
+        .expects(seed.producerId, bearerToken)
+        .returning(Future.successful(organization))
+        .once()
+
+      (attributeRegistryManagementService
+        .getAttributesBulk(_: Seq[String])(_: String))
+        .expects(Seq(attributeId1, attributeId2, attributeId3), bearerToken)
+        .returning(Future.successful(Seq(attribute1, attribute2, attribute3)))
+        .once()
+
+      val requestData = seed.toJson.toString
+
+      val response = request("eservices", HttpMethods.POST, Some(requestData))
+
+      response.status shouldBe StatusCodes.BadRequest
 
     }
   }

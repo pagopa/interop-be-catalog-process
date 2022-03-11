@@ -9,8 +9,11 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, SecurityDirectives}
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
+import it.pagopa.interop.catalogprocess.api.impl._
+import it.pagopa.interop.commons.utils.SprayCommonFormats.uuidFormat
 import it.pagopa.interop.commons.utils.AkkaUtils.Authenticator
 import it.pagopa.interop.catalogprocess.server.Controller
+import spray.json.{JsString, JsValue, JsonFormat, RootJsonFormat, deserializationError}
 
 import java.util.UUID
 import scala.concurrent.duration._
@@ -80,4 +83,33 @@ abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.co
       10.seconds
     )
   }
+
+  implicit val seedFormat: JsonFormat[CatalogManagementDependency.EServiceTechnology] =
+    new JsonFormat[CatalogManagementDependency.EServiceTechnology] {
+      override def write(obj: CatalogManagementDependency.EServiceTechnology): JsValue =
+        obj match {
+          case CatalogManagementDependency.EServiceTechnology.REST => JsString("REST")
+          case CatalogManagementDependency.EServiceTechnology.SOAP => JsString("SOAP")
+        }
+
+      override def read(json: JsValue): CatalogManagementDependency.EServiceTechnology =
+        json match {
+          case JsString("REST") => CatalogManagementDependency.EServiceTechnology.REST
+          case JsString("SOAP") => CatalogManagementDependency.EServiceTechnology.SOAP
+          case unrecognized =>
+            deserializationError(s"EServiceTechnology serialization error ${unrecognized.toString}")
+        }
+    }
+
+  implicit val attributeValueFormat: RootJsonFormat[CatalogManagementDependency.AttributeValue] =
+    jsonFormat2(CatalogManagementDependency.AttributeValue)
+
+  implicit val attributeFormat: RootJsonFormat[CatalogManagementDependency.Attribute] =
+    jsonFormat2(CatalogManagementDependency.Attribute)
+
+  implicit val attributesFormat: RootJsonFormat[CatalogManagementDependency.Attributes] =
+    jsonFormat3(CatalogManagementDependency.Attributes)
+
+  implicit val eServiceSeedFormat: RootJsonFormat[CatalogManagementDependency.EServiceSeed] =
+    jsonFormat5(CatalogManagementDependency.EServiceSeed)
 }

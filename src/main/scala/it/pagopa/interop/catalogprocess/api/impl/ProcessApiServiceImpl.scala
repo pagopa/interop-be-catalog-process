@@ -5,7 +5,7 @@ import akka.http.scaladsl.model.{ContentType, HttpEntity, MessageEntity, StatusC
 import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
-import cats.implicits.toTraverseOps
+import cats.implicits._
 import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
 import it.pagopa.interop.agreementmanagement.client.{model => AgreementManagementDependency}
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
@@ -17,7 +17,7 @@ import it.pagopa.interop.catalogmanagement.client.model.{
 }
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.catalogprocess.api.ProcessApiService
-import it.pagopa.interop.catalogprocess.api.impl.Converter.{convertToApiDescriptorState, convertToApiAgreementState}
+import it.pagopa.interop.catalogprocess.api.impl.Converter.{convertToApiAgreementState, convertToApiDescriptorState}
 import it.pagopa.interop.catalogprocess.common.system.{ApplicationConfiguration, validateBearer}
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors._
 import it.pagopa.interop.catalogprocess.model._
@@ -27,11 +27,13 @@ import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.interop.commons.utils.TypeConversions.{EitherOps, OptionOps}
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
+import it.pagopa.interop.commons.utils.errors.ComponentError
 import it.pagopa.interop.partymanagement.client.model.{BulkOrganizations, BulkPartiesSeed}
 import org.slf4j.LoggerFactory
 
 import java.io.{File, FileOutputStream}
 import java.nio.file.{Files, Path}
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -64,6 +66,12 @@ final case class ProcessApiServiceImpl(
       for {
         bearer <- validateBearer(contexts, jwtReader)
         clientSeed = Converter.convertToClientEServiceSeed(eServiceSeed)
+        //TODO this request is for temporary purpose, it must be substituted we something more efficient (e.g. an improvement of attribute registry)
+        allAgreements <- agreementManagementService.getAgreements(bearerToken = bearer, None, None, None)
+        _ <- checkImplicitVerifiedAttribute(
+          allAgreements.flatMap(_.verifiedAttributes),
+          eServiceSeed.attributes.verified
+        )
         createdEService <- catalogManagementService.createEService(bearer)(clientSeed)
         apiEservice     <- convertToApiEservice(bearer, createdEService)
       } yield apiEservice
@@ -81,6 +89,38 @@ final case class ProcessApiServiceImpl(
           )
         createEService400(errorResponse)
     }
+  }
+
+  private def checkImplicitVerifiedAttribute(
+    agreementVerifiedAttributes: Seq[AgreementManagementDependency.VerifiedAttribute],
+    eserviceVerifiedAttribute: Seq[AttributeSeed]
+  ): Future[Unit] = {
+
+    val alreadyVerifiedAttributes: Set[String] = agreementVerifiedAttributes
+      .filter { attr =>
+        attr.verified.exists(identity) &&
+        attr.validityTimespan.exists(validity => validity > Instant.now().getEpochSecond)
+      }
+      .map(_.id.toString)
+      .toSet
+
+    val fromSingle: Seq[String] =
+      eserviceVerifiedAttribute.flatMap(attr => attr.single.find(a => !a.explicitAttributeVerification)).map(_.id)
+
+    val fromGroup: Seq[String] = eserviceVerifiedAttribute
+      .flatMap(attr =>
+        attr.group.map(as => as.filter(a => !a.explicitAttributeVerification)).getOrElse(Seq.empty[AttributeValueSeed])
+      )
+      .map(_.id)
+
+    val allImplicitVerificationAttributes: Set[String] = (fromSingle ++ fromGroup).toSet
+
+    val diff: Set[String] = allImplicitVerificationAttributes diff alreadyVerifiedAttributes
+
+    val error: Either[ComponentError, Unit] = Left(ImplicitAttributeVerificationNotAdmitted(diff))
+
+    error.unlessA(diff.isEmpty).toFuture
+
   }
 
   /** Code: 204, Message: E-Service draft Descriptor deleted
