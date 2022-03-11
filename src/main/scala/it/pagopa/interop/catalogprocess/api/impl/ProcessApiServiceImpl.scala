@@ -104,22 +104,23 @@ final case class ProcessApiServiceImpl(
       .map(_.id.toString)
       .toSet
 
-    val fromSingle: Seq[String] =
+    val implicitVerificationAttributeFromSingle: Seq[String] =
       eserviceVerifiedAttribute.flatMap(attr => attr.single.find(a => !a.explicitAttributeVerification)).map(_.id)
 
-    val fromGroup: Seq[String] = eserviceVerifiedAttribute
+    val implicitVerificationAttributeFromGroup: Seq[String] = eserviceVerifiedAttribute
       .flatMap(attr =>
         attr.group.map(as => as.filter(a => !a.explicitAttributeVerification)).getOrElse(Seq.empty[AttributeValueSeed])
       )
       .map(_.id)
 
-    val allImplicitVerificationAttributes: Set[String] = (fromSingle ++ fromGroup).toSet
+    val allImplicitVerificationAttributes: Set[String] =
+      (implicitVerificationAttributeFromSingle ++ implicitVerificationAttributeFromGroup).toSet
 
-    val diff: Set[String] = allImplicitVerificationAttributes diff alreadyVerifiedAttributes
+    val difference: Set[String] = allImplicitVerificationAttributes diff alreadyVerifiedAttributes
 
-    val error: Either[ComponentError, Unit] = Left(ImplicitAttributeVerificationNotAdmitted(diff))
+    val error: Either[ComponentError, Unit] = Left(ImplicitAttributeVerificationNotAdmitted(difference))
 
-    error.unlessA(diff.isEmpty).toFuture
+    error.unlessA(difference.isEmpty).toFuture
 
   }
 
