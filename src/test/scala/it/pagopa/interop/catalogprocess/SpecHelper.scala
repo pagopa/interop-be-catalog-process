@@ -37,7 +37,8 @@ abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.co
     description = None,
     audience = Seq.empty,
     voucherLifespan = 0,
-    dailyCallsMaxNumber = 0,
+    dailyCallsPerConsumer = 0,
+    dailyCallsTotal = 0,
     interface = None,
     docs = Seq.empty,
     state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED
