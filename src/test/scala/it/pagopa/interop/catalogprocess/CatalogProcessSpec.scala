@@ -253,7 +253,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
             state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
             audience = List("aud1"),
             voucherLifespan = 1000,
-            dailyCallsMaxNumber = 1000
+            dailyCallsPerConsumer = 1000,
+            dailyCallsTotal = 0
           )
         )
       )

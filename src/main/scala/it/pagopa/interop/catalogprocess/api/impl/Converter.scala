@@ -37,7 +37,8 @@ object Converter {
       state = convertToApiDescriptorState(descriptor.state),
       audience = descriptor.audience,
       voucherLifespan = descriptor.voucherLifespan,
-      dailyCallsMaxNumber = descriptor.dailyCallsMaxNumber
+      dailyCallsPerConsumer = descriptor.dailyCallsPerConsumer,
+      dailyCallsTotal = descriptor.dailyCallsTotal
     )
   }
 
@@ -113,7 +114,8 @@ object Converter {
         description = descriptor.description,
         audience = descriptor.audience,
         voucherLifespan = descriptor.voucherLifespan,
-        dailyCallsMaxNumber = descriptor.dailyCallsMaxNumber
+        dailyCallsPerConsumer = descriptor.dailyCallsPerConsumer,
+        dailyCallsTotal = descriptor.dailyCallsTotal
       )
     )
   }
@@ -142,7 +144,8 @@ object Converter {
         description = seed.description,
         audience = seed.audience,
         voucherLifespan = seed.voucherLifespan,
-        dailyCallsMaxNumber = seed.dailyCallsMaxNumber,
+        dailyCallsPerConsumer = seed.dailyCallsPerConsumer,
+        dailyCallsTotal = seed.dailyCallsTotal,
         state = CatalogManagementDependency.EServiceDescriptorState.DRAFT
       )
     )
