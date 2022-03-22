@@ -23,13 +23,6 @@ object Dependencies {
     lazy val s3        = namespace % "s3" % awsSdkVersion
   }
 
-  lazy val Protobuf = "protobuf"
-
-  private[this] object scalaprotobuf {
-    lazy val namespace = "com.thesamet.scalapb"
-    lazy val core      = namespace %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion
-  }
-
   private[this] object json4s {
     lazy val namespace = "org.json4s"
     lazy val jackson   = namespace %% "json4s-jackson" % json4sVersion
@@ -136,7 +129,6 @@ object Dependencies {
       pagopa.commons                           % Compile,
       pagopa.fileManager                       % Compile,
       pagopa.commonsJWT                        % Compile,
-      scalaprotobuf.core                       % Protobuf,
       akka.testkit                             % Test,
       scalatest.core                           % Test,
       scalamock.core                           % Test
