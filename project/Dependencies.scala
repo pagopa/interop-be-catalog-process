@@ -5,22 +5,17 @@ import sbt._
 object Dependencies {
 
   private[this] object akka {
-    lazy val namespace  = "com.typesafe.akka"
-    lazy val actorTyped = namespace                       %% "akka-actor-typed"     % akkaVersion
-    lazy val stream     = namespace                       %% "akka-stream"          % akkaVersion
-    lazy val http       = namespace                       %% "akka-http"            % akkaHttpVersion
-    lazy val httpJson   = namespace                       %% "akka-http-spray-json" % akkaHttpVersion
-    lazy val httpJson4s = "de.heikoseeberger"             %% "akka-http-json4s"     % akkaHttpJson4sVersion
-    lazy val management = "com.lightbend.akka.management" %% "akka-management"      % akkaManagementVersion
+    lazy val namespace           = "com.typesafe.akka"
+    lazy val actorTyped          = namespace                       %% "akka-actor-typed"     % akkaVersion
+    lazy val stream              = namespace                       %% "akka-stream"          % akkaVersion
+    lazy val http                = namespace                       %% "akka-http"            % akkaHttpVersion
+    lazy val httpJson            = namespace                       %% "akka-http-spray-json" % akkaHttpVersion
+    lazy val httpJson4s          = "de.heikoseeberger"             %% "akka-http-json4s"     % akkaHttpJson4sVersion
+    lazy val management          = "com.lightbend.akka.management" %% "akka-management"      % akkaManagementVersion
     lazy val managementLogLevels =
       "com.lightbend.akka.management" %% "akka-management-loglevels-logback" % akkaManagementVersion
     lazy val slf4j   = namespace %% "akka-slf4j"               % akkaVersion
     lazy val testkit = namespace %% "akka-actor-testkit-typed" % akkaVersion
-  }
-
-  private[this] object awssdk {
-    lazy val namespace = "software.amazon.awssdk"
-    lazy val s3        = namespace % "s3" % awsSdkVersion
   }
 
   private[this] object json4s {
@@ -102,9 +97,9 @@ object Dependencies {
   object Jars {
     lazy val overrides: Seq[ModuleID] =
       Seq(jackson.annotations % Compile, jackson.core % Compile, jackson.databind % Compile)
-    lazy val `server`: Seq[ModuleID] = Seq(
+    lazy val `server`: Seq[ModuleID]  = Seq(
       // For making Java 12 happy
-      "javax.annotation" % "javax.annotation-api" % "1.3.2" % "compile",
+      "javax.annotation"                       % "javax.annotation-api" % "1.3.2" % "compile",
       //
       akka.actorTyped                          % Compile,
       akka.management                          % Compile,
@@ -113,7 +108,6 @@ object Dependencies {
       akka.http                                % Compile,
       akka.httpJson                            % Compile,
       cats.core                                % Compile,
-      awssdk.s3                                % Compile,
       commons.fileUpload                       % Compile,
       mustache.compiler                        % Compile,
       logback.classic                          % Compile,
@@ -133,7 +127,7 @@ object Dependencies {
       scalatest.core                           % Test,
       scalamock.core                           % Test
     )
-    lazy val client: Seq[ModuleID] = Seq(
+    lazy val client: Seq[ModuleID]    = Seq(
       akka.stream     % Compile,
       akka.http       % Compile,
       akka.httpJson4s % Compile,
