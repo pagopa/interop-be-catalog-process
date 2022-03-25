@@ -49,16 +49,16 @@ case object StartupErrorShutdown extends CoordinatedShutdown.Reason
 
 trait AgreementManagementDependency {
   private final val agreementManagementInvoker: AgreementManagementInvoker = AgreementManagementInvoker()
-  private final val agreementApi: AgreementApi                             = AgreementApi(ApplicationConfiguration.agreementManagementUrl)
+  private final val agreementApi: AgreementApi = AgreementApi(ApplicationConfiguration.agreementManagementUrl)
   val agreementManagementService: AgreementManagementService =
     AgreementManagementServiceImpl(agreementManagementInvoker, agreementApi)
 }
 
 trait AuthorizationManagementDependency {
   private final val authorizationManagementInvoker: AuthorizationManagementInvoker = AuthorizationManagementInvoker()
-  private final val authorizationPurposeApi: PurposeApi =
+  private final val authorizationPurposeApi: PurposeApi                            =
     PurposeApi(ApplicationConfiguration.authorizationManagementUrl)
-  val authorizationManagementService: AuthorizationManagementService =
+  val authorizationManagementService: AuthorizationManagementService               =
     AuthorizationManagementServiceImpl(authorizationManagementInvoker, authorizationPurposeApi)
 }
 
@@ -72,14 +72,14 @@ trait AttributeRegistryManagementDependency {
 
 trait CatalogManagementDependency {
   private final val catalogManagementInvoker: CatalogManagementInvoker = CatalogManagementInvoker()
-  private final val catalogApi: EServiceApi                            = EServiceApi(ApplicationConfiguration.catalogManagementUrl)
+  private final val catalogApi: EServiceApi              = EServiceApi(ApplicationConfiguration.catalogManagementUrl)
   val catalogManagementService: CatalogManagementService =
     CatalogManagementServiceImpl(catalogManagementInvoker, catalogApi)
 }
 
 trait PartyManagementDependency {
   private final val partyManagementInvoker: PartyManagementInvoker = PartyManagementInvoker()
-  private final val partyApi: PartyApi                             = PartyApi(ApplicationConfiguration.partyManagementUrl)
+  private final val partyApi: PartyApi               = PartyApi(ApplicationConfiguration.partyManagementUrl)
   val partyManagementService: PartyManagementService =
     PartyManagementServiceImpl(partyManagementInvoker, partyApi)
 }
@@ -97,7 +97,7 @@ object Main
     fileManager <- FileManager.getConcreteImplementation(StorageConfiguration.runtimeFileManager).toFuture
     keyset      <- JWTConfiguration.jwtReader.loadKeyset().toFuture
     jwtValidator = new DefaultJWTReader with PublicKeysHolder {
-      var publicKeyset: Map[KID, SerializedKey] = keyset
+      var publicKeyset: Map[KID, SerializedKey]                                        = keyset
       override protected val claimsVerifier: DefaultJWTClaimsVerifier[SecurityContext] =
         getClaimsVerifier(audience = ApplicationConfiguration.jwtAudience)
     }
@@ -105,7 +105,7 @@ object Main
 
   dependenciesLoaded.transformWith {
     case Success((fileManager, jwtValidator)) => launchApp(fileManager, jwtValidator)
-    case Failure(ex) =>
+    case Failure(ex)                          =>
       classicActorSystem.log.error("Startup error: {}", ex.getMessage)
       classicActorSystem.log.error(ex.getStackTrace.mkString("\n"))
       CoordinatedShutdown(classicActorSystem).run(StartupErrorShutdown)

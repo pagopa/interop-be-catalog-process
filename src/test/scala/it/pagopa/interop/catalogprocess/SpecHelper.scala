@@ -23,7 +23,7 @@ abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.co
   val bearerToken: String               = "token"
   val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(bearerToken)))
 
-  val httpSystem: ActorSystem[Any] =
+  val httpSystem: ActorSystem[Any]                        =
     ActorSystem(Behaviors.ignore[Any], name = system.name, config = system.settings.config)
   implicit val executionContext: ExecutionContextExecutor = httpSystem.executionContext
   implicit val classicSystem: actor.ActorSystem           = httpSystem.classicSystem
