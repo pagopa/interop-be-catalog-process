@@ -6,6 +6,6 @@ import scala.concurrent.Future
 
 trait AttributeRegistryManagementService {
 
-  def getAttributesBulk(attributeIds: Seq[String])(bearerToken: String): Future[Seq[Attribute]]
+  def getAttributesBulk(attributeIds: Seq[String])(contexts: Seq[(String, String)]): Future[Seq[Attribute]]
 
 }

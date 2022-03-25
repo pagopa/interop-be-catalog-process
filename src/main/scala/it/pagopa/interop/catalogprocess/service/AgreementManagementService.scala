@@ -6,7 +6,7 @@ import scala.concurrent.Future
 
 trait AgreementManagementService {
   def getAgreements(
-    bearerToken: String,
+    contexts: Seq[(String, String)],
     consumerId: Option[String],
     producerId: Option[String],
     status: Option[AgreementState]
@@ -18,7 +18,7 @@ trait AgreementManagementService {
     * @param ec
     * @return
     */
-  def getAgreementsByConsumerId(bearerToken: String)(consumerId: String): Future[Seq[Agreement]] =
-    getAgreements(bearerToken, Some(consumerId), None, None)
+  def getAgreementsByConsumerId(contexts: Seq[(String, String)])(consumerId: String): Future[Seq[Agreement]] =
+    getAgreements(contexts, Some(consumerId), None, None)
 
 }
