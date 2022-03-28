@@ -8,29 +8,31 @@ import scala.concurrent.Future
 
 trait CatalogManagementService {
   def listEServices(
-    bearerToken: String
+    contexts: Seq[(String, String)]
   )(producerId: Option[String], status: Option[EServiceDescriptorState]): Future[Seq[EService]]
-  def getEService(bearerToken: String)(eServiceId: String): Future[EService]
-  def createEService(bearerToken: String)(eServiceSeed: EServiceSeed): Future[EService]
-  def deleteDraft(bearerToken: String)(eServiceId: String, descriptorId: String): Future[Unit]
-  def updateEservice(bearerToken: String)(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed): Future[EService]
-  def cloneEservice(bearer: String)(eServiceId: String, descriptorId: String): Future[EService]
-  def deleteEService(bearer: String)(eServiceId: String): Future[Unit]
+  def getEService(contexts: Seq[(String, String)])(eServiceId: String): Future[EService]
+  def createEService(contexts: Seq[(String, String)])(eServiceSeed: EServiceSeed): Future[EService]
+  def deleteDraft(contexts: Seq[(String, String)])(eServiceId: String, descriptorId: String): Future[Unit]
+  def updateEservice(
+    contexts: Seq[(String, String)]
+  )(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed): Future[EService]
+  def cloneEservice(contexts: Seq[(String, String)])(eServiceId: String, descriptorId: String): Future[EService]
+  def deleteEService(contexts: Seq[(String, String)])(eServiceId: String): Future[Unit]
 
   def createDescriptor(
-    bearerToken: String
+    contexts: Seq[(String, String)]
   )(eServiceId: String, eServiceDescriptorSeed: EServiceDescriptorSeed): Future[EServiceDescriptor]
-  def deprecateDescriptor(bearerToken: String)(eServiceId: String, descriptorId: String): Future[Unit]
-  def archiveDescriptor(bearerToken: String)(eServiceId: String, descriptorId: String): Future[Unit]
-  def publishDescriptor(bearerToken: String)(eServiceId: String, descriptorId: String): Future[Unit]
-  def draftDescriptor(bearerToken: String)(eServiceId: String, descriptorId: String): Future[Unit]
-  def suspendDescriptor(bearerToken: String)(eServiceId: String, descriptorId: String): Future[Unit]
+  def deprecateDescriptor(contexts: Seq[(String, String)])(eServiceId: String, descriptorId: String): Future[Unit]
+  def archiveDescriptor(contexts: Seq[(String, String)])(eServiceId: String, descriptorId: String): Future[Unit]
+  def publishDescriptor(contexts: Seq[(String, String)])(eServiceId: String, descriptorId: String): Future[Unit]
+  def draftDescriptor(contexts: Seq[(String, String)])(eServiceId: String, descriptorId: String): Future[Unit]
+  def suspendDescriptor(contexts: Seq[(String, String)])(eServiceId: String, descriptorId: String): Future[Unit]
   def hasNotDraftDescriptor(eService: EService): Future[Boolean]
   def updateDraftDescriptor(
-    bearerToken: String
+    contexts: Seq[(String, String)]
   )(eServiceId: String, descriptorId: String, seed: UpdateEServiceDescriptorSeed): Future[EService]
 
-  def createEServiceDocument(bearerToken: String)(
+  def createEServiceDocument(contexts: Seq[(String, String)])(
     eServiceId: String,
     descriptorId: String,
     kind: String,
@@ -39,10 +41,10 @@ trait CatalogManagementService {
   ): Future[EService]
 
   def getEServiceDocument(
-    bearerToken: String
+    contexts: Seq[(String, String)]
   )(eServiceId: String, descriptorId: String, documentId: String): Future[EServiceDoc]
 
-  def updateEServiceDocument(bearerToken: String)(
+  def updateEServiceDocument(contexts: Seq[(String, String)])(
     eServiceId: String,
     descriptorId: String,
     documentId: String,
@@ -50,6 +52,6 @@ trait CatalogManagementService {
   ): Future[EServiceDoc]
 
   def deleteEServiceDocument(
-    bearerToken: String
+    contexts: Seq[(String, String)]
   )(eServiceId: String, descriptorId: String, documentId: String): Future[Unit]
 }

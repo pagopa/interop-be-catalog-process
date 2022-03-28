@@ -28,6 +28,9 @@ tags:
       url: http://swagger.io
 paths:
   /eservices:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/IpAddress'
     get:
       security:
         - bearerAuth: []
@@ -92,6 +95,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
   /flatten/eservices:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/IpAddress'
     get:
       security:
         - bearerAuth: []
@@ -139,6 +145,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/FlatEServices'
   /eservices/{eServiceId}:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/IpAddress'
     get:
       security:
         - bearerAuth: []
@@ -243,6 +252,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
   /eservices/{eServiceId}/descriptors:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/IpAddress'
     post:
       security:
         - bearerAuth: []
@@ -284,6 +296,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
   /eservices/{eServiceId}/descriptors/{descriptorId}:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/IpAddress'
     delete:
       security:
         - bearerAuth: []
@@ -366,6 +381,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
   /eservices/{eServiceId}/descriptors/{descriptorId}/publish:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/IpAddress'
     post:
       security:
         - bearerAuth: []
@@ -402,6 +420,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
   /eservices/{eServiceId}/descriptors/{descriptorId}/suspend:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/IpAddress'
     post:
       security:
         - bearerAuth: []
@@ -438,6 +459,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
   /eservices/{eServiceId}/descriptors/{descriptorId}/activate:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/IpAddress'
     post:
       security:
         - bearerAuth: []
@@ -474,6 +498,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
   /eservices/{eServiceId}/descriptors/{descriptorId}/clone:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/IpAddress'
     post:
       security:
         - bearerAuth: []
@@ -516,6 +543,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
   /eservices/{eServiceId}/descriptors/{descriptorId}/documents:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/IpAddress'
     post:
       security:
         - bearerAuth: []
@@ -579,6 +609,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
   /eservices/{eServiceId}/descriptors/{descriptorId}/documents/{documentId}:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/IpAddress'
     get:
       security:
         - bearerAuth: []
@@ -666,7 +699,10 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  /eservices/{eServiceId}/descriptors/{descriptorId}/documents/{documentId}/update: 
+  /eservices/{eServiceId}/descriptors/{descriptorId}/documents/{documentId}/update:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/IpAddress'
     post:
       security:
         - bearerAuth: []
@@ -736,6 +772,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 components:
+  parameters:
+    CorrelationIdHeader:
+      in: header
+      name: X-Correlation-Id
+      required: true
+      schema:
+        type: string
+    IpAddress:
+      in: header
+      name: X-Forwarded-For
+      schema:
+        type: string
   schemas:
     EServiceSeed:
       type: object

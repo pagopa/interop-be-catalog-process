@@ -8,7 +8,7 @@ import scala.concurrent.Future
 trait AuthorizationManagementService {
 
   def updateStateOnClients(
-    bearerToken: String
+    contexts: Seq[(String, String)]
   )(eServiceId: UUID, state: ClientComponentState, audience: Seq[String], voucherLifespan: Int): Future[Unit]
 
 }

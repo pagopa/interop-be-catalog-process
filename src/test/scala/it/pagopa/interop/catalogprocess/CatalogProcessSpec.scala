@@ -146,8 +146,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       )
 
       (agreementManagementService
-        .getAgreements(_: String, _: Option[String], _: Option[String], _: Option[AgreementState]))
-        .expects(bearerToken, Some(consumerId.toString), None, Some(AgreementState.ACTIVE))
+        .getAgreements(_: Seq[(String, String)], _: Option[String], _: Option[String], _: Option[AgreementState]))
+        .expects(*, Some(consumerId.toString), None, Some(AgreementState.ACTIVE))
         .returning(Future.successful(Seq(activeAgreement)))
         .once()
 
@@ -162,8 +162,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       )
 
       (catalogManagementService
-        .getEService(_: String)(_: String))
-        .expects(bearerToken, eserviceId1.toString)
+        .getEService(_: Seq[(String, String)])(_: String))
+        .expects(*, eserviceId1.toString)
         .returning(Future.successful(eservice1))
         .once()
 
@@ -177,8 +177,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       (attributeRegistryManagementService
-        .getAttributesBulk(_: Seq[String])(_: String))
-        .expects(Seq.empty, bearerToken)
+        .getAttributesBulk(_: Seq[String])(_: Seq[(String, String)]))
+        .expects(Seq.empty, *)
         .returning(Future.successful(Seq.empty))
         .once()
 
@@ -309,8 +309,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       (catalogManagementService
-        .createEService(_: String)(_: CatalogManagementDependency.EServiceSeed))
-        .expects(bearerToken, seed)
+        .createEService(_: Seq[(String, String)])(_: CatalogManagementDependency.EServiceSeed))
+        .expects(*, seed)
         .returning(Future.successful(eservice))
         .once()
 
@@ -321,8 +321,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       (attributeRegistryManagementService
-        .getAttributesBulk(_: Seq[String])(_: String))
-        .expects(Seq(attributeId1, attributeId2, attributeId3), bearerToken)
+        .getAttributesBulk(_: Seq[String])(_: Seq[(String, String)]))
+        .expects(Seq(attributeId1, attributeId2, attributeId3), *)
         .returning(Future.successful(Seq(attribute1, attribute2, attribute3)))
         .once()
 
@@ -338,7 +338,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
             json match {
               case JsString("REST") => CatalogManagementDependency.EServiceTechnology.REST
               case JsString("SOAP") => CatalogManagementDependency.EServiceTechnology.SOAP
-              case unrecognized =>
+              case unrecognized     =>
                 deserializationError(s"EServiceTechnology serialization error ${unrecognized.toString}")
             }
         }
@@ -435,26 +435,28 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       (catalogManagementService
-        .getEService(_: String)(_: String))
-        .expects(bearerToken, eServiceId)
+        .getEService(_: Seq[(String, String)])(_: String))
+        .expects(*, eServiceId)
         .returning(Future.successful(eService))
         .once()
 
       (catalogManagementService
-        .suspendDescriptor(_: String)(_: String, _: String))
-        .expects(bearerToken, eServiceId, descriptorId)
+        .suspendDescriptor(_: Seq[(String, String)])(_: String, _: String))
+        .expects(*, eServiceId, descriptorId)
         .returning(Future.successful(()))
         .once()
 
-      (authorizationManagementService
-        .updateStateOnClients(_: String)(
-          _: UUID,
-          _: AuthorizationManagementDependency.ClientComponentState,
-          _: Seq[String],
-          _: Int
-        ))
+      (
+        authorizationManagementService
+          .updateStateOnClients(_: Seq[(String, String)])(
+            _: UUID,
+            _: AuthorizationManagementDependency.ClientComponentState,
+            _: Seq[String],
+            _: Int
+          )
+        )
         .expects(
-          bearerToken,
+          *,
           eServiceUuid,
           AuthorizationManagementDependency.ClientComponentState.INACTIVE,
           descriptor.audience,
@@ -482,26 +484,28 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       (catalogManagementService
-        .getEService(_: String)(_: String))
-        .expects(bearerToken, eServiceId)
+        .getEService(_: Seq[(String, String)])(_: String))
+        .expects(*, eServiceId)
         .returning(Future.successful(eService))
         .once()
 
       (catalogManagementService
-        .suspendDescriptor(_: String)(_: String, _: String))
-        .expects(bearerToken, eServiceId, descriptorId)
+        .suspendDescriptor(_: Seq[(String, String)])(_: String, _: String))
+        .expects(*, eServiceId, descriptorId)
         .returning(Future.successful(()))
         .once()
 
-      (authorizationManagementService
-        .updateStateOnClients(_: String)(
-          _: UUID,
-          _: AuthorizationManagementDependency.ClientComponentState,
-          _: Seq[String],
-          _: Int
-        ))
+      (
+        authorizationManagementService
+          .updateStateOnClients(_: Seq[(String, String)])(
+            _: UUID,
+            _: AuthorizationManagementDependency.ClientComponentState,
+            _: Seq[String],
+            _: Int
+          )
+        )
         .expects(
-          bearerToken,
+          *,
           eServiceUuid,
           AuthorizationManagementDependency.ClientComponentState.INACTIVE,
           descriptor.audience,
@@ -528,14 +532,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       (catalogManagementService
-        .getEService(_: String)(_: String))
-        .expects(bearerToken, eServiceId)
+        .getEService(_: Seq[(String, String)])(_: String))
+        .expects(*, eServiceId)
         .returning(Future.successful(eService))
         .once()
 
       (catalogManagementService
-        .suspendDescriptor(_: String)(_: String, _: String))
-        .expects(bearerToken, eServiceId, descriptorId)
+        .suspendDescriptor(_: Seq[(String, String)])(_: String, _: String))
+        .expects(*, eServiceId, descriptorId)
         .returning(Future.successful(()))
         .once()
 
@@ -557,14 +561,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       (catalogManagementService
-        .getEService(_: String)(_: String))
-        .expects(bearerToken, eServiceId)
+        .getEService(_: Seq[(String, String)])(_: String))
+        .expects(*, eServiceId)
         .returning(Future.successful(eService))
         .once()
 
       (catalogManagementService
-        .suspendDescriptor(_: String)(_: String, _: String))
-        .expects(bearerToken, eServiceId, descriptorId)
+        .suspendDescriptor(_: Seq[(String, String)])(_: String, _: String))
+        .expects(*, eServiceId, descriptorId)
         .returning(Future.successful(()))
         .once()
 
@@ -615,26 +619,28 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       (catalogManagementService
-        .getEService(_: String)(_: String))
-        .expects(bearerToken, eServiceId)
+        .getEService(_: Seq[(String, String)])(_: String))
+        .expects(*, eServiceId)
         .returning(Future.successful(eService))
         .once()
 
       (catalogManagementService
-        .deprecateDescriptor(_: String)(_: String, _: String))
-        .expects(bearerToken, eServiceId, descriptorId)
+        .deprecateDescriptor(_: Seq[(String, String)])(_: String, _: String))
+        .expects(*, eServiceId, descriptorId)
         .returning(Future.successful(()))
         .once()
 
-      (authorizationManagementService
-        .updateStateOnClients(_: String)(
-          _: UUID,
-          _: AuthorizationManagementDependency.ClientComponentState,
-          _: Seq[String],
-          _: Int
-        ))
+      (
+        authorizationManagementService
+          .updateStateOnClients(_: Seq[(String, String)])(
+            _: UUID,
+            _: AuthorizationManagementDependency.ClientComponentState,
+            _: Seq[String],
+            _: Int
+          )
+        )
         .expects(
-          bearerToken,
+          *,
           eServiceUuid,
           AuthorizationManagementDependency.ClientComponentState.ACTIVE,
           descriptor.audience,
@@ -662,26 +668,28 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       (catalogManagementService
-        .getEService(_: String)(_: String))
-        .expects(bearerToken, eServiceId)
+        .getEService(_: Seq[(String, String)])(_: String))
+        .expects(*, eServiceId)
         .returning(Future.successful(eService))
         .once()
 
       (catalogManagementService
-        .deprecateDescriptor(_: String)(_: String, _: String))
-        .expects(bearerToken, eServiceId, descriptorId)
+        .deprecateDescriptor(_: Seq[(String, String)])(_: String, _: String))
+        .expects(*, eServiceId, descriptorId)
         .returning(Future.successful(()))
         .once()
 
-      (authorizationManagementService
-        .updateStateOnClients(_: String)(
-          _: UUID,
-          _: AuthorizationManagementDependency.ClientComponentState,
-          _: Seq[String],
-          _: Int
-        ))
+      (
+        authorizationManagementService
+          .updateStateOnClients(_: Seq[(String, String)])(
+            _: UUID,
+            _: AuthorizationManagementDependency.ClientComponentState,
+            _: Seq[String],
+            _: Int
+          )
+        )
         .expects(
-          bearerToken,
+          *,
           eServiceUuid,
           AuthorizationManagementDependency.ClientComponentState.ACTIVE,
           descriptor.audience,
@@ -709,26 +717,28 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       (catalogManagementService
-        .getEService(_: String)(_: String))
-        .expects(bearerToken, eServiceId)
+        .getEService(_: Seq[(String, String)])(_: String))
+        .expects(*, eServiceId)
         .returning(Future.successful(eService))
         .once()
 
       (catalogManagementService
-        .publishDescriptor(_: String)(_: String, _: String))
-        .expects(bearerToken, eServiceId, descriptorId)
+        .publishDescriptor(_: Seq[(String, String)])(_: String, _: String))
+        .expects(*, eServiceId, descriptorId)
         .returning(Future.successful(()))
         .once()
 
-      (authorizationManagementService
-        .updateStateOnClients(_: String)(
-          _: UUID,
-          _: AuthorizationManagementDependency.ClientComponentState,
-          _: Seq[String],
-          _: Int
-        ))
+      (
+        authorizationManagementService
+          .updateStateOnClients(_: Seq[(String, String)])(
+            _: UUID,
+            _: AuthorizationManagementDependency.ClientComponentState,
+            _: Seq[String],
+            _: Int
+          )
+        )
         .expects(
-          bearerToken,
+          *,
           eServiceUuid,
           AuthorizationManagementDependency.ClientComponentState.ACTIVE,
           descriptor.audience,
@@ -756,26 +766,28 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       (catalogManagementService
-        .getEService(_: String)(_: String))
-        .expects(bearerToken, eServiceId)
+        .getEService(_: Seq[(String, String)])(_: String))
+        .expects(*, eServiceId)
         .returning(Future.successful(eService))
         .once()
 
       (catalogManagementService
-        .publishDescriptor(_: String)(_: String, _: String))
-        .expects(bearerToken, eServiceId, descriptorId)
+        .publishDescriptor(_: Seq[(String, String)])(_: String, _: String))
+        .expects(*, eServiceId, descriptorId)
         .returning(Future.successful(()))
         .once()
 
-      (authorizationManagementService
-        .updateStateOnClients(_: String)(
-          _: UUID,
-          _: AuthorizationManagementDependency.ClientComponentState,
-          _: Seq[String],
-          _: Int
-        ))
+      (
+        authorizationManagementService
+          .updateStateOnClients(_: Seq[(String, String)])(
+            _: UUID,
+            _: AuthorizationManagementDependency.ClientComponentState,
+            _: Seq[String],
+            _: Int
+          )
+        )
         .expects(
-          bearerToken,
+          *,
           eServiceUuid,
           AuthorizationManagementDependency.ClientComponentState.ACTIVE,
           descriptor.audience,
@@ -802,14 +814,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       (catalogManagementService
-        .getEService(_: String)(_: String))
-        .expects(bearerToken, eServiceId)
+        .getEService(_: Seq[(String, String)])(_: String))
+        .expects(*, eServiceId)
         .returning(Future.successful(eService))
         .once()
 
       (catalogManagementService
-        .suspendDescriptor(_: String)(_: String, _: String))
-        .expects(bearerToken, eServiceId, descriptorId)
+        .suspendDescriptor(_: Seq[(String, String)])(_: String, _: String))
+        .expects(*, eServiceId, descriptorId)
         .returning(Future.successful(()))
         .once()
 
@@ -831,14 +843,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       (catalogManagementService
-        .getEService(_: String)(_: String))
-        .expects(bearerToken, eServiceId)
+        .getEService(_: Seq[(String, String)])(_: String))
+        .expects(*, eServiceId)
         .returning(Future.successful(eService))
         .once()
 
       (catalogManagementService
-        .suspendDescriptor(_: String)(_: String, _: String))
-        .expects(bearerToken, eServiceId, descriptorId)
+        .suspendDescriptor(_: Seq[(String, String)])(_: String, _: String))
+        .expects(*, eServiceId, descriptorId)
         .returning(Future.successful(()))
         .once()
 
@@ -860,14 +872,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       (catalogManagementService
-        .getEService(_: String)(_: String))
-        .expects(bearerToken, eServiceId)
+        .getEService(_: Seq[(String, String)])(_: String))
+        .expects(*, eServiceId)
         .returning(Future.successful(eService))
         .once()
 
       (catalogManagementService
-        .suspendDescriptor(_: String)(_: String, _: String))
-        .expects(bearerToken, eServiceId, descriptorId)
+        .suspendDescriptor(_: Seq[(String, String)])(_: String, _: String))
+        .expects(*, eServiceId, descriptorId)
         .returning(Future.successful(()))
         .once()
 
@@ -889,14 +901,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       (catalogManagementService
-        .getEService(_: String)(_: String))
-        .expects(bearerToken, eServiceId)
+        .getEService(_: Seq[(String, String)])(_: String))
+        .expects(*, eServiceId)
         .returning(Future.successful(eService))
         .once()
 
       (catalogManagementService
-        .suspendDescriptor(_: String)(_: String, _: String))
-        .expects(bearerToken, eServiceId, descriptorId)
+        .suspendDescriptor(_: Seq[(String, String)])(_: String, _: String))
+        .expects(*, eServiceId, descriptorId)
         .returning(Future.successful(()))
         .once()
 
@@ -917,5 +929,5 @@ object CatalogProcessSpec extends MockFactory {
   val partyManagementService: PartyManagementService                         = mock[PartyManagementService]
   val fileManager: FileManager                                               = mock[FileManager]
   val jwtReader: JWTReader                                                   = mock[JWTReader]
-  def mockSubject(uuid: String): Success[JWTClaimsSet]                       = Success(new JWTClaimsSet.Builder().subject(uuid).build())
+  def mockSubject(uuid: String): Success[JWTClaimsSet] = Success(new JWTClaimsSet.Builder().subject(uuid).build())
 }

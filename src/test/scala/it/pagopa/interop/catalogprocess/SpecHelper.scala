@@ -6,12 +6,13 @@ import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.Behaviors
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
+import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, SecurityDirectives}
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
-import it.pagopa.interop.commons.utils.AkkaUtils.Authenticator
 import it.pagopa.interop.catalogprocess.server.Controller
+import it.pagopa.interop.commons.utils.AkkaUtils.Authenticator
 
+import java.net.InetAddress
 import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
@@ -20,10 +21,16 @@ abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.co
 
   var bindServer: Option[Future[Http.ServerBinding]] = None
 
-  val bearerToken: String               = "token"
-  val authorization: Seq[Authorization] = Seq(headers.Authorization(OAuth2BearerToken(bearerToken)))
+  val bearerToken: String                        = "token"
+  val bearerTokenContexts: Seq[(String, String)] = Seq("bearer" -> bearerToken)
+  final val requestHeaders: Seq[HttpHeader]      =
+    Seq(
+      headers.Authorization(OAuth2BearerToken(bearerToken)),
+      headers.RawHeader("X-Correlation-Id", "test-id"),
+      headers.`X-Forwarded-For`(RemoteAddress(InetAddress.getByName("127.0.0.1")))
+    )
 
-  val httpSystem: ActorSystem[Any] =
+  val httpSystem: ActorSystem[Any]                        =
     ActorSystem(Behaviors.ignore[Any], name = system.name, config = system.settings.config)
   implicit val executionContext: ExecutionContextExecutor = httpSystem.executionContext
   implicit val classicSystem: actor.ActorSystem           = httpSystem.classicSystem
@@ -76,7 +83,7 @@ abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.co
     }
     Await.result(
       Http().singleRequest(
-        HttpRequest(uri = s"$serviceURL/$path", method = verb, entity = entity, headers = authorization)
+        HttpRequest(uri = s"$serviceURL/$path", method = verb, entity = entity, headers = requestHeaders)
       ),
       10.seconds
     )
