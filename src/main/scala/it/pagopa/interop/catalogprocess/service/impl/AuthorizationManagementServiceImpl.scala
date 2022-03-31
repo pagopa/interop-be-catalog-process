@@ -20,7 +20,7 @@ final case class AuthorizationManagementServiceImpl(invoker: AuthorizationManage
   )(eServiceId: UUID, state: ClientComponentState, audience: Seq[String], voucherLifespan: Int): Future[Unit] = {
     val payload: ClientEServiceDetailsUpdate =
       ClientEServiceDetailsUpdate(state = state, audience = audience, voucherLifespan = voucherLifespan)
-    val request: ApiRequest[Unit] =
+    val request: ApiRequest[Unit]            =
       api.updateEServiceState(eserviceId = eServiceId, clientEServiceDetailsUpdate = payload)(BearerToken(bearerToken))
     invoker
       .invoke(request, s"Update EService state on all clients")

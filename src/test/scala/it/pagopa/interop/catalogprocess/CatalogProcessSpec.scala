@@ -338,7 +338,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
             json match {
               case JsString("REST") => CatalogManagementDependency.EServiceTechnology.REST
               case JsString("SOAP") => CatalogManagementDependency.EServiceTechnology.SOAP
-              case unrecognized =>
+              case unrecognized     =>
                 deserializationError(s"EServiceTechnology serialization error ${unrecognized.toString}")
             }
         }
@@ -917,5 +917,5 @@ object CatalogProcessSpec extends MockFactory {
   val partyManagementService: PartyManagementService                         = mock[PartyManagementService]
   val fileManager: FileManager                                               = mock[FileManager]
   val jwtReader: JWTReader                                                   = mock[JWTReader]
-  def mockSubject(uuid: String): Success[JWTClaimsSet]                       = Success(new JWTClaimsSet.Builder().subject(uuid).build())
+  def mockSubject(uuid: String): Success[JWTClaimsSet] = Success(new JWTClaimsSet.Builder().subject(uuid).build())
 }

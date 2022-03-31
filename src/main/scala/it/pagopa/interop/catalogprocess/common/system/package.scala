@@ -14,7 +14,7 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 
 package object system {
 
-  implicit val actorSystem: ActorSystem[Nothing] =
+  implicit val actorSystem: ActorSystem[Nothing]          =
     ActorSystem[Nothing](Behaviors.empty[Nothing], "interop-be-catalog-process")
   implicit val classicActorSystem: classic.ActorSystem    = actorSystem.toClassic
   implicit val executionContext: ExecutionContextExecutor = actorSystem.executionContext
