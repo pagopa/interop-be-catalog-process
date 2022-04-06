@@ -14,12 +14,12 @@ object Converter {
 
   def convertToApiEservice(
     eservice: CatalogManagementDependency.EService,
-    organization: PartyManagementDependency.Organization,
+    institution: PartyManagementDependency.Institution,
     attributes: Seq[AttributeManagementDependency.Attribute]
   ): EService =
     EService(
       id = eservice.id,
-      producer = Organization(id = eservice.producerId, name = organization.description),
+      producer = Organization(id = eservice.producerId, name = institution.description),
       name = eservice.name,
       description = eservice.description,
       technology = convertToApiTechnology(eservice.technology),
