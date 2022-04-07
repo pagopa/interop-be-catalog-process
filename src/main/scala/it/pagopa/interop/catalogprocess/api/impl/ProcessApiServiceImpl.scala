@@ -27,7 +27,7 @@ import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions.{EitherOps, OptionOps}
-import it.pagopa.interop.partymanagement.client.model.{BulkOrganizations, BulkPartiesSeed}
+import it.pagopa.interop.partymanagement.client.model.{BulkInstitutions, BulkPartiesSeed}
 import org.slf4j.LoggerFactory
 
 import java.io.{File, FileOutputStream}
@@ -423,7 +423,7 @@ final case class ProcessApiServiceImpl(
         agreementStates           <- parseArrayParameters(agreementState).traverse(AgreementState.fromValue).toFuture
         retrievedEservices        <- retrieveEservices(contexts, producerId, consumerId, statusEnum, agreementStates)
         eservices                 <- processEservicesWithLatestFilter(retrievedEservices, latestPublishedOnly)
-        organizationsDetails      <- partyManagementService.getBulkOrganizations(
+        organizationsDetails      <- partyManagementService.getBulkInstitutions(
           BulkPartiesSeed(partyIdentifiers = eservices.map(_.producerId))
         )(bearer)
         flattenServices = eservices.flatMap(service =>
@@ -576,7 +576,7 @@ final case class ProcessApiServiceImpl(
     eservice: CatalogManagementDependency.EService
   ): Future[EService] = {
     for {
-      organization <- partyManagementService.getOrganization(eservice.producerId)(bearer)
+      organization <- partyManagementService.getInstitution(eservice.producerId)(bearer)
       attributes <- attributeRegistryManagementService.getAttributesBulk(extractIdsFromAttributes(eservice.attributes))(
         contexts
       )
@@ -658,7 +658,7 @@ final case class ProcessApiServiceImpl(
   private def convertToFlattenEservice(
     eservice: client.model.EService,
     agreementSubscribedEservices: Seq[AgreementManagementDependency.Agreement],
-    organizationDetails: BulkOrganizations
+    institutionsDetails: BulkInstitutions
   ): Seq[FlatEService] = {
 
     val flatEServiceZero: FlatEService = FlatEService(
@@ -666,7 +666,7 @@ final case class ProcessApiServiceImpl(
       producerId = eservice.producerId,
       name = eservice.name,
       // TODO "Unknown" is a temporary flag
-      producerName = organizationDetails.found
+      producerName = institutionsDetails.found
         .find(_.id == eservice.producerId)
         .map(_.description)
         .getOrElse("Unknown"),

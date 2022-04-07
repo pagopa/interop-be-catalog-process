@@ -22,7 +22,7 @@ import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.utils.SprayCommonFormats.uuidFormat
 import it.pagopa.interop.partymanagement.client.model.{
   Attribute => PartyManagementApiAttribute,
-  Organization => PartyManagementApiOrganization
+  Institution => PartyManagementApiInstitution
 }
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
@@ -168,10 +168,10 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       val org1 =
-        PartyManagementDependency.Organization(producerId1, "", "description1", "", "", "", "", Seq.empty)
+        PartyManagementDependency.Institution(producerId1, "", "description1", "", "", "", "", Seq.empty)
 
       (partyManagementService
-        .getOrganization(_: UUID)(_: String))
+        .getInstitution(_: UUID)(_: String))
         .expects(producerId1, bearerToken)
         .returning(Future.successful(org1))
         .once()
@@ -182,7 +182,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .returning(Future.successful(Seq.empty))
         .once()
 
-      val response = request(s"eservices?consumerId=${consumerId}&agreementStates=ACTIVE", HttpMethods.GET)
+      val response = request(s"eservices?consumerId=$consumerId&agreementStates=ACTIVE", HttpMethods.GET)
 
       response.status shouldBe StatusCodes.OK
       val body = Await.result(Unmarshal(response.entity).to[Seq[EService]], Duration.Inf)
@@ -259,7 +259,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         )
       )
 
-      val organization = PartyManagementApiOrganization(
+      val institution = PartyManagementApiInstitution(
         id = seed.producerId,
         institutionId = "institutionId",
         description = "organization description",
@@ -315,9 +315,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       (partyManagementService
-        .getOrganization(_: UUID)(_: String))
+        .getInstitution(_: UUID)(_: String))
         .expects(seed.producerId, bearerToken)
-        .returning(Future.successful(organization))
+        .returning(Future.successful(institution))
         .once()
 
       (attributeRegistryManagementService
@@ -361,7 +361,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       val expected = EService(
         id = UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824301"),
-        producer = Organization(id = organization.id, name = organization.description),
+        producer = Organization(id = institution.id, name = institution.description),
         name = seed.name,
         description = seed.description,
         technology = convertToApiTechnology(seed.technology),
