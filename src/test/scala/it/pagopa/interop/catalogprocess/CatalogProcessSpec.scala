@@ -168,7 +168,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       val org1 =
-        PartyManagementDependency.Institution(producerId1, "", "", "description1", "", "", "", "", "", None, Seq.empty)
+        PartyManagementDependency.Institution(producerId1, "", "description1", "", "", "", "", Seq.empty)
 
       (partyManagementService
         .getInstitution(_: UUID)(_: String))
@@ -261,15 +261,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       val institution = PartyManagementApiInstitution(
         id = seed.producerId,
-        externalId = "institutionId",
-        originId = "",
+        institutionId = "",
         description = "organization description",
         digitalAddress = "digitalAddress",
         address = "address",
         zipCode = "zipCode",
         taxCode = "code",
-        origin = "",
-        institutionType = None,
         attributes = Seq.empty[PartyManagementApiAttribute]
       )
 
