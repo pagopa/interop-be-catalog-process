@@ -47,7 +47,7 @@ object Converter {
       id = document.id,
       name = document.name,
       contentType = document.contentType,
-      description = document.description
+      prettyName = document.prettyName
     )
   }
 
@@ -133,7 +133,7 @@ object Converter {
   def convertToClientEServiceDescriptorDocumentSeed(
     seed: UpdateEServiceDescriptorDocumentSeed
   ): Future[CatalogManagementDependency.UpdateEServiceDescriptorDocumentSeed] = {
-    Future.successful(CatalogManagementDependency.UpdateEServiceDescriptorDocumentSeed(description = seed.description))
+    Future.successful(CatalogManagementDependency.UpdateEServiceDescriptorDocumentSeed(prettyName = seed.prettyName))
   }
 
   def convertToClientUpdateEServiceDescriptorSeed(

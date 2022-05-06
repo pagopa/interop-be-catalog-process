@@ -30,7 +30,7 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
             id = UUID.randomUUID(),
             name = "fileName",
             contentType = "contentType",
-            description = "description",
+            prettyName = "description",
             path = "path"
           )
         ),
@@ -55,7 +55,7 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
             id = UUID.randomUUID(),
             name = "fileName",
             contentType = "contentType",
-            description = "description",
+            prettyName = "description",
             path = "path"
           )
         ),

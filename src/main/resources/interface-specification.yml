@@ -877,10 +877,10 @@ components:
           minimum: 0
     UpdateEServiceDescriptorDocumentSeed:
       required:
-        - description
+        - prettyName
       type: object
       properties:
-        description:
+        prettyName:
           type: string
     AttributesSeed:
       properties:
@@ -968,7 +968,7 @@ components:
         - id
         - name
         - contentType
-        - description
+        - prettyName
       properties:
         id:
           type: string
@@ -977,7 +977,7 @@ components:
           type: string
         contentType:
           type: string
-        description:
+        prettyName:
           type: string
     EServiceDescriptor:
       type: object
