@@ -257,13 +257,14 @@ final case class ProcessApiServiceImpl(
     }
   }
 
-  /** Code: 200, Message: EService Document created, DataType: EService
+  /**
+    * Code: 200, Message: EService Document created, DataType: EService
     * Code: 400, Message: Invalid input, DataType: Problem
     * Code: 404, Message: Not found, DataType: Problem
     */
   override def createEServiceDocument(
     kind: String,
-    description: String,
+    prettyName: String,
     doc: (FileInfo, File),
     eServiceId: String,
     descriptorId: String
@@ -285,7 +286,7 @@ final case class ProcessApiServiceImpl(
           eServiceId,
           descriptorId,
           kind,
-          description,
+          prettyName,
           doc
         )
         apiEservice <- convertToApiEservice(bearer, contexts, eservice)
