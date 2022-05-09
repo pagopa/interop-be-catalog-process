@@ -219,24 +219,24 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
     eServiceId: String,
     descriptorId: String,
     kind: String,
-    description: String,
+    prettyName: String,
     doc: (FileInfo, File)
   ): Future[EService] = {
     for {
       (bearerToken, correlationId, ip) <- extractHeaders(contexts).toFuture
       request = api.createEServiceDocument(
         xCorrelationId = correlationId,
-        eServiceId,
-        descriptorId,
-        kind,
-        description,
-        doc._2,
+        eServiceId = eServiceId,
+        descriptorId = descriptorId,
+        kind = kind,
+        prettyName = prettyName,
+        doc = doc._2,
         xForwardedFor = ip
       )(BearerToken(bearerToken))
       result <- invoker
         .invoke(
           request,
-          s"Document with description $description created on Descriptor $descriptorId for E-Services $eServiceId"
+          s"Document with pretty name $prettyName created on Descriptor $descriptorId for E-Services $eServiceId"
         )
     } yield result
   }
