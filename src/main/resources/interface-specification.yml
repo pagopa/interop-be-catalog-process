@@ -574,7 +574,7 @@ paths:
               type: object
               required:
                 - kind
-                - description
+                - prettyName
                 - doc
               properties:
                 kind:
@@ -583,7 +583,7 @@ paths:
                   enum:
                     - INTERFACE
                     - DOCUMENT
-                description:
+                prettyName:
                   type: string
                 doc:
                   type: string
