@@ -7,47 +7,61 @@ import java.io.File
 import scala.concurrent.Future
 
 trait CatalogManagementService {
-  def listEServices(
+  def listEServices(producerId: Option[String], status: Option[EServiceDescriptorState])(implicit
     contexts: Seq[(String, String)]
-  )(producerId: Option[String], status: Option[EServiceDescriptorState]): Future[Seq[EService]]
-  def getEService(contexts: Seq[(String, String)])(eServiceId: String): Future[EService]
-  def createEService(contexts: Seq[(String, String)])(eServiceSeed: EServiceSeed): Future[EService]
-  def deleteDraft(contexts: Seq[(String, String)])(eServiceId: String, descriptorId: String): Future[Unit]
-  def updateEservice(
+  ): Future[Seq[EService]]
+  def getEService(eServiceId: String)(implicit contexts: Seq[(String, String)]): Future[EService]
+  def createEService(eServiceSeed: EServiceSeed)(implicit contexts: Seq[(String, String)]): Future[EService]
+  def deleteDraft(eServiceId: String, descriptorId: String)(implicit contexts: Seq[(String, String)]): Future[Unit]
+  def updateEservice(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed)(implicit
     contexts: Seq[(String, String)]
-  )(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed): Future[EService]
-  def cloneEservice(contexts: Seq[(String, String)])(eServiceId: String, descriptorId: String): Future[EService]
-  def deleteEService(contexts: Seq[(String, String)])(eServiceId: String): Future[Unit]
+  ): Future[EService]
+  def cloneEservice(eServiceId: String, descriptorId: String)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[EService]
+  def deleteEService(eServiceId: String)(implicit contexts: Seq[(String, String)]): Future[Unit]
 
-  def createDescriptor(
+  def createDescriptor(eServiceId: String, eServiceDescriptorSeed: EServiceDescriptorSeed)(implicit
     contexts: Seq[(String, String)]
-  )(eServiceId: String, eServiceDescriptorSeed: EServiceDescriptorSeed): Future[EServiceDescriptor]
-  def deprecateDescriptor(contexts: Seq[(String, String)])(eServiceId: String, descriptorId: String): Future[Unit]
-  def archiveDescriptor(contexts: Seq[(String, String)])(eServiceId: String, descriptorId: String): Future[Unit]
-  def publishDescriptor(contexts: Seq[(String, String)])(eServiceId: String, descriptorId: String): Future[Unit]
-  def draftDescriptor(contexts: Seq[(String, String)])(eServiceId: String, descriptorId: String): Future[Unit]
-  def suspendDescriptor(contexts: Seq[(String, String)])(eServiceId: String, descriptorId: String): Future[Unit]
-  def hasNotDraftDescriptor(eService: EService): Future[Boolean]
-  def updateDraftDescriptor(
+  ): Future[EServiceDescriptor]
+  def deprecateDescriptor(eServiceId: String, descriptorId: String)(implicit
     contexts: Seq[(String, String)]
-  )(eServiceId: String, descriptorId: String, seed: UpdateEServiceDescriptorSeed): Future[EService]
+  ): Future[Unit]
+  def archiveDescriptor(eServiceId: String, descriptorId: String)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[Unit]
+  def publishDescriptor(eServiceId: String, descriptorId: String)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[Unit]
+  def draftDescriptor(eServiceId: String, descriptorId: String)(implicit contexts: Seq[(String, String)]): Future[Unit]
+  def suspendDescriptor(eServiceId: String, descriptorId: String)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[Unit]
+  def hasNotDraftDescriptor(eService: EService)(implicit contexts: Seq[(String, String)]): Future[Boolean]
+  def updateDraftDescriptor(eServiceId: String, descriptorId: String, seed: UpdateEServiceDescriptorSeed)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[EService]
 
   def createEServiceDocument(
-    contexts: Seq[(String, String)]
-  )(eServiceId: String, descriptorId: String, kind: String, prettyName: String, doc: (FileInfo, File)): Future[EService]
+    eServiceId: String,
+    descriptorId: String,
+    kind: String,
+    prettyName: String,
+    doc: (FileInfo, File)
+  )(implicit contexts: Seq[(String, String)]): Future[EService]
 
-  def getEServiceDocument(
+  def getEServiceDocument(eServiceId: String, descriptorId: String, documentId: String)(implicit
     contexts: Seq[(String, String)]
-  )(eServiceId: String, descriptorId: String, documentId: String): Future[EServiceDoc]
+  ): Future[EServiceDoc]
 
-  def updateEServiceDocument(contexts: Seq[(String, String)])(
+  def updateEServiceDocument(
     eServiceId: String,
     descriptorId: String,
     documentId: String,
     updateEServiceDescriptorDocumentSeed: UpdateEServiceDescriptorDocumentSeed
-  ): Future[EServiceDoc]
+  )(implicit contexts: Seq[(String, String)]): Future[EServiceDoc]
 
-  def deleteEServiceDocument(
+  def deleteEServiceDocument(eServiceId: String, descriptorId: String, documentId: String)(implicit
     contexts: Seq[(String, String)]
-  )(eServiceId: String, descriptorId: String, documentId: String): Future[Unit]
+  ): Future[Unit]
 }

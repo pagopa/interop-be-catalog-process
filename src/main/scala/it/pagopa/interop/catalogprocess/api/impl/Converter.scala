@@ -16,18 +16,17 @@ object Converter {
     eservice: CatalogManagementDependency.EService,
     institution: PartyManagementDependency.Institution,
     attributes: Seq[AttributeManagementDependency.Attribute]
-  ): EService =
-    EService(
-      id = eservice.id,
-      producer = Organization(id = eservice.producerId, name = institution.description),
-      name = eservice.name,
-      description = eservice.description,
-      technology = convertToApiTechnology(eservice.technology),
-      attributes = convertToApiAttributes(eservice.attributes, attributes),
-      descriptors = eservice.descriptors.map(convertToApiDescriptor)
-    )
+  ): EService = EService(
+    id = eservice.id,
+    producer = Organization(id = eservice.producerId, name = institution.description),
+    name = eservice.name,
+    description = eservice.description,
+    technology = convertToApiTechnology(eservice.technology),
+    attributes = convertToApiAttributes(eservice.attributes, attributes),
+    descriptors = eservice.descriptors.map(convertToApiDescriptor)
+  )
 
-  def convertToApiDescriptor(descriptor: CatalogManagementDependency.EServiceDescriptor): EServiceDescriptor = {
+  def convertToApiDescriptor(descriptor: CatalogManagementDependency.EServiceDescriptor): EServiceDescriptor =
     EServiceDescriptor(
       id = descriptor.id,
       version = descriptor.version,
@@ -40,16 +39,13 @@ object Converter {
       dailyCallsPerConsumer = descriptor.dailyCallsPerConsumer,
       dailyCallsTotal = descriptor.dailyCallsTotal
     )
-  }
 
-  def convertToApiEserviceDoc(document: CatalogManagementDependency.EServiceDoc): EServiceDoc = {
-    EServiceDoc(
-      id = document.id,
-      name = document.name,
-      contentType = document.contentType,
-      prettyName = document.prettyName
-    )
-  }
+  def convertToApiEserviceDoc(document: CatalogManagementDependency.EServiceDoc): EServiceDoc = EServiceDoc(
+    id = document.id,
+    name = document.name,
+    contentType = document.contentType,
+    prettyName = document.prettyName
+  )
 
   def convertToApiAgreementState(state: AgreementState): AgreementManagementDependency.AgreementState =
     state match {
@@ -63,7 +59,6 @@ object Converter {
     currentAttributes: CatalogManagementDependency.Attributes,
     attributes: Seq[AttributeManagementDependency.Attribute]
   ): Attributes = {
-
     val attributeNames: Map[String, AttributeDetails] =
       attributes.map(attr => attr.id -> AttributeDetails(attr.name, attr.description)).toMap
 
@@ -72,30 +67,26 @@ object Converter {
       declared = currentAttributes.declared.map(convertToApiAttribute(attributeNames)),
       verified = currentAttributes.verified.map(convertToApiAttribute(attributeNames))
     )
-
   }
 
   private def convertToApiAttribute(
     attributeNames: Map[String, AttributeDetails]
-  )(attribute: CatalogManagementDependency.Attribute): Attribute = {
-    Attribute(
-      single = attribute.single.map(convertToApiAttributeValue(attributeNames)),
-      group = attribute.group.map(values => values.map(convertToApiAttributeValue(attributeNames)))
-    )
-  }
+  )(attribute: CatalogManagementDependency.Attribute): Attribute = Attribute(
+    single = attribute.single.map(convertToApiAttributeValue(attributeNames)),
+    group = attribute.group.map(values => values.map(convertToApiAttributeValue(attributeNames)))
+  )
 
   private def convertToApiAttributeValue(
     attributeNames: Map[String, AttributeDetails]
-  )(value: CatalogManagementDependency.AttributeValue) =
-    AttributeValue(
-      id = value.id,
-      // TODO how to manage this case? Raise an error/Default/Flat option values
-      // TODO for now default value "Unknown"
-      name = attributeNames.get(value.id).map(_.name).getOrElse("Unknown"),
-      // TODO same here
-      description = attributeNames.get(value.id).map(_.description).getOrElse("Unknown"),
-      explicitAttributeVerification = value.explicitAttributeVerification
-    )
+  )(value: CatalogManagementDependency.AttributeValue) = AttributeValue(
+    id = value.id,
+    // TODO how to manage this case? Raise an error/Default/Flat option values
+    // TODO for now default value "Unknown"
+    name = attributeNames.get(value.id).map(_.name).getOrElse("Unknown"),
+    // TODO same here
+    description = attributeNames.get(value.id).map(_.description).getOrElse("Unknown"),
+    explicitAttributeVerification = value.explicitAttributeVerification
+  )
 
   def convertToClientEServiceSeed(eServiceSeed: EServiceSeed): CatalogManagementDependency.EServiceSeed =
     CatalogManagementDependency.EServiceSeed(
@@ -108,59 +99,52 @@ object Converter {
 
   def convertToClientEServiceDescriptorSeed(
     descriptor: EServiceDescriptorSeed
-  ): Future[CatalogManagementDependency.EServiceDescriptorSeed] = {
-    Future.successful(
-      CatalogManagementDependency.EServiceDescriptorSeed(
-        description = descriptor.description,
-        audience = descriptor.audience,
-        voucherLifespan = descriptor.voucherLifespan,
-        dailyCallsPerConsumer = descriptor.dailyCallsPerConsumer,
-        dailyCallsTotal = descriptor.dailyCallsTotal
-      )
+  ): Future[CatalogManagementDependency.EServiceDescriptorSeed] = Future.successful(
+    CatalogManagementDependency.EServiceDescriptorSeed(
+      description = descriptor.description,
+      audience = descriptor.audience,
+      voucherLifespan = descriptor.voucherLifespan,
+      dailyCallsPerConsumer = descriptor.dailyCallsPerConsumer,
+      dailyCallsTotal = descriptor.dailyCallsTotal
     )
-  }
+  )
 
   def convertToClientUpdateEServiceSeed(
     eServiceSeed: UpdateEServiceSeed
-  ): CatalogManagementDependency.UpdateEServiceSeed =
-    CatalogManagementDependency.UpdateEServiceSeed(
-      name = eServiceSeed.name,
-      description = eServiceSeed.description,
-      technology = convertFromApiTechnology(eServiceSeed.technology),
-      attributes = convertToCatalogClientAttributes(eServiceSeed.attributes)
-    )
+  ): CatalogManagementDependency.UpdateEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
+    name = eServiceSeed.name,
+    description = eServiceSeed.description,
+    technology = convertFromApiTechnology(eServiceSeed.technology),
+    attributes = convertToCatalogClientAttributes(eServiceSeed.attributes)
+  )
 
   def convertToClientEServiceDescriptorDocumentSeed(
     seed: UpdateEServiceDescriptorDocumentSeed
-  ): Future[CatalogManagementDependency.UpdateEServiceDescriptorDocumentSeed] = {
+  ): Future[CatalogManagementDependency.UpdateEServiceDescriptorDocumentSeed] =
     Future.successful(CatalogManagementDependency.UpdateEServiceDescriptorDocumentSeed(prettyName = seed.prettyName))
-  }
 
   def convertToClientUpdateEServiceDescriptorSeed(
     seed: UpdateEServiceDescriptorSeed
-  ): Future[CatalogManagementDependency.UpdateEServiceDescriptorSeed] = {
-    Future.successful(
-      CatalogManagementDependency.UpdateEServiceDescriptorSeed(
-        description = seed.description,
-        audience = seed.audience,
-        voucherLifespan = seed.voucherLifespan,
-        dailyCallsPerConsumer = seed.dailyCallsPerConsumer,
-        dailyCallsTotal = seed.dailyCallsTotal,
-        state = CatalogManagementDependency.EServiceDescriptorState.DRAFT
-      )
+  ): Future[CatalogManagementDependency.UpdateEServiceDescriptorSeed] = Future.successful(
+    CatalogManagementDependency.UpdateEServiceDescriptorSeed(
+      description = seed.description,
+      audience = seed.audience,
+      voucherLifespan = seed.voucherLifespan,
+      dailyCallsPerConsumer = seed.dailyCallsPerConsumer,
+      dailyCallsTotal = seed.dailyCallsTotal,
+      state = CatalogManagementDependency.EServiceDescriptorState.DRAFT
     )
-  }
+  )
 
   def convertToApiDescriptorState(
     clientStatus: CatalogManagementDependency.EServiceDescriptorState
-  ): EServiceDescriptorState =
-    clientStatus match {
-      case CatalogManagementDependency.EServiceDescriptorState.DRAFT      => EServiceDescriptorState.DRAFT
-      case CatalogManagementDependency.EServiceDescriptorState.PUBLISHED  => EServiceDescriptorState.PUBLISHED
-      case CatalogManagementDependency.EServiceDescriptorState.DEPRECATED => EServiceDescriptorState.DEPRECATED
-      case CatalogManagementDependency.EServiceDescriptorState.SUSPENDED  => EServiceDescriptorState.SUSPENDED
-      case CatalogManagementDependency.EServiceDescriptorState.ARCHIVED   => EServiceDescriptorState.ARCHIVED
-    }
+  ): EServiceDescriptorState = clientStatus match {
+    case CatalogManagementDependency.EServiceDescriptorState.DRAFT      => EServiceDescriptorState.DRAFT
+    case CatalogManagementDependency.EServiceDescriptorState.PUBLISHED  => EServiceDescriptorState.PUBLISHED
+    case CatalogManagementDependency.EServiceDescriptorState.DEPRECATED => EServiceDescriptorState.DEPRECATED
+    case CatalogManagementDependency.EServiceDescriptorState.SUSPENDED  => EServiceDescriptorState.SUSPENDED
+    case CatalogManagementDependency.EServiceDescriptorState.ARCHIVED   => EServiceDescriptorState.ARCHIVED
+  }
 
   def convertToApiTechnology(technology: CatalogManagementDependency.EServiceTechnology): EServiceTechnology =
     technology match {
@@ -189,9 +173,8 @@ object Converter {
 
   private def convertToCatalogClientAttributeValue(
     seed: AttributeValueSeed
-  ): CatalogManagementDependency.AttributeValue =
-    CatalogManagementDependency.AttributeValue(
-      id = seed.id,
-      explicitAttributeVerification = seed.explicitAttributeVerification
-    )
+  ): CatalogManagementDependency.AttributeValue = CatalogManagementDependency.AttributeValue(
+    id = seed.id,
+    explicitAttributeVerification = seed.explicitAttributeVerification
+  )
 }

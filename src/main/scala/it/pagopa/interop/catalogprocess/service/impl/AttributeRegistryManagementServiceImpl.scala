@@ -6,17 +6,19 @@ import it.pagopa.interop.attributeregistrymanagement.client.model.Attribute
 import it.pagopa.interop.catalogprocess.service.{AttributeRegistryManagementInvoker, AttributeRegistryManagementService}
 import it.pagopa.interop.commons.utils.TypeConversions.EitherOps
 import it.pagopa.interop.commons.utils.extractHeaders
-import org.slf4j.{Logger, LoggerFactory}
-
+import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
+import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import scala.concurrent.{ExecutionContext, Future}
 
 final case class AttributeRegistryManagementServiceImpl(invoker: AttributeRegistryManagementInvoker, api: AttributeApi)(
   implicit ec: ExecutionContext
 ) extends AttributeRegistryManagementService {
 
-  val logger: Logger = LoggerFactory.getLogger(this.getClass)
+  val logger: LoggerTakingImplicit[ContextFieldsToLog] = Logger.takingImplicit[ContextFieldsToLog](this.getClass)
 
-  override def getAttributesBulk(attributeIds: Seq[String])(contexts: Seq[(String, String)]): Future[Seq[Attribute]] = {
+  override def getAttributesBulk(
+    attributeIds: Seq[String]
+  )(implicit contexts: Seq[(String, String)]): Future[Seq[Attribute]] = {
     for {
       (bearerToken, correlationId, ip) <- extractHeaders(contexts).toFuture
       request = api.getBulkedAttributes(
@@ -31,7 +33,7 @@ final case class AttributeRegistryManagementServiceImpl(invoker: AttributeRegist
           x.content.attributes
         }
         .recoverWith { case ex =>
-          logger.error(s"Retrieving attributes using bulked request FAILED: ${ex.getMessage}")
+          logger.error(s"Retrieving attributes using bulked request FAILED", ex)
           Future.failed[Seq[Attribute]](ex)
         }
     } yield result

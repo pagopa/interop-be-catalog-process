@@ -5,11 +5,8 @@ import it.pagopa.interop.agreementmanagement.client.model.{Agreement, AgreementS
 import scala.concurrent.Future
 
 trait AgreementManagementService {
-  def getAgreements(
-    contexts: Seq[(String, String)],
-    consumerId: Option[String],
-    producerId: Option[String],
-    status: Option[AgreementState]
+  def getAgreements(consumerId: Option[String], producerId: Option[String], status: Option[AgreementState])(implicit
+    contexts: Seq[(String, String)]
   ): Future[Seq[Agreement]]
 
   /** Returns the agreements related to the consumer passed in input.
@@ -18,7 +15,7 @@ trait AgreementManagementService {
     * @param ec
     * @return
     */
-  def getAgreementsByConsumerId(contexts: Seq[(String, String)])(consumerId: String): Future[Seq[Agreement]] =
-    getAgreements(contexts, Some(consumerId), None, None)
+  def getAgreementsByConsumerId(consumerId: String)(implicit contexts: Seq[(String, String)]): Future[Seq[Agreement]] =
+    getAgreements(Some(consumerId), None, None)
 
 }
