@@ -19,12 +19,11 @@ import it.pagopa.interop.catalogmanagement.client.model.{
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.catalogprocess.api.ProcessApiService
 import it.pagopa.interop.catalogprocess.api.impl.Converter.{convertToApiAgreementState, convertToApiDescriptorState}
-import it.pagopa.interop.catalogprocess.common.system.{ApplicationConfiguration, validateBearer}
+import it.pagopa.interop.catalogprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors._
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.commons.files.service.FileManager
-import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions.{EitherOps, OptionOps}
@@ -34,6 +33,9 @@ import java.io.{File, FileOutputStream}
 import java.nio.file.{Files, Path}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
+import it.pagopa.interop.commons.jwt.service.JWTReader
+import it.pagopa.interop.commons.utils.AkkaUtils.getFutureBearer
+import it.pagopa.interop.commons.utils.TypeConversions.TryOps
 
 final case class ProcessApiServiceImpl(
   catalogManagementService: CatalogManagementService,
@@ -925,4 +927,11 @@ object ProcessApiServiceImpl {
     case CatalogManagementDependency.EServiceDescriptorState.DRAFT => Future.successful(descriptor)
     case _ => Future.failed(NotValidDescriptor(descriptor.id.toString, descriptor.state.toString))
   }
+
+  private def validateBearer(contexts: Seq[(String, String)], jwt: JWTReader)(implicit
+    ec: ExecutionContext
+  ): Future[String] = for {
+    bearer <- getFutureBearer(contexts)
+    _      <- jwt.getClaims(bearer).toFuture
+  } yield bearer
 }

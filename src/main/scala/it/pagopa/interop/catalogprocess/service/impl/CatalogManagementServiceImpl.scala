@@ -5,7 +5,6 @@ import it.pagopa.interop.catalogmanagement.client
 import it.pagopa.interop.catalogmanagement.client.api.EServiceApi
 import it.pagopa.interop.catalogmanagement.client.invoker.{ApiRequest, BearerToken}
 import it.pagopa.interop.catalogmanagement.client.model._
-import it.pagopa.interop.catalogprocess.common.system._
 import it.pagopa.interop.catalogprocess.errors.ForbiddenOperation
 import it.pagopa.interop.catalogprocess.service.{CatalogManagementInvoker, CatalogManagementService}
 import it.pagopa.interop.commons.utils.TypeConversions.{EitherOps, StringOps}
@@ -13,10 +12,11 @@ import it.pagopa.interop.commons.utils.extractHeaders
 import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import java.io.File
-import scala.concurrent.Future
+import scala.concurrent.{Future, ExecutionContext}
 
-final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker, api: EServiceApi)
-    extends CatalogManagementService {
+final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker, api: EServiceApi)(implicit
+  ec: ExecutionContext
+) extends CatalogManagementService {
   implicit val logger: LoggerTakingImplicit[ContextFieldsToLog] =
     Logger.takingImplicit[ContextFieldsToLog](this.getClass)
 
