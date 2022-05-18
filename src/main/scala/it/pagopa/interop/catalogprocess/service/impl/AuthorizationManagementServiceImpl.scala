@@ -6,8 +6,8 @@ import it.pagopa.interop.authorizationmanagement.client.model.{ClientComponentSt
 import it.pagopa.interop.catalogprocess.service.{AuthorizationManagementInvoker, AuthorizationManagementService}
 import it.pagopa.interop.commons.utils.TypeConversions.EitherOps
 import it.pagopa.interop.commons.utils.extractHeaders
-import org.slf4j.{Logger, LoggerFactory}
-
+import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
+import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -15,11 +15,15 @@ final case class AuthorizationManagementServiceImpl(invoker: AuthorizationManage
   ec: ExecutionContext
 ) extends AuthorizationManagementService {
 
-  implicit val logger: Logger = LoggerFactory.getLogger(this.getClass)
+  implicit val logger: LoggerTakingImplicit[ContextFieldsToLog] =
+    Logger.takingImplicit[ContextFieldsToLog](this.getClass)
 
   override def updateStateOnClients(
-    contexts: Seq[(String, String)]
-  )(eServiceId: UUID, state: ClientComponentState, audience: Seq[String], voucherLifespan: Int): Future[Unit] = {
+    eServiceId: UUID,
+    state: ClientComponentState,
+    audience: Seq[String],
+    voucherLifespan: Int
+  )(implicit contexts: Seq[(String, String)]): Future[Unit] = {
 
     val payload: ClientEServiceDetailsUpdate =
       ClientEServiceDetailsUpdate(state = state, audience = audience, voucherLifespan = voucherLifespan)
