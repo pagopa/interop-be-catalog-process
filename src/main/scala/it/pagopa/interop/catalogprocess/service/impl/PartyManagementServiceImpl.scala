@@ -1,9 +1,9 @@
 package it.pagopa.interop.catalogprocess.service.impl
 
 import it.pagopa.interop.catalogprocess.service.{PartyManagementInvoker, PartyManagementService}
-import it.pagopa.interop.partymanagement.client.api.PartyApi
-import it.pagopa.interop.partymanagement.client.invoker.BearerToken
-import it.pagopa.interop.partymanagement.client.model.{BulkInstitutions, BulkPartiesSeed, Institution}
+import it.pagopa.interop.selfcare.partymanagement.client.api.PartyApi
+import it.pagopa.interop.selfcare.partymanagement.client.invoker.BearerToken
+import it.pagopa.interop.selfcare.partymanagement.client.model.{BulkInstitutions, BulkPartiesSeed, Institution}
 import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import java.util.UUID

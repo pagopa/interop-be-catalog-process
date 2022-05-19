@@ -1,6 +1,6 @@
 package it.pagopa.interop.catalogprocess.service
 
-import it.pagopa.interop.partymanagement.client.model.{BulkInstitutions, BulkPartiesSeed, Institution}
+import it.pagopa.interop.selfcare.partymanagement.client.model.{BulkInstitutions, BulkPartiesSeed, Institution}
 
 import java.util.UUID
 import scala.concurrent.Future

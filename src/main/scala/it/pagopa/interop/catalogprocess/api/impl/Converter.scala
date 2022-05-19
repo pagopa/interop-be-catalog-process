@@ -1,7 +1,7 @@
 package it.pagopa.interop.catalogprocess.api.impl
 
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
-import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
+import it.pagopa.interop.selfcare.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.attributeregistrymanagement.client.{model => AttributeManagementDependency}
 import it.pagopa.interop.agreementmanagement.client.{model => AgreementManagementDependency}
 import it.pagopa.interop.catalogprocess.model._

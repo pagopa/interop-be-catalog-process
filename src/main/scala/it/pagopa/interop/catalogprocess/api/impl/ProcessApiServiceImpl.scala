@@ -27,7 +27,7 @@ import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions.{EitherOps, OptionOps}
-import it.pagopa.interop.partymanagement.client.model.{BulkInstitutions, BulkPartiesSeed}
+import it.pagopa.interop.selfcare.partymanagement.client.model.{BulkInstitutions, BulkPartiesSeed}
 
 import java.io.{File, FileOutputStream}
 import java.nio.file.{Files, Path}
