@@ -3,13 +3,13 @@ package it.pagopa.interop.catalogprocess
 import akka.http.scaladsl.model.{HttpMethods, StatusCodes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import com.nimbusds.jwt.JWTClaimsSet
+import it.pagopa.interop.agreementmanagement.client.model.{Agreement, AgreementState}
 import it.pagopa.interop.attributeregistrymanagement.client.model.{
   Attribute => AttributeRegistryManagementApiAttribute,
   AttributeKind => AttributeRegistryManagementApiAttributeKind
 }
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
-import it.pagopa.interop.partymanagement.client.{model => PartyManagementDependency}
 import it.pagopa.interop.catalogprocess.api.impl.Converter.convertToApiTechnology
 import it.pagopa.interop.catalogprocess.api.impl._
 import it.pagopa.interop.catalogprocess.api.{HealthApi, ProcessApi}
@@ -20,10 +20,8 @@ import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.utils.SprayCommonFormats.uuidFormat
-import it.pagopa.interop.partymanagement.client.model.{
-  Attribute => PartyManagementApiAttribute,
-  Institution => PartyManagementApiInstitution
-}
+import it.pagopa.interop.selfcare.partymanagement.client.model.{Attribute => PartyManagementApiAttribute}
+import it.pagopa.interop.selfcare.partymanagement.client.{model => PartyManagementDependency}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -32,9 +30,8 @@ import spray.json._
 import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Success
-import it.pagopa.interop.agreementmanagement.client.model.{Agreement, AgreementState}
 
 class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndAfterAll with MockFactory {
 
@@ -126,12 +123,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val descriptorId1    = UUID.randomUUID()
       val producerId1      = UUID.randomUUID()
 
-      (jwtReader
-        .getClaims(_: String))
-        .expects(bearerToken)
-        .returning(mockSubject(UUID.randomUUID().toString))
-        .once()
-
       val activeAgreement = Agreement(
         UUID.randomUUID(),
         eserviceId1,
@@ -178,14 +169,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
           "",
           "",
           "",
-          None,
-          Map.empty,
+          institutionType = "",
           Seq.empty
         )
 
       (partyManagementService
-        .getInstitution(_: UUID)(_: String)(_: Seq[(String, String)]))
-        .expects(producerId1, bearerToken, *)
+        .getInstitution(_: UUID)(_: Seq[(String, String)], _: ExecutionContext))
+        .expects(producerId1, *, *)
         .returning(Future.successful(org1))
         .once()
 
@@ -272,7 +262,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         )
       )
 
-      val institution = PartyManagementApiInstitution(
+      val institution = PartyManagementDependency.Institution(
         id = seed.producerId,
         externalId = "institutionId",
         originId = "",
@@ -282,8 +272,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         zipCode = "zipCode",
         taxCode = "code",
         origin = "",
-        institutionType = None,
-        products = Map.empty,
+        institutionType = "",
         attributes = Seq.empty[PartyManagementApiAttribute]
       )
 
@@ -319,12 +308,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         creationTime = OffsetDateTime.now()
       )
 
-      (jwtReader
-        .getClaims(_: String))
-        .expects(bearerToken)
-        .returning(mockSubject(UUID.randomUUID().toString))
-        .once()
-
       (catalogManagementService
         .createEService(_: CatalogManagementDependency.EServiceSeed)(_: Seq[(String, String)]))
         .expects(seed, *)
@@ -332,8 +315,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       (partyManagementService
-        .getInstitution(_: UUID)(_: String)(_: Seq[(String, String)]))
-        .expects(seed.producerId, bearerToken, *)
+        .getInstitution(_: UUID)(_: Seq[(String, String)], _: ExecutionContext))
+        .expects(seed.producerId, *, *)
         .returning(Future.successful(institution))
         .once()
 

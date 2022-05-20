@@ -34,7 +34,7 @@ import it.pagopa.interop.catalogprocess.service.impl.{
   PartyManagementServiceImpl
 }
 import it.pagopa.interop.authorizationmanagement.client.api.PurposeApi
-import it.pagopa.interop.partymanagement.client.api.PartyApi
+import it.pagopa.interop.selfcare.partymanagement.client.api.PartyApi
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
@@ -43,6 +43,8 @@ import com.atlassian.oai.validator.report.ValidationReport
 import akka.http.scaladsl.server.Route
 
 trait Dependencies {
+
+  implicit val partyManagementApiKeyValue: PartyManagementApiKeyValue = PartyManagementApiKeyValue()
 
   def getFileManager(): Future[FileManager] =
     FileManager.getConcreteImplementation(StorageConfiguration.runtimeFileManager).toFuture
