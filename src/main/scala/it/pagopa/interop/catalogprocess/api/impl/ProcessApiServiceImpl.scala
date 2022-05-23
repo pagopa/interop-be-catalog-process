@@ -1,12 +1,12 @@
 package it.pagopa.interop.catalogprocess.api.impl
 
-import cats.syntax.all._
 import akka.http.scaladsl.marshalling.ToEntityMarshaller
 import akka.http.scaladsl.model.{ContentType, HttpEntity, MessageEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
+import cats.syntax.all._
 import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
 import it.pagopa.interop.agreementmanagement.client.{model => AgreementManagementDependency}
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
@@ -24,18 +24,19 @@ import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors._
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.commons.files.service.FileManager
+import it.pagopa.interop.commons.jwt.service.JWTReader
+import it.pagopa.interop.commons.jwt.{ADMIN_ROLE, API_ROLE, authorizeInterop, hasPermissions}
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
+import it.pagopa.interop.commons.utils.AkkaUtils.getFutureBearer
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
-import it.pagopa.interop.commons.utils.TypeConversions.{EitherOps, OptionOps}
+import it.pagopa.interop.commons.utils.TypeConversions.{EitherOps, OptionOps, TryOps}
+import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.OperationForbidden
 import it.pagopa.interop.partymanagement.client.model.{BulkInstitutions, BulkPartiesSeed}
 
 import java.io.{File, FileOutputStream}
 import java.nio.file.{Files, Path}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
-import it.pagopa.interop.commons.jwt.service.JWTReader
-import it.pagopa.interop.commons.utils.AkkaUtils.getFutureBearer
-import it.pagopa.interop.commons.utils.TypeConversions.TryOps
 
 final case class ProcessApiServiceImpl(
   catalogManagementService: CatalogManagementService,
@@ -52,6 +53,13 @@ final case class ProcessApiServiceImpl(
 
   val logger: LoggerTakingImplicit[ContextFieldsToLog] = Logger.takingImplicit[ContextFieldsToLog](this.getClass)
 
+  private[this] def authorize(roles: String*)(
+    route: => Route
+  )(implicit contexts: Seq[(String, String)], toEntityMarshallerProblem: ToEntityMarshaller[Problem]): Route =
+    authorizeInterop(hasPermissions(roles: _*), problemOf(StatusCodes.Forbidden, OperationForbidden)) {
+      route
+    }
+
   /** Code: 200, Message: EService created, DataType: EService
     * Code: 400, Message: Invalid input, DataType: Problem
     */
@@ -59,7 +67,7 @@ final case class ProcessApiServiceImpl(
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerEService: ToEntityMarshaller[EService]
-  ): Route = {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     logger.info("Creating e-service for producer {} with service name {}", eServiceSeed.producerId, eServiceSeed.name)
     val result = for {
       bearer <- validateBearer(contexts, jwtReader)
@@ -91,7 +99,7 @@ final case class ProcessApiServiceImpl(
   override def deleteDraft(eServiceId: String, descriptorId: String)(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
-  ): Route = {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     logger.info("Deleting draft descriptor {} for e-service {}", eServiceId, descriptorId)
     val result = catalogManagementService.deleteDraft(eServiceId, descriptorId)
 
@@ -170,7 +178,7 @@ final case class ProcessApiServiceImpl(
   override def publishDescriptor(eServiceId: String, descriptorId: String)(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
-  ): Route = {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     logger.info("Publishing descriptor {} for eservice {}", descriptorId, eServiceId)
     val result = for {
       currentEService <- catalogManagementService.getEService(eServiceId)
@@ -262,7 +270,7 @@ final case class ProcessApiServiceImpl(
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerEService: ToEntityMarshaller[EService]
-  ): Route = {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     logger.info(
       "Creating e-service document of kind {} for e-service {} and descriptor {}",
       kind,
@@ -462,7 +470,7 @@ final case class ProcessApiServiceImpl(
     contexts: Seq[(String, String)],
     toEntityMarshallerEServiceDescriptor: ToEntityMarshaller[EServiceDescriptor],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
-  ): Route = {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     logger.info("Creating descriptor for e-service {}", eServiceId)
     val result = for {
       currentEService           <- catalogManagementService.getEService(eServiceId)
@@ -493,7 +501,7 @@ final case class ProcessApiServiceImpl(
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerEService: ToEntityMarshaller[EService]
-  ): Route = {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     logger.info("Updating draft descriptor {} of e-service {}", descriptorId, eServiceId)
     val result: Future[EService] = for {
       bearer          <- validateBearer(contexts, jwtReader)
@@ -524,7 +532,7 @@ final case class ProcessApiServiceImpl(
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerEService: ToEntityMarshaller[EService]
-  ): Route = {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     logger.info("Updating e-service by id {}", eServiceId)
     val result = for {
       bearer <- validateBearer(contexts, jwtReader)
@@ -670,7 +678,7 @@ final case class ProcessApiServiceImpl(
   override def deleteEServiceDocumentById(eServiceId: String, descriptorId: String, documentId: String)(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
-  ): Route = {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     logger.info("Delete document {} of descriptor {} for e-service {}", documentId, descriptorId, eServiceId)
     val result = catalogManagementService.deleteEServiceDocument(eServiceId, descriptorId, documentId)
 
@@ -718,7 +726,7 @@ final case class ProcessApiServiceImpl(
     contexts: Seq[(String, String)],
     toEntityMarshallerEServiceDoc: ToEntityMarshaller[EServiceDoc],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
-  ): Route = {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     logger.info("Updating e-service by id {}", eServiceId)
     val result = for {
       clientSeed      <-
@@ -762,7 +770,7 @@ final case class ProcessApiServiceImpl(
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerEService: ToEntityMarshaller[EService]
-  ): Route = {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     logger.info("Cloning descriptor {} of e-service {}", descriptorId, eServiceId)
     val result = for {
       bearer         <- validateBearer(contexts, jwtReader)
@@ -786,19 +794,20 @@ final case class ProcessApiServiceImpl(
     */
   override def deleteEService(
     eServiceId: String
-  )(implicit contexts: Seq[(String, String)], toEntityMarshallerProblem: ToEntityMarshaller[Problem]): Route = {
-    logger.info("Deleting e-service {}", eServiceId)
-    val result = catalogManagementService.deleteEService(eServiceId)
+  )(implicit contexts: Seq[(String, String)], toEntityMarshallerProblem: ToEntityMarshaller[Problem]): Route =
+    authorize(ADMIN_ROLE, API_ROLE) {
+      logger.info("Deleting e-service {}", eServiceId)
+      val result = catalogManagementService.deleteEService(eServiceId)
 
-    onComplete(result) {
-      case Success(_)  => deleteEService204
-      case Failure(ex) =>
-        logger.error(s"Error while deleting e-service ${eServiceId}", ex)
-        val error =
-          problemOf(StatusCodes.InternalServerError, EServiceDeletionError(eServiceId))
-        complete(error.status, error)
+      onComplete(result) {
+        case Success(_)  => deleteEService204
+        case Failure(ex) =>
+          logger.error(s"Error while deleting e-service ${eServiceId}", ex)
+          val error =
+            problemOf(StatusCodes.InternalServerError, EServiceDeletionError(eServiceId))
+          complete(error.status, error)
+      }
     }
-  }
 
   /** Code: 204, Message: E-Service Descriptor activated
     * Code: 400, Message: Invalid input, DataType: Problem
@@ -807,7 +816,7 @@ final case class ProcessApiServiceImpl(
   override def activateDescriptor(eServiceId: String, descriptorId: String)(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
-  ): Route = {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     logger.info("Activating descriptor {} for e-service {}", descriptorId, eServiceId)
     def activateDescriptor(eService: ManagementEService, descriptor: ManagementDescriptor): Future[Unit] = {
       val validState             = Seq(
@@ -874,7 +883,7 @@ final case class ProcessApiServiceImpl(
   override def suspendDescriptor(eServiceId: String, descriptorId: String)(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
-  ): Route = {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     logger.info("Suspending descriptor {} of e-service {}", descriptorId, eServiceId)
     val result = for {
       eService   <- catalogManagementService.getEService(eServiceId)

@@ -7,10 +7,12 @@ import akka.actor.typed.scaladsl.Behaviors
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
-import akka.http.scaladsl.server.directives.{AuthenticationDirective, SecurityDirectives}
+import akka.http.scaladsl.server.Directives.Authenticator
+import akka.http.scaladsl.server.directives.Credentials.{Missing, Provided}
+import akka.http.scaladsl.server.directives.{AuthenticationDirective, Credentials, SecurityDirectives}
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.catalogprocess.server.Controller
-import it.pagopa.interop.commons.utils.AkkaUtils.Authenticator
+import it.pagopa.interop.commons.utils.{BEARER, USER_ROLES}
 
 import java.net.InetAddress
 import java.util.UUID
@@ -21,9 +23,8 @@ abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.co
 
   var bindServer: Option[Future[Http.ServerBinding]] = None
 
-  val bearerToken: String                        = "token"
-  val bearerTokenContexts: Seq[(String, String)] = Seq("bearer" -> bearerToken)
-  final val requestHeaders: Seq[HttpHeader]      =
+  val bearerToken: String                   = "token"
+  final val requestHeaders: Seq[HttpHeader] =
     Seq(
       headers.Authorization(OAuth2BearerToken(bearerToken)),
       headers.RawHeader("X-Correlation-Id", "test-id"),
@@ -36,7 +37,7 @@ abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.co
   implicit val classicSystem: actor.ActorSystem           = httpSystem.classicSystem
 
   val wrappingDirective: AuthenticationDirective[Seq[(String, String)]] =
-    SecurityDirectives.authenticateOAuth2("SecurityRealm", Authenticator)
+    SecurityDirectives.authenticateOAuth2("SecurityRealm", AdminMockAuthenticator)
 
   def descriptorStub: CatalogManagementDependency.EServiceDescriptor = CatalogManagementDependency.EServiceDescriptor(
     id = UUID.randomUUID(),
@@ -87,5 +88,15 @@ abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.co
       ),
       10.seconds
     )
+  }
+}
+
+//mocks admin user role rights for every call
+object AdminMockAuthenticator extends Authenticator[Seq[(String, String)]] {
+  override def apply(credentials: Credentials): Option[Seq[(String, String)]] = {
+    credentials match {
+      case Provided(identifier) => Some(Seq(BEARER -> identifier, USER_ROLES -> "admin"))
+      case Missing              => None
+    }
   }
 }
