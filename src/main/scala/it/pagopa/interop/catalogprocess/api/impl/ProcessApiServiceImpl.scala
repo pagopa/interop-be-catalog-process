@@ -25,7 +25,7 @@ import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt.service.JWTReader
-import it.pagopa.interop.commons.jwt.{ADMIN_ROLE, API_ROLE, authorizeInterop, hasPermissions}
+import it.pagopa.interop.commons.jwt.{ADMIN_ROLE, API_ROLE, M2M_ROLE, SECURITY_ROLE, authorizeInterop, hasPermissions}
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.interop.commons.utils.AkkaUtils.getFutureBearer
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
@@ -148,7 +148,7 @@ final case class ProcessApiServiceImpl(
   )(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerEServicearray: ToEntityMarshaller[Seq[EService]]
-  ): Route = {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
     logger.info("Getting e-service with producer = {}, consumer = {} and state = {}", producerId, consumerId, status)
     val result = for {
       bearer          <- validateBearer(contexts, jwtReader)
@@ -237,7 +237,7 @@ final case class ProcessApiServiceImpl(
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerEService: ToEntityMarshaller[EService]
-  ): Route = {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
     logger.info("Getting e-service {}", eServiceId)
     val result = for {
       bearer      <- validateBearer(contexts, jwtReader)
@@ -321,7 +321,7 @@ final case class ProcessApiServiceImpl(
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerFile: ToEntityMarshaller[File]
-  ): Route = {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
     logger.info(
       "Getting e-service document {} for e-service {} and descriptor {}",
       documentId,
@@ -403,7 +403,7 @@ final case class ProcessApiServiceImpl(
   )(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerFlatEServicearray: ToEntityMarshaller[Seq[FlatEService]]
-  ): Route = {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
     logger.info(
       "Getting flatten e-services list for caller {} where producer = {}, consumer = {}, state = {} and latest published only = {}",
       callerId,
