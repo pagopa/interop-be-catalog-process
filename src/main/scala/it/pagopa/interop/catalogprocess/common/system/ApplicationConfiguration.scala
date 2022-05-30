@@ -7,20 +7,19 @@ object ApplicationConfiguration {
 
   val serverPort: Int = config.getInt("catalog-process.port")
 
-  val catalogManagementUrl: String = config.getString("catalog-process.services.catalog-management")
-
-  val agreementManagementUrl: String = config.getString("catalog-process.services.agreement-management")
-
-  val authorizationManagementUrl: String = config.getString("catalog-process.services.authorization-management")
-
+  val catalogManagementUrl: String           = config.getString("catalog-process.services.catalog-management")
+  val agreementManagementUrl: String         = config.getString("catalog-process.services.agreement-management")
+  val authorizationManagementUrl: String     = config.getString("catalog-process.services.authorization-management")
   val attributeRegistryManagementUrl: String =
     config.getString("catalog-process.services.attribute-registry-management")
+  val partyManagementUrl: String             = config.getString("catalog-process.services.party-management")
 
-  val partyManagementUrl: String = config.getString("catalog-process.services.party-management")
+  val partyManagementApiKey: String = config.getString("catalog-process.api-keys.party-management")
 
   val jwtAudience: Set[String] = config.getString("catalog-process.jwt.audience").split(",").toSet.filter(_.nonEmpty)
 
   val storageContainer: String = config.getString("catalog-process.storage.container")
 
   require(jwtAudience.nonEmpty, "Audience cannot be empty")
+
 }
