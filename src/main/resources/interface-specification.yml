@@ -757,8 +757,7 @@ paths:
                 $ref: '#/components/schemas/Problem'
   /status:
     get:
-      security:
-        - bearerAuth: []
+      security: []
       tags:
         - health
       summary: Health status endpoint
