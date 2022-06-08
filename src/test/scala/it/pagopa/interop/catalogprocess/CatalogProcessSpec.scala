@@ -450,6 +450,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         authorizationManagementService
           .updateStateOnClients(
             _: UUID,
+            _: UUID,
             _: AuthorizationManagementDependency.ClientComponentState,
             _: Seq[String],
             _: Int
@@ -457,6 +458,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         )
         .expects(
           eServiceUuid,
+          descriptor.id,
           AuthorizationManagementDependency.ClientComponentState.INACTIVE,
           descriptor.audience,
           descriptor.voucherLifespan,
@@ -499,6 +501,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         authorizationManagementService
           .updateStateOnClients(
             _: UUID,
+            _: UUID,
             _: AuthorizationManagementDependency.ClientComponentState,
             _: Seq[String],
             _: Int
@@ -506,6 +509,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         )
         .expects(
           eServiceUuid,
+          descriptor.id,
           AuthorizationManagementDependency.ClientComponentState.INACTIVE,
           descriptor.audience,
           descriptor.voucherLifespan,
@@ -634,6 +638,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         authorizationManagementService
           .updateStateOnClients(
             _: UUID,
+            _: UUID,
             _: AuthorizationManagementDependency.ClientComponentState,
             _: Seq[String],
             _: Int
@@ -641,6 +646,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         )
         .expects(
           eServiceUuid,
+          descriptor.id,
           AuthorizationManagementDependency.ClientComponentState.ACTIVE,
           descriptor.audience,
           descriptor.voucherLifespan,
@@ -683,6 +689,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         authorizationManagementService
           .updateStateOnClients(
             _: UUID,
+            _: UUID,
             _: AuthorizationManagementDependency.ClientComponentState,
             _: Seq[String],
             _: Int
@@ -690,6 +697,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         )
         .expects(
           eServiceUuid,
+          descriptor.id,
           AuthorizationManagementDependency.ClientComponentState.ACTIVE,
           descriptor.audience,
           descriptor.voucherLifespan,
@@ -732,6 +740,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         authorizationManagementService
           .updateStateOnClients(
             _: UUID,
+            _: UUID,
             _: AuthorizationManagementDependency.ClientComponentState,
             _: Seq[String],
             _: Int
@@ -739,6 +748,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         )
         .expects(
           eServiceUuid,
+          descriptor.id,
           AuthorizationManagementDependency.ClientComponentState.ACTIVE,
           descriptor.audience,
           descriptor.voucherLifespan,
@@ -781,6 +791,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         authorizationManagementService
           .updateStateOnClients(
             _: UUID,
+            _: UUID,
             _: AuthorizationManagementDependency.ClientComponentState,
             _: Seq[String],
             _: Int
@@ -788,6 +799,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         )
         .expects(
           eServiceUuid,
+          descriptor.id,
           AuthorizationManagementDependency.ClientComponentState.ACTIVE,
           descriptor.audience,
           descriptor.voucherLifespan,

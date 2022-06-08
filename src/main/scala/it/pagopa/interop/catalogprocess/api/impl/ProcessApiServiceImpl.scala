@@ -24,8 +24,8 @@ import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors._
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.commons.files.service.FileManager
-import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.jwt._
+import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions.{EitherOps, OptionOps}
@@ -159,7 +159,7 @@ final case class ProcessApiServiceImpl(
       case Success(response) => getEServices200(response)
       case Failure(ex)       =>
         logger.error(
-          s"Error while getting e-service with producer = ${producerId}, consumer = ${consumerId} and state = ${status}",
+          s"Error while getting e-service with producer = $producerId, consumer = $consumerId and state = $status",
           ex
         )
         val error =
@@ -198,6 +198,7 @@ final case class ProcessApiServiceImpl(
         .sequence
       _ <- authorizationManagementService.updateStateOnClients(
         currentEService.id,
+        descriptor.id,
         AuthorizationManagementDependency.ClientComponentState.ACTIVE,
         descriptor.audience,
         descriptor.voucherLifespan
@@ -335,7 +336,7 @@ final case class ProcessApiServiceImpl(
         complete(output)
       case Failure(ex: ApiError[_]) if ex.code == 400 =>
         logger.error(
-          s"Error while getting e-service document $documentId for e-service $eServiceId and descriptor ${descriptorId}",
+          s"Error while getting e-service document $documentId for e-service $eServiceId and descriptor $descriptorId",
           ex
         )
         getEServiceDocumentById400(
@@ -351,7 +352,7 @@ final case class ProcessApiServiceImpl(
         )
       case Failure(ex: ContentTypeParsingError)       =>
         logger.error(
-          s"Error while parsing document ${documentId} content type for e-service $eServiceId and descriptor $descriptorId - Content type: ${ex.contentType}, errors - ${ex.errors
+          s"Error while parsing document $documentId content type for e-service $eServiceId and descriptor $descriptorId - Content type: ${ex.contentType}, errors - ${ex.errors
               .mkString(", ")}",
           ex
         )
@@ -427,7 +428,7 @@ final case class ProcessApiServiceImpl(
       case Success(response) => getFlatEServices200(response)
       case Failure(ex)       =>
         logger.error(
-          s"Error while getting flatten e-services list for caller $callerId where producer = ${producerId}, consumer = ${consumerId}, state = ${state} and latest published only = ${latestPublishedOnly}",
+          s"Error while getting flatten e-services list for caller $callerId where producer = $producerId, consumer = $consumerId, state = $state and latest published only = $latestPublishedOnly",
           ex
         )
         val error = problemOf(StatusCodes.InternalServerError, FlattenedEServicesRetrievalError)
@@ -678,7 +679,7 @@ final case class ProcessApiServiceImpl(
       case Success(_)                                 => deleteEServiceDocumentById204
       case Failure(ex: ApiError[_]) if ex.code == 400 =>
         logger.error(
-          s"Error while deleting document ${documentId} of descriptor $descriptorId for e-service $eServiceId",
+          s"Error while deleting document $documentId of descriptor $descriptorId for e-service $eServiceId",
           ex
         )
         deleteEServiceDocumentById400(
@@ -686,7 +687,7 @@ final case class ProcessApiServiceImpl(
         )
       case Failure(ex: ApiError[_]) if ex.code == 404 =>
         logger.error(
-          s"Error while deleting document ${documentId} of descriptor $descriptorId for e-service $eServiceId",
+          s"Error while deleting document $documentId of descriptor $descriptorId for e-service $eServiceId",
           ex
         )
         deleteEServiceDocumentById404(
@@ -694,7 +695,7 @@ final case class ProcessApiServiceImpl(
         )
       case Failure(ex)                                =>
         logger.error(
-          s"Error while deleting document ${documentId} of descriptor $descriptorId for e-service $eServiceId",
+          s"Error while deleting document $documentId of descriptor $descriptorId for e-service $eServiceId",
           ex
         )
         val error = problemOf(
@@ -838,6 +839,7 @@ final case class ProcessApiServiceImpl(
       _          <- activateDescriptor(eService, descriptor)
       _          <- authorizationManagementService.updateStateOnClients(
         eService.id,
+        descriptor.id,
         AuthorizationManagementDependency.ClientComponentState.ACTIVE,
         descriptor.audience,
         descriptor.voucherLifespan
@@ -885,6 +887,7 @@ final case class ProcessApiServiceImpl(
       _          <- catalogManagementService.suspendDescriptor(eServiceId, descriptorId)
       _          <- authorizationManagementService.updateStateOnClients(
         eService.id,
+        descriptor.id,
         AuthorizationManagementDependency.ClientComponentState.INACTIVE,
         descriptor.audience,
         descriptor.voucherLifespan
