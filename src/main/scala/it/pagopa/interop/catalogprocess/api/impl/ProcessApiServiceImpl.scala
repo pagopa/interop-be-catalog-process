@@ -152,7 +152,7 @@ final case class ProcessApiServiceImpl(
       statusEnum      <- status.traverse(CatalogManagementDependency.EServiceDescriptorState.fromValue).toFuture
       agreementStates <- parseArrayParameters(agreementState).traverse(AgreementState.fromValue).toFuture
       eservices       <- retrieveEservices(producerId, consumerId, statusEnum, agreementStates)
-      apiEservices    <- eservices.traverse(service => convertToApiEservice(service))
+      apiEservices    <- Future.traverse(eservices)(service => convertToApiEservice(service))
     } yield apiEservices
 
     onComplete(result) {
@@ -579,10 +579,8 @@ final case class ProcessApiServiceImpl(
           .map(convertToApiAgreementState)
           .map(Some(_))
           .flatTraverse(agreementManagementService.getAgreements(consumerId, producerId, _).map(_.toList))
-        eservices  <- agreements
-          .map(_.eserviceId.toString)
-          .distinct
-          .traverse(catalogManagementService.getEService(_))
+        ids = agreements.map(_.eserviceId.toString).distinct
+        eservices <- Future.traverse(ids)(catalogManagementService.getEService(_))
       } yield eservices.filter(eService =>
         producerId.forall(_ == eService.producerId.toString) &&
           status.forall(s => eService.descriptors.exists(_.state == s))
