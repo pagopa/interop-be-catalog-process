@@ -20,13 +20,19 @@ final case class AuthorizationManagementServiceImpl(invoker: AuthorizationManage
 
   override def updateStateOnClients(
     eServiceId: UUID,
+    descriptorId: UUID,
     state: ClientComponentState,
     audience: Seq[String],
     voucherLifespan: Int
   )(implicit contexts: Seq[(String, String)]): Future[Unit] = {
 
     val payload: ClientEServiceDetailsUpdate =
-      ClientEServiceDetailsUpdate(state = state, audience = audience, voucherLifespan = voucherLifespan)
+      ClientEServiceDetailsUpdate(
+        descriptorId = descriptorId,
+        state = state,
+        audience = audience,
+        voucherLifespan = voucherLifespan
+      )
 
     for {
       (bearerToken, correlationId, ip) <- extractHeaders(contexts).toFuture
