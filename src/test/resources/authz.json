@@ -7,7 +7,7 @@
       "verb": "POST"
     },
     {
-      "route": "getEService",
+      "route": "getEServiceById",
       "roles": ["admin", "api", "security", "m2m"],
       "verb": "GET"
     },
@@ -17,16 +17,20 @@
       "verb": "GET"
     },
     {
-      "route": "getEServiceDocument",
+      "route": "getEServiceDocumentById",
       "roles": ["admin", "api", "security", "m2m"],
       "verb": "GET"
     },
     { "route": "deleteDraft", "roles": ["admin", "api"], "verb": "DELETE" },
-    { "route": "updateDescriptor", "roles": ["admin", "api"], "verb": "PUT" },
+    {
+      "route": "updateDraftDescriptor",
+      "roles": ["admin", "api"],
+      "verb": "PUT"
+    },
     { "route": "updateEServiceById", "roles": ["admin", "api"], "verb": "PUT" },
     { "route": "createDescriptor", "roles": ["admin", "api"], "verb": "POST" },
     {
-      "route": "deleteEServiceDocument",
+      "route": "deleteEServiceDocumentById",
       "roles": ["admin", "api"],
       "verb": "DELETE"
     },
@@ -40,7 +44,7 @@
     { "route": "draftDescriptor", "roles": ["admin", "api"], "verb": "POST" },
     { "route": "publishDescriptor", "roles": ["admin", "api"], "verb": "POST" },
     {
-      "route": "updateEServiceDocument",
+      "route": "updateEServiceDocumentById",
       "roles": ["admin", "api"],
       "verb": "POST"
     },
