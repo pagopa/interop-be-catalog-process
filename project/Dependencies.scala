@@ -14,8 +14,9 @@ object Dependencies {
     lazy val management          = "com.lightbend.akka.management" %% "akka-management"      % akkaManagementVersion
     lazy val managementLogLevels =
       "com.lightbend.akka.management" %% "akka-management-loglevels-logback" % akkaManagementVersion
-    lazy val slf4j   = namespace %% "akka-slf4j"               % akkaVersion
-    lazy val testkit = namespace %% "akka-actor-testkit-typed" % akkaVersion
+    lazy val slf4j       = namespace %% "akka-slf4j"               % akkaVersion
+    lazy val testkit     = namespace %% "akka-actor-testkit-typed" % akkaVersion
+    lazy val httpTestkit = namespace %% "akka-http-testkit"        % akkaHttpVersion
   }
 
   private[this] object json4s {
@@ -124,6 +125,7 @@ object Dependencies {
       pagopa.fileManager                       % Compile,
       pagopa.commonsJWT                        % Compile,
       akka.testkit                             % Test,
+      akka.httpTestkit                         % Test,
       scalatest.core                           % Test,
       scalamock.core                           % Test
     )
