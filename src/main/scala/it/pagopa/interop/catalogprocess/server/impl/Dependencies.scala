@@ -81,7 +81,8 @@ trait Dependencies {
   val healthApi: HealthApi = new HealthApi(
     new HealthServiceApiImpl(),
     HealthApiMarshallerImpl,
-    SecurityDirectives.authenticateOAuth2("SecurityRealm", AkkaUtils.PassThroughAuthenticator)
+    SecurityDirectives.authenticateOAuth2("SecurityRealm", AkkaUtils.PassThroughAuthenticator),
+    loggingEnabled = false
   )
 
   private def agreementManagementInvoker()(implicit actorSystem: ActorSystem[_]): AgreementManagementInvoker =
