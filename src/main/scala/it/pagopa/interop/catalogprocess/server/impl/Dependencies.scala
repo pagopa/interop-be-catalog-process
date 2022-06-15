@@ -86,16 +86,19 @@ trait Dependencies {
 
   private def agreementManagementInvoker()(implicit actorSystem: ActorSystem[_]): AgreementManagementInvoker =
     AgreementManagementInvoker()(actorSystem.classicSystem)
-  private val agreementApi: AgreementApi = AgreementApi(ApplicationConfiguration.agreementManagementUrl)
+  private val agreementApi: AgreementApi          = AgreementApi(ApplicationConfiguration.agreementManagementUrl)
   def agreementManagementService()(implicit
     ec: ExecutionContext,
     actorSystem: ActorSystem[_]
   ): AgreementManagementService =
     AgreementManagementServiceImpl(agreementManagementInvoker(), agreementApi)
 
-  private def authorizationManagementInvoker()(implicit actorSystem: ActorSystem[_]): AuthorizationManagementInvoker =
-    AuthorizationManagementInvoker()(actorSystem.classicSystem)
-  private def authorizationPurposeApi: PurposeApi                                                                    =
+  private def authorizationManagementInvoker()(implicit
+    actorSystem: ActorSystem[_],
+    blockingEc: ExecutionContext
+  ): AuthorizationManagementInvoker =
+    AuthorizationManagementInvoker()(actorSystem.classicSystem, blockingEc)
+  private def authorizationPurposeApi: PurposeApi =
     PurposeApi(ApplicationConfiguration.authorizationManagementUrl)
   def authorizationManagementService()(implicit
     ec: ExecutionContext,
