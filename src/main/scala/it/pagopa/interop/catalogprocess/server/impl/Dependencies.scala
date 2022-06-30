@@ -5,7 +5,6 @@ import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.server.directives.SecurityDirectives
 import com.nimbusds.jose.proc.SecurityContext
 import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier
-import it.pagopa.interop.commons.files.StorageConfiguration
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.jwt.service.impl.{DefaultJWTReader, getClaimsVerifier}
@@ -41,13 +40,13 @@ import scala.concurrent.ExecutionContext
 import akka.actor.typed.ActorSystem
 import com.atlassian.oai.validator.report.ValidationReport
 import akka.http.scaladsl.server.Route
+import scala.concurrent.ExecutionContextExecutor
 
 trait Dependencies {
 
   implicit val partyManagementApiKeyValue: PartyManagementApiKeyValue = PartyManagementApiKeyValue()
 
-  def getFileManager(): Future[FileManager] =
-    FileManager.getConcreteImplementation(StorageConfiguration.runtimeFileManager).toFuture
+  def getFileManager(blockingEc: ExecutionContextExecutor): FileManager = FileManager.get(FileManager.S3)(blockingEc)
 
   def getJwtReader()(implicit ec: ExecutionContext): Future[JWTReader] = JWTConfiguration.jwtReader
     .loadKeyset()

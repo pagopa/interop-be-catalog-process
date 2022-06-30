@@ -15,6 +15,8 @@ import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.Behaviors
 import scala.concurrent.ExecutionContext
 import buildinfo.BuildInfo
+import akka.actor.typed.DispatcherSelector
+import scala.concurrent.ExecutionContextExecutor
 
 object Main extends App with CORSSupport with Dependencies {
 
@@ -26,13 +28,16 @@ object Main extends App with CORSSupport with Dependencies {
       implicit val actorSystem: ActorSystem[_]        = context.system
       implicit val executionContext: ExecutionContext = actorSystem.executionContext
 
+      val selector: DispatcherSelector         = DispatcherSelector.fromConfig("futures-dispatcher")
+      val blockingEc: ExecutionContextExecutor = actorSystem.dispatchers.lookup(selector)
+
       Kamon.init()
       AkkaManagement.get(actorSystem.classicSystem).start()
 
       val serverBinding: Future[Http.ServerBinding] = for {
-        jwtReader   <- getJwtReader()
-        fileManager <- getFileManager()
-        controller = new Controller(healthApi, processApi(jwtReader, fileManager), validationExceptionToRoute.some)(
+        jwtReader <- getJwtReader()
+        fileManager = getFileManager(blockingEc)
+        controller  = new Controller(healthApi, processApi(jwtReader, fileManager), validationExceptionToRoute.some)(
           actorSystem.classicSystem
         )
         binding <-

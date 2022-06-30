@@ -11,7 +11,6 @@ import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.catalogprocess.util.FakeDependencies._
 import it.pagopa.interop.catalogprocess.util.{AuthorizedRoutes, AuthzScalatestRouteTest}
 import it.pagopa.interop.commons.files.service.FileManager
-import it.pagopa.interop.commons.files.service.impl.FileManagerImpl
 import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.jwt.service.impl.{DefaultJWTReader, getClaimsVerifier}
 import it.pagopa.interop.commons.jwt.{KID, PublicKeysHolder, SerializedKey}
@@ -20,8 +19,11 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import java.io.File
 import java.util.UUID
 import scala.concurrent.ExecutionContext
+import org.scalatest.BeforeAndAfterAll
+import java.util.concurrent.{Executors, ExecutorService}
+import scala.concurrent.ExecutionContextExecutor
 
-class ProcessApiAuthzSpec extends AnyWordSpecLike with AuthzScalatestRouteTest {
+class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with AuthzScalatestRouteTest {
 
   val fakeCatalogManagementService: CatalogManagementService                     = new FakeCatalogManagementService()
   val fakePartyManagementService: PartyManagementService                         = new FakePartyManagementService()
@@ -29,12 +31,16 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with AuthzScalatestRouteTest {
     new FakeAttributeRegistryManagementService()
   val fakeAgreementManagementService: AgreementManagementService                 = new FakeAgreementManagementService()
   val fakeAuthorizationManagementService: AuthorizationManagementService = new FakeAuthorizationManagementService()
-  val fakeFileManager: FileManager                                       = new FileManagerImpl()
-  val fakeJwtReader: JWTReader                                           = new DefaultJWTReader with PublicKeysHolder {
+  private val threadPool: ExecutorService                                = Executors.newSingleThreadExecutor()
+  private val blockingEc: ExecutionContextExecutor = ExecutionContext.fromExecutorService(threadPool)
+  val fakeFileManager: FileManager                 = FileManager.get(FileManager.File)(blockingEc)
+  val fakeJwtReader: JWTReader                     = new DefaultJWTReader with PublicKeysHolder {
     var publicKeyset: Map[KID, SerializedKey]                                        = Map.empty
     override protected val claimsVerifier: DefaultJWTClaimsVerifier[SecurityContext] =
       getClaimsVerifier(audience = Set("fake"))
   }
+
+  override def afterAll(): Unit = { threadPool.shutdown() }
 
   val service: ProcessApiServiceImpl =
     ProcessApiServiceImpl(
