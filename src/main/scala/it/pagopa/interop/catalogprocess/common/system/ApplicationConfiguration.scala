@@ -18,6 +18,8 @@ object ApplicationConfiguration {
 
   val jwtAudience: Set[String] = config.getString("catalog-process.jwt.audience").split(",").toSet.filter(_.nonEmpty)
 
+  val storageKind: String = config.getString("catalog-process.storage.kind")
+
   val storageContainer: String = config.getString("catalog-process.storage.container")
 
   require(jwtAudience.nonEmpty, "Audience cannot be empty")
