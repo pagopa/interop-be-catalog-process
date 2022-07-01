@@ -10,7 +10,7 @@ object Versions {
   lazy val jacksonVersion              = "2.11.4"
   lazy val jdbcPersistenceVersion      = "5.0.1"
   lazy val json4sVersion               = "4.0.5"
-  lazy val kamonVersion                = "2.5.1"
+  lazy val kamonVersion                = "2.5.4"
   lazy val logbackVersion              = "1.2.11"
   lazy val mustacheVersion             = "0.9.10"
   lazy val openapi4jVersion            = "1.0.7"
@@ -19,16 +19,16 @@ object Versions {
   lazy val s3Persistence               = "1.0.27"
   lazy val scalaMockVersion            = "5.2.0"
   lazy val scalapbVersion              = "0.11.1"
-  lazy val scalatestVersion            = "3.2.11"
+  lazy val scalatestVersion            = "3.2.12"
   lazy val slickVersion                = "3.3.3"
   lazy val swaggerValidatorVersion     = "2.23.0"
 }
 
 object PagopaVersions {
-  lazy val agreementManagementVersion         = "0.1.x-SNAPSHOT"
-  lazy val attributeRegistryManagementVersion = "0.1.x-SNAPSHOT"
-  lazy val catalogManagementVersion           = "0.1.x-SNAPSHOT"
-  lazy val commonsVersion                     = "0.1.x-SNAPSHOT"
-  lazy val partyManagementVersion             = "0.1.x-SNAPSHOT"
-  lazy val authorizationManagementVersion     = "0.1.x-SNAPSHOT"
+  lazy val agreementManagementVersion         = "1.0.x-SNAPSHOT"
+  lazy val attributeRegistryManagementVersion = "1.0.x-SNAPSHOT"
+  lazy val catalogManagementVersion           = "1.0.x-SNAPSHOT"
+  lazy val commonsVersion                     = "1.0.x-SNAPSHOT"
+  lazy val partyManagementVersion             = "1.0.x-SNAPSHOT"
+  lazy val authorizationManagementVersion     = "1.0.x-SNAPSHOT"
 }
