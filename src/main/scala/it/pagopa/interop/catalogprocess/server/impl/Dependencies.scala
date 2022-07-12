@@ -53,9 +53,8 @@ trait Dependencies {
       case _      => throw new Exception("Incorrect File Manager")
     })(blockingEc)
 
-  def getJwtReader()(implicit ec: ExecutionContext): Future[JWTReader] = JWTConfiguration.jwtReader
+  def getJwtReader(): Future[JWTReader] = JWTConfiguration.jwtReader
     .loadKeyset()
-    .toFuture
     .map(keyset =>
       new DefaultJWTReader with PublicKeysHolder {
         var publicKeyset: Map[KID, SerializedKey]                                        = keyset
@@ -63,18 +62,19 @@ trait Dependencies {
           getClaimsVerifier(audience = ApplicationConfiguration.jwtAudience)
       }
     )
+    .toFuture
 
-  def processApi(jwtReader: JWTReader, fileManager: FileManager)(implicit
+  def processApi(jwtReader: JWTReader, fileManager: FileManager, blockingEc: ExecutionContextExecutor)(implicit
     ec: ExecutionContext,
     actorSystem: ActorSystem[_]
   ): ProcessApi =
     new ProcessApi(
       ProcessApiServiceImpl(
-        catalogManagementService = catalogManagementService(),
+        catalogManagementService = catalogManagementService(blockingEc),
         partyManagementService = partyManagementService(),
-        attributeRegistryManagementService = attributeRegistryManagementService(),
-        agreementManagementService = agreementManagementService(),
-        authorizationManagementService = authorizationManagementService(),
+        attributeRegistryManagementService = attributeRegistryManagementService(blockingEc),
+        agreementManagementService = agreementManagementService(blockingEc),
+        authorizationManagementService = authorizationManagementService(blockingEc),
         fileManager = fileManager,
         jwtReader = jwtReader
       ),
@@ -82,51 +82,53 @@ trait Dependencies {
       jwtReader.OAuth2JWTValidatorAsContexts
     )
 
-  val healthApi: HealthApi = new HealthApi(
+  val healthApi: HealthApi                        = new HealthApi(
     new HealthServiceApiImpl(),
     HealthApiMarshallerImpl,
     SecurityDirectives.authenticateOAuth2("SecurityRealm", AkkaUtils.PassThroughAuthenticator),
     loggingEnabled = false
   )
 
-  private def agreementManagementInvoker()(implicit actorSystem: ActorSystem[_]): AgreementManagementInvoker =
-    AgreementManagementInvoker()(actorSystem.classicSystem)
-  private val agreementApi: AgreementApi          = AgreementApi(ApplicationConfiguration.agreementManagementUrl)
-  def agreementManagementService()(implicit
-    ec: ExecutionContext,
+  private def agreementManagementInvoker(blockingEc: ExecutionContextExecutor)(implicit
     actorSystem: ActorSystem[_]
-  ): AgreementManagementService =
-    AgreementManagementServiceImpl(agreementManagementInvoker(), agreementApi)
+  ): AgreementManagementInvoker =
+    AgreementManagementInvoker(blockingEc)(actorSystem.classicSystem)
+  private val agreementApi: AgreementApi          = AgreementApi(ApplicationConfiguration.agreementManagementUrl)
+  def agreementManagementService(
+    blockingEc: ExecutionContextExecutor
+  )(implicit ec: ExecutionContext, actorSystem: ActorSystem[_]): AgreementManagementService =
+    AgreementManagementServiceImpl(agreementManagementInvoker(blockingEc), agreementApi)
 
-  private def authorizationManagementInvoker()(implicit
-    actorSystem: ActorSystem[_],
-    blockingEc: ExecutionContext
+  private def authorizationManagementInvoker(blockingEc: ExecutionContextExecutor)(implicit
+    actorSystem: ActorSystem[_]
   ): AuthorizationManagementInvoker =
-    AuthorizationManagementInvoker()(actorSystem.classicSystem, blockingEc)
+    AuthorizationManagementInvoker(blockingEc)(actorSystem.classicSystem)
   private def authorizationPurposeApi: PurposeApi =
     PurposeApi(ApplicationConfiguration.authorizationManagementUrl)
-  def authorizationManagementService()(implicit
-    ec: ExecutionContext,
-    actorSystem: ActorSystem[_]
-  ): AuthorizationManagementService =
-    AuthorizationManagementServiceImpl(authorizationManagementInvoker(), authorizationPurposeApi)
+  def authorizationManagementService(
+    blockingEc: ExecutionContextExecutor
+  )(implicit ec: ExecutionContext, actorSystem: ActorSystem[_]): AuthorizationManagementService =
+    AuthorizationManagementServiceImpl(authorizationManagementInvoker(blockingEc), authorizationPurposeApi)
 
-  private def attributeRegistryManagementInvoker()(implicit
+  private def attributeRegistryManagementInvoker(blockingEc: ExecutionContextExecutor)(implicit
     actorSystem: ActorSystem[_]
   ): AttributeRegistryManagementInvoker =
-    AttributeRegistryManagementInvoker()(actorSystem.classicSystem)
+    AttributeRegistryManagementInvoker(blockingEc)(actorSystem.classicSystem)
   private def attributeApi: AttributeApi = AttributeApi(ApplicationConfiguration.attributeRegistryManagementUrl)
-  def attributeRegistryManagementService()(implicit
-    ec: ExecutionContext,
-    actorSystem: ActorSystem[_]
-  ): AttributeRegistryManagementService =
-    AttributeRegistryManagementServiceImpl(attributeRegistryManagementInvoker(), attributeApi)
+  def attributeRegistryManagementService(
+    blockingEc: ExecutionContextExecutor
+  )(implicit ec: ExecutionContext, actorSystem: ActorSystem[_]): AttributeRegistryManagementService =
+    AttributeRegistryManagementServiceImpl(attributeRegistryManagementInvoker(blockingEc), attributeApi)
 
-  private def catalogManagementInvoker()(implicit actorSystem: ActorSystem[_]): CatalogManagementInvoker =
-    CatalogManagementInvoker()(actorSystem.classicSystem)
-  private def catalogApi: EServiceApi = EServiceApi(ApplicationConfiguration.catalogManagementUrl)
-  def catalogManagementService()(implicit actorSystem: ActorSystem[_], ec: ExecutionContext): CatalogManagementService =
-    CatalogManagementServiceImpl(catalogManagementInvoker(), catalogApi)
+  private def catalogManagementInvoker(blockingEc: ExecutionContextExecutor)(implicit
+    actorSystem: ActorSystem[_]
+  ): CatalogManagementInvoker =
+    CatalogManagementInvoker(blockingEc)(actorSystem.classicSystem)
+  private def catalogApi: EServiceApi    = EServiceApi(ApplicationConfiguration.catalogManagementUrl)
+  def catalogManagementService(
+    blockingEc: ExecutionContextExecutor
+  )(implicit actorSystem: ActorSystem[_], ec: ExecutionContext): CatalogManagementService =
+    CatalogManagementServiceImpl(catalogManagementInvoker(blockingEc), catalogApi)
 
   private def partyManagementInvoker()(implicit actorSystem: ActorSystem[_]): PartyManagementInvoker =
     PartyManagementInvoker()(actorSystem.classicSystem)
