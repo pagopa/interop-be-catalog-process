@@ -51,12 +51,6 @@ object Dependencies {
     lazy val compiler  = namespace % "compiler" % mustacheVersion
   }
 
-  private[this] object kamon {
-    lazy val namespace  = "io.kamon"
-    lazy val bundle     = namespace %% "kamon-bundle"     % kamonVersion
-    lazy val prometheus = namespace %% "kamon-prometheus" % kamonVersion
-  }
-
   private[this] object resilience4j {
     lazy val namespace   = "io.github.resilience4j"
     lazy val rateLimiter = namespace % "resilience4j-ratelimiter" % resilience4jVersion
@@ -114,8 +108,6 @@ object Dependencies {
       logback.classic                          % Compile,
       akka.slf4j                               % Compile,
       resilience4j.rateLimiter                 % Compile,
-      kamon.bundle                             % Compile,
-      kamon.prometheus                         % Compile,
       pagopa.catalogManagementClient           % Compile,
       pagopa.agreementManagementClient         % Compile,
       pagopa.partyManagementClient             % Compile,
