@@ -102,7 +102,7 @@ final case class ProcessApiServiceImpl(
 
     def deleteEServiceIfEmpty(eService: CatalogManagementDependency.EService): Future[Unit] =
       if (eService.descriptors.exists(_.id.toString != descriptorId))
-        Future.successful(())
+        Future.unit
       else
         catalogManagementService.deleteEService(eServiceId)
 
