@@ -930,6 +930,112 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
   }
 
+  "Descriptor deletion" must {
+
+    "keep EService if other Descriptors exist" in {
+
+      val draftDescriptor = CatalogManagementDependency.EServiceDescriptor(
+        id = UUID.randomUUID(),
+        version = "1",
+        description = None,
+        interface = None,
+        docs = Nil,
+        state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
+        audience = List("aud1"),
+        voucherLifespan = 1000,
+        dailyCallsPerConsumer = 1000,
+        dailyCallsTotal = 0
+      )
+
+      val otherDescriptor = CatalogManagementDependency.EServiceDescriptor(
+        id = UUID.randomUUID(),
+        version = "1",
+        description = None,
+        interface = None,
+        docs = Nil,
+        state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED,
+        audience = List("aud1"),
+        voucherLifespan = 1000,
+        dailyCallsPerConsumer = 1000,
+        dailyCallsTotal = 0
+      )
+
+      val eservice = CatalogManagementDependency.EService(
+        id = UUID.randomUUID(),
+        producerId = UUID.randomUUID(),
+        name = "Name",
+        description = "Description",
+        technology = CatalogManagementDependency.EServiceTechnology.REST,
+        attributes = CatalogManagementDependency.Attributes(certified = Nil, verified = Nil, declared = Nil),
+        descriptors = List(draftDescriptor, otherDescriptor)
+      )
+
+      (catalogManagementService
+        .getEService(_: String)(_: Seq[(String, String)]))
+        .expects(eservice.id.toString, *)
+        .returning(Future.successful(eservice))
+        .once()
+
+      (catalogManagementService
+        .deleteDraft(_: String, _: String)(_: Seq[(String, String)]))
+        .expects(eservice.id.toString, draftDescriptor.id.toString, *)
+        .returning(Future.successful(()))
+        .once()
+
+      val response = request(s"eservices/${eservice.id}/descriptors/${draftDescriptor.id}", HttpMethods.DELETE)
+
+      response.status shouldBe StatusCodes.NoContent
+    }
+
+    "delete EService if there are no other Descriptors" in {
+
+      val draftDescriptor = CatalogManagementDependency.EServiceDescriptor(
+        id = UUID.randomUUID(),
+        version = "1",
+        description = None,
+        interface = None,
+        docs = Nil,
+        state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
+        audience = List("aud1"),
+        voucherLifespan = 1000,
+        dailyCallsPerConsumer = 1000,
+        dailyCallsTotal = 0
+      )
+
+      val eservice = CatalogManagementDependency.EService(
+        id = UUID.randomUUID(),
+        producerId = UUID.randomUUID(),
+        name = "Name",
+        description = "Description",
+        technology = CatalogManagementDependency.EServiceTechnology.REST,
+        attributes = CatalogManagementDependency.Attributes(certified = Nil, verified = Nil, declared = Nil),
+        descriptors = List(draftDescriptor)
+      )
+
+      (catalogManagementService
+        .getEService(_: String)(_: Seq[(String, String)]))
+        .expects(eservice.id.toString, *)
+        .returning(Future.successful(eservice))
+        .once()
+
+      (catalogManagementService
+        .deleteDraft(_: String, _: String)(_: Seq[(String, String)]))
+        .expects(eservice.id.toString, draftDescriptor.id.toString, *)
+        .returning(Future.successful(()))
+        .once()
+
+      (catalogManagementService
+        .deleteEService(_: String)(_: Seq[(String, String)]))
+        .expects(eservice.id.toString, *)
+        .returning(Future.successful(()))
+        .once()
+
+      val response = request(s"eservices/${eservice.id}/descriptors/${draftDescriptor.id}", HttpMethods.DELETE)
+
+      response.status shouldBe StatusCodes.NoContent
+    }
+  }
+
 }
 
 object CatalogProcessSpec extends MockFactory {
