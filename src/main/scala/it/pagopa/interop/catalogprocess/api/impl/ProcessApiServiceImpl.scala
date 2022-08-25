@@ -99,7 +99,18 @@ final case class ProcessApiServiceImpl(
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
   ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     logger.info("Deleting draft descriptor {} for e-service {}", eServiceId, descriptorId)
-    val result = catalogManagementService.deleteDraft(eServiceId, descriptorId)
+
+    def deleteEServiceIfEmpty(eService: CatalogManagementDependency.EService): Future[Unit] =
+      if (eService.descriptors.exists(_.id.toString != descriptorId))
+        Future.unit
+      else
+        catalogManagementService.deleteEService(eServiceId)
+
+    val result = for {
+      eService <- catalogManagementService.getEService(eServiceId)
+      result   <- catalogManagementService.deleteDraft(eServiceId, descriptorId)
+      _        <- deleteEServiceIfEmpty(eService)
+    } yield result
 
     onComplete(result) {
       case Success(_)                                 => deleteDraft204
