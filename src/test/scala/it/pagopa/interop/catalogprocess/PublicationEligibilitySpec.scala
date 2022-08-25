@@ -6,6 +6,7 @@ import org.scalatest.concurrent.ScalaFutures._
 import org.scalatest.matchers.should.Matchers._
 import org.scalatest.wordspec.AnyWordSpecLike
 
+import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext}
@@ -31,7 +32,9 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
             name = "fileName",
             contentType = "contentType",
             prettyName = "description",
-            path = "path"
+            path = "path",
+            checksum = "checksum",
+            uploadDate = OffsetDateTime.now()
           )
         ),
         docs = Seq.empty,
@@ -56,7 +59,9 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
             name = "fileName",
             contentType = "contentType",
             prettyName = "description",
-            path = "path"
+            path = "path",
+            checksum = "checksum",
+            uploadDate = OffsetDateTime.now()
           )
         ),
         docs = Seq.empty,

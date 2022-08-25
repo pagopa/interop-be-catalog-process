@@ -27,6 +27,7 @@ import it.pagopa.interop.catalogprocess.service.{
 import it.pagopa.interop.selfcare.partymanagement.client.model.{BulkInstitutions, BulkPartiesSeed, Institution}
 
 import java.io.File
+import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -214,7 +215,17 @@ object FakeDependencies {
 
     override def getEServiceDocument(eServiceId: String, descriptorId: String, documentId: String)(implicit
       contexts: Seq[(String, String)]
-    ): Future[EServiceDoc] = Future.successful(EServiceDoc(id = UUID.randomUUID(), "a", "b", "c", "d"))
+    ): Future[EServiceDoc] = Future.successful(
+      EServiceDoc(
+        id = UUID.randomUUID(),
+        name = "a",
+        contentType = "b",
+        prettyName = "c",
+        path = "d",
+        checksum = "e",
+        uploadDate = OffsetDateTime.now()
+      )
+    )
 
     override def updateEServiceDocument(
       eServiceId: String,
@@ -222,7 +233,17 @@ object FakeDependencies {
       documentId: String,
       updateEServiceDescriptorDocumentSeed: UpdateEServiceDescriptorDocumentSeed
     )(implicit contexts: Seq[(String, String)]): Future[EServiceDoc] =
-      Future.successful(EServiceDoc(id = UUID.randomUUID(), "a", "b", "c", "d"))
+      Future.successful(
+        EServiceDoc(
+          id = UUID.randomUUID(),
+          name = "a",
+          contentType = "b",
+          prettyName = "c",
+          path = "d",
+          checksum = "e",
+          uploadDate = OffsetDateTime.now()
+        )
+      )
 
     override def deleteEServiceDocument(eServiceId: String, descriptorId: String, documentId: String)(implicit
       contexts: Seq[(String, String)]
