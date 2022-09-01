@@ -9,6 +9,7 @@ import it.pagopa.interop.commons.utils.extractHeaders
 import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import scala.concurrent.{ExecutionContext, Future}
+import java.util.UUID
 
 final case class AttributeRegistryManagementServiceImpl(invoker: AttributeRegistryManagementInvoker, api: AttributeApi)(
   implicit ec: ExecutionContext
@@ -17,14 +18,14 @@ final case class AttributeRegistryManagementServiceImpl(invoker: AttributeRegist
   val logger: LoggerTakingImplicit[ContextFieldsToLog] = Logger.takingImplicit[ContextFieldsToLog](this.getClass)
 
   override def getAttributesBulk(
-    attributeIds: Seq[String]
+    attributeIds: Seq[UUID]
   )(implicit contexts: Seq[(String, String)]): Future[Seq[Attribute]] = {
     for {
       (bearerToken, correlationId, ip) <- extractHeaders(contexts).toFuture
       request = api.getBulkedAttributes(
         xCorrelationId = correlationId,
         xForwardedFor = ip,
-        Some(attributeIds.mkString(","))
+        Some(attributeIds.map(_.toString).mkString(","))
       )(BearerToken(bearerToken))
       result <- invoker
         .execute(request)

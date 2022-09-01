@@ -36,6 +36,7 @@ import java.io.{File, FileOutputStream}
 import java.nio.file.{Files, Path}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
+import java.util.UUID
 
 final case class ProcessApiServiceImpl(
   catalogManagementService: CatalogManagementService,
@@ -580,14 +581,14 @@ final case class ProcessApiServiceImpl(
     )
   } yield Converter.convertToApiEservice(eservice, organization, attributes)
 
-  private def extractIdsFromAttributes(attributes: CatalogManagementDependency.Attributes): Seq[String] =
+  private def extractIdsFromAttributes(attributes: CatalogManagementDependency.Attributes): Seq[UUID] =
     attributes.certified.flatMap(extractIdsFromAttribute) ++
       attributes.declared.flatMap(extractIdsFromAttribute) ++
       attributes.verified.flatMap(extractIdsFromAttribute)
 
-  private def extractIdsFromAttribute(attribute: CatalogManagementDependency.Attribute): Seq[String] = {
-    val fromSingle: Seq[String] = attribute.single.toSeq.map(_.id)
-    val fromGroup: Seq[String]  = attribute.group.toSeq.flatMap(_.map(_.id))
+  private def extractIdsFromAttribute(attribute: CatalogManagementDependency.Attribute): Seq[UUID] = {
+    val fromSingle: Seq[UUID] = attribute.single.toSeq.map(_.id)
+    val fromGroup: Seq[UUID]  = attribute.group.toSeq.flatMap(_.map(_.id))
 
     fromSingle ++ fromGroup
   }

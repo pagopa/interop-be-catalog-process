@@ -180,7 +180,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       (attributeRegistryManagementService
-        .getAttributesBulk(_: Seq[String])(_: Seq[(String, String)]))
+        .getAttributesBulk(_: Seq[UUID])(_: Seq[(String, String)]))
         .expects(Seq.empty, *)
         .returning(Future.successful(Seq.empty))
         .once()
@@ -216,8 +216,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
           certified = List(
             CatalogManagementDependency
               .Attribute(
-                single =
-                  Some(CatalogManagementDependency.AttributeValue("0001", explicitAttributeVerification = false)),
+                single = Some(
+                  CatalogManagementDependency.AttributeValue(
+                    UUID.fromString("a54aebcc-f469-4c5a-b232-8b7003824300"),
+                    explicitAttributeVerification = false
+                  )
+                ),
                 group = None
               )
           ),
@@ -225,14 +229,25 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
             CatalogManagementDependency
               .Attribute(
                 single = None,
-                group =
-                  Some(List(CatalogManagementDependency.AttributeValue("0002", explicitAttributeVerification = false)))
+                group = Some(
+                  List(
+                    CatalogManagementDependency.AttributeValue(
+                      UUID.fromString("b54aebcc-f469-4c5a-b232-8b7003824300"),
+                      explicitAttributeVerification = false
+                    )
+                  )
+                )
               )
           ),
           verified = List(
             CatalogManagementDependency
               .Attribute(
-                single = Some(CatalogManagementDependency.AttributeValue("0003", explicitAttributeVerification = true)),
+                single = Some(
+                  CatalogManagementDependency.AttributeValue(
+                    UUID.fromString("d54aebcc-f469-4c5a-b232-8b7003824300"),
+                    explicitAttributeVerification = true
+                  )
+                ),
                 group = None
               )
           )
@@ -276,9 +291,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         attributes = Seq.empty[PartyManagementApiAttribute]
       )
 
-      val attributeId1: String = "0001"
-      val attributeId2: String = "0002"
-      val attributeId3: String = "0003"
+      val attributeId1: UUID = UUID.fromString("a54aebcc-f469-4c5a-b232-8b7003824300")
+      val attributeId2: UUID = UUID.fromString("b54aebcc-f469-4c5a-b232-8b7003824300")
+      val attributeId3: UUID = UUID.fromString("d54aebcc-f469-4c5a-b232-8b7003824300")
 
       val attribute1 = AttributeRegistryManagementApiAttribute(
         id = attributeId1,
@@ -321,7 +336,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       (attributeRegistryManagementService
-        .getAttributesBulk(_: Seq[String])(_: Seq[(String, String)]))
+        .getAttributesBulk(_: Seq[UUID])(_: Seq[(String, String)]))
         .expects(Seq(attributeId1, attributeId2, attributeId3), *)
         .returning(Future.successful(Seq(attribute1, attribute2, attribute3)))
         .once()
