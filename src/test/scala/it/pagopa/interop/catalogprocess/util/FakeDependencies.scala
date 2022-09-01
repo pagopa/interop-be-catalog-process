@@ -63,7 +63,7 @@ object FakeDependencies {
   }
 
   class FakeAttributeRegistryManagementService extends AttributeRegistryManagementService {
-    override def getAttributesBulk(attributeIds: Seq[String])(implicit
+    override def getAttributesBulk(attributeIds: Seq[UUID])(implicit
       contexts: Seq[(String, String)]
     ): Future[Seq[Attribute]] = Future.successful(Seq.empty)
   }

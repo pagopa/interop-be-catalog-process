@@ -913,6 +913,7 @@ components:
       properties:
         id:
           type: string
+          format: uuid
         explicitAttributeVerification:
           type: boolean
       required:
@@ -1028,6 +1029,7 @@ components:
       properties:
         id:
           type: string
+          format: uuid
         name:
           type: string
         description:
@@ -1133,6 +1135,7 @@ components:
       properties:
         id:
           type: string
+          format: uuid
       required:
         - id
     AgreementState:
