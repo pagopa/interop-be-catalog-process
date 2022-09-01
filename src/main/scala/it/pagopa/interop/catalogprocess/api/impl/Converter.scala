@@ -60,7 +60,7 @@ object Converter {
     attributes: Seq[AttributeManagementDependency.Attribute]
   ): Attributes = {
     val attributeNames: Map[String, AttributeDetails] =
-      attributes.map(attr => attr.id -> AttributeDetails(attr.name, attr.description)).toMap
+      attributes.map(attr => attr.id.toString -> AttributeDetails(attr.name, attr.description)).toMap
 
     Attributes(
       certified = currentAttributes.certified.map(convertToApiAttribute(attributeNames)),
@@ -82,9 +82,9 @@ object Converter {
     id = value.id,
     // TODO how to manage this case? Raise an error/Default/Flat option values
     // TODO for now default value "Unknown"
-    name = attributeNames.get(value.id).map(_.name).getOrElse("Unknown"),
+    name = attributeNames.get(value.id.toString).map(_.name).getOrElse("Unknown"),
     // TODO same here
-    description = attributeNames.get(value.id).map(_.description).getOrElse("Unknown"),
+    description = attributeNames.get(value.id.toString).map(_.description).getOrElse("Unknown"),
     explicitAttributeVerification = value.explicitAttributeVerification
   )
 
