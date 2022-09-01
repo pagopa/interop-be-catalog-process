@@ -699,8 +699,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  ? /eservices/{eServiceId}/descriptors/{descriptorId}/documents/{documentId}/update
-  : parameters:
+  /eservices/{eServiceId}/descriptors/{descriptorId}/documents/{documentId}/update:
+    parameters:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/IpAddress'
     post:
