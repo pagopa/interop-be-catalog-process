@@ -7,6 +7,7 @@ import it.pagopa.interop.agreementmanagement.client.{model => AgreementManagemen
 import it.pagopa.interop.catalogprocess.model._
 
 import scala.concurrent.Future
+import java.util.UUID
 
 object Converter {
 
@@ -59,8 +60,8 @@ object Converter {
     currentAttributes: CatalogManagementDependency.Attributes,
     attributes: Seq[AttributeManagementDependency.Attribute]
   ): Attributes = {
-    val attributeNames: Map[String, AttributeDetails] =
-      attributes.map(attr => attr.id.toString -> AttributeDetails(attr.name, attr.description)).toMap
+    val attributeNames: Map[UUID, AttributeDetails] =
+      attributes.map(attr => attr.id -> AttributeDetails(attr.name, attr.description)).toMap
 
     Attributes(
       certified = currentAttributes.certified.map(convertToApiAttribute(attributeNames)),
@@ -70,21 +71,21 @@ object Converter {
   }
 
   private def convertToApiAttribute(
-    attributeNames: Map[String, AttributeDetails]
+    attributeNames: Map[UUID, AttributeDetails]
   )(attribute: CatalogManagementDependency.Attribute): Attribute = Attribute(
     single = attribute.single.map(convertToApiAttributeValue(attributeNames)),
     group = attribute.group.map(values => values.map(convertToApiAttributeValue(attributeNames)))
   )
 
   private def convertToApiAttributeValue(
-    attributeNames: Map[String, AttributeDetails]
+    attributeNames: Map[UUID, AttributeDetails]
   )(value: CatalogManagementDependency.AttributeValue) = AttributeValue(
     id = value.id,
     // TODO how to manage this case? Raise an error/Default/Flat option values
     // TODO for now default value "Unknown"
-    name = attributeNames.get(value.id.toString).map(_.name).getOrElse("Unknown"),
+    name = attributeNames.get(value.id).map(_.name).getOrElse("Unknown"),
     // TODO same here
-    description = attributeNames.get(value.id.toString).map(_.description).getOrElse("Unknown"),
+    description = attributeNames.get(value.id).map(_.description).getOrElse("Unknown"),
     explicitAttributeVerification = value.explicitAttributeVerification
   )
 
