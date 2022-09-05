@@ -56,7 +56,7 @@ final case class ProcessApiServiceImpl(
   private[this] def authorize(roles: String*)(
     route: => Route
   )(implicit contexts: Seq[(String, String)], toEntityMarshallerProblem: ToEntityMarshaller[Problem]): Route =
-    authorizeInterop(hasPermissions(roles: _*), problemOf(StatusCodes.Forbidden, List(OperationForbidden))) {
+    authorizeInterop(hasPermissions(roles: _*), problemOf(StatusCodes.Forbidden, OperationForbidden)) {
       route
     }
 
@@ -85,11 +85,7 @@ final case class ProcessApiServiceImpl(
         val errorResponse: Problem =
           problemOf(
             StatusCodes.BadRequest,
-            List(
-              EServiceCreationError(
-                s"Error while creating E-Service for producer Id ${eServiceSeed.producerId.toString}"
-              )
-            )
+            EServiceCreationError(s"Error while creating E-Service for producer Id ${eServiceSeed.producerId.toString}")
           )
         createEService400(errorResponse)
     }
@@ -124,10 +120,8 @@ final case class ProcessApiServiceImpl(
         deleteDraft400(
           problemOf(
             StatusCodes.BadRequest,
-            List(
-              DraftDescriptorDeletionBadRequest(
-                s"Error while deleting draft descriptor $descriptorId for E-Service $eServiceId"
-              )
+            DraftDescriptorDeletionBadRequest(
+              s"Error while deleting draft descriptor $descriptorId for E-Service $eServiceId"
             )
           )
         )
@@ -136,10 +130,8 @@ final case class ProcessApiServiceImpl(
         deleteDraft404(
           problemOf(
             StatusCodes.NotFound,
-            List(
-              DraftDescriptorDeletionNotFound(
-                s"Error while deleting draft descriptor $descriptorId for E-Service $eServiceId"
-              )
+            DraftDescriptorDeletionNotFound(
+              s"Error while deleting draft descriptor $descriptorId for E-Service $eServiceId"
             )
           )
         )
@@ -147,10 +139,8 @@ final case class ProcessApiServiceImpl(
         logger.error(s"Error while deleting draft descriptor $descriptorId for e-service $eServiceId", ex)
         val error = problemOf(
           StatusCodes.InternalServerError,
-          List(
-            DraftDescriptorDeletionError(
-              s"Unexpected error while deleting draft descriptor $descriptorId for E-Service $eServiceId"
-            )
+          DraftDescriptorDeletionError(
+            s"Unexpected error while deleting draft descriptor $descriptorId for E-Service $eServiceId"
           )
         )
         complete(error.status, error)
@@ -185,7 +175,7 @@ final case class ProcessApiServiceImpl(
           ex
         )
         val error =
-          problemOf(StatusCodes.InternalServerError, List(EServicesRetrievalError))
+          problemOf(StatusCodes.InternalServerError, EServicesRetrievalError)
         complete(error.status, error)
     }
   }
@@ -231,21 +221,19 @@ final case class ProcessApiServiceImpl(
       case Success(_)                                      => publishDescriptor204
       case Failure(ex: ApiError[_]) if ex.code == 400      =>
         logger.error(s"Error while publishing descriptor $descriptorId for eservice $eServiceId", ex)
-        publishDescriptor400(
-          problemOf(StatusCodes.BadRequest, List(PublishDescriptorBadRequest(descriptorId, eServiceId)))
-        )
+        publishDescriptor400(problemOf(StatusCodes.BadRequest, PublishDescriptorBadRequest(descriptorId, eServiceId)))
       case Failure(ex: ApiError[_]) if ex.code == 404      =>
         logger.error(s"Error while publishing descriptor $descriptorId for eservice $eServiceId", ex)
 
-        publishDescriptor404(problemOf(StatusCodes.NotFound, List(PublishDescriptorNotFound(descriptorId, eServiceId))))
+        publishDescriptor404(problemOf(StatusCodes.NotFound, PublishDescriptorNotFound(descriptorId, eServiceId)))
       case Failure(ex: EServiceDescriptorWithoutInterface) =>
         logger.error(s"Error while publishing descriptor $descriptorId for eservice $eServiceId", ex)
 
-        publishDescriptor400(problemOf(StatusCodes.BadRequest, List(ex)))
+        publishDescriptor400(problemOf(StatusCodes.BadRequest, ex))
       case Failure(ex)                                     =>
         logger.error(s"Error while publishing descriptor $descriptorId for eservice $eServiceId", ex)
         val error =
-          problemOf(StatusCodes.InternalServerError, List(PublishDescriptorError(descriptorId, eServiceId)))
+          problemOf(StatusCodes.InternalServerError, PublishDescriptorError(descriptorId, eServiceId))
         complete(error.status, error)
     }
   }
@@ -271,7 +259,7 @@ final case class ProcessApiServiceImpl(
       case Failure(ex)       =>
         logger.error(s"Error while getting e-service $eServiceId", ex)
         val error =
-          problemOf(StatusCodes.InternalServerError, List(EServiceRetrievalError(eServiceId)))
+          problemOf(StatusCodes.InternalServerError, EServiceRetrievalError(eServiceId))
         complete(error.status, error)
     }
   }
@@ -311,7 +299,7 @@ final case class ProcessApiServiceImpl(
           ex
         )
         createEServiceDocument400(
-          problemOf(StatusCodes.BadRequest, List(CreateDescriptorDocumentBadRequest(descriptorId, eServiceId)))
+          problemOf(StatusCodes.BadRequest, CreateDescriptorDocumentBadRequest(descriptorId, eServiceId))
         )
       case Failure(ex: ApiError[_]) if ex.code == 404 =>
         logger.error(
@@ -319,7 +307,7 @@ final case class ProcessApiServiceImpl(
           ex
         )
         createEServiceDocument404(
-          problemOf(StatusCodes.NotFound, List(CreateDescriptorDocumentNotFound(descriptorId, eServiceId)))
+          problemOf(StatusCodes.NotFound, CreateDescriptorDocumentNotFound(descriptorId, eServiceId))
         )
       case Failure(ex)                                =>
         logger.error(
@@ -327,7 +315,7 @@ final case class ProcessApiServiceImpl(
           ex
         )
         val error =
-          problemOf(StatusCodes.InternalServerError, List(CreateDescriptorDocumentError(descriptorId, eServiceId)))
+          problemOf(StatusCodes.InternalServerError, CreateDescriptorDocumentError(descriptorId, eServiceId))
         complete(error.status, error)
     }
   }
@@ -364,7 +352,7 @@ final case class ProcessApiServiceImpl(
           ex
         )
         getEServiceDocumentById400(
-          problemOf(StatusCodes.BadRequest, List(GetDescriptorDocumentBadRequest(documentId, descriptorId, eServiceId)))
+          problemOf(StatusCodes.BadRequest, GetDescriptorDocumentBadRequest(documentId, descriptorId, eServiceId))
         )
       case Failure(ex: ApiError[_]) if ex.code == 404 =>
         logger.error(
@@ -372,7 +360,7 @@ final case class ProcessApiServiceImpl(
           ex
         )
         getEServiceDocumentById404(
-          problemOf(StatusCodes.NotFound, List(GetDescriptorDocumentNotFound(documentId, descriptorId, eServiceId)))
+          problemOf(StatusCodes.NotFound, GetDescriptorDocumentNotFound(documentId, descriptorId, eServiceId))
         )
       case Failure(ex: ContentTypeParsingError)       =>
         logger.error(
@@ -380,7 +368,7 @@ final case class ProcessApiServiceImpl(
               .mkString(", ")}",
           ex
         )
-        val error = problemOf(StatusCodes.InternalServerError, List(ex))
+        val error = problemOf(StatusCodes.InternalServerError, ex)
         complete(error.status, error)
       case Failure(ex)                                =>
         logger.error(
@@ -388,10 +376,8 @@ final case class ProcessApiServiceImpl(
           ex
         )
         val error =
-          problemOf(
-            StatusCodes.InternalServerError,
-            List(GetDescriptorDocumentError(documentId, descriptorId, eServiceId))
-          )
+          problemOf(StatusCodes.InternalServerError, GetDescriptorDocumentError(documentId, descriptorId, eServiceId))
+
         complete(error.status, error)
     }
   }
@@ -458,7 +444,7 @@ final case class ProcessApiServiceImpl(
           s"Error while getting flatten e-services list for caller $callerId where producer = $producerId, consumer = $consumerId, state = $state and latest published only = $latestPublishedOnly",
           ex
         )
-        val error = problemOf(StatusCodes.InternalServerError, List(FlattenedEServicesRetrievalError))
+        val error = problemOf(StatusCodes.InternalServerError, FlattenedEServicesRetrievalError)
         complete(error.status, error)
     }
   }
@@ -505,7 +491,7 @@ final case class ProcessApiServiceImpl(
       case Success(res) => createDescriptor200(res)
       case Failure(ex)  =>
         logger.error(s"Error while creating descriptor for e-service $eServiceId", ex)
-        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, List(CreateDescriptorError(eServiceId)))
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, CreateDescriptorError(eServiceId))
         createDescriptor400(errorResponse)
     }
   }
@@ -540,7 +526,7 @@ final case class ProcessApiServiceImpl(
       case Success(res) => updateDraftDescriptor200(res)
       case Failure(ex)  =>
         logger.error(s"Error while updating draft descriptor $descriptorId of e-service $eServiceId", ex)
-        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, List(UpdateDraftDescriptorError(eServiceId)))
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, UpdateDraftDescriptorError(eServiceId))
         updateDraftDescriptor400(errorResponse)
     }
   }
@@ -567,7 +553,7 @@ final case class ProcessApiServiceImpl(
       case Success(res) => updateEServiceById200(res)
       case Failure(ex)  =>
         logger.error(s"Error while updating e-service by id $eServiceId", ex)
-        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, List(UpdateEServiceError(eServiceId)))
+        val errorResponse: Problem = problemOf(StatusCodes.BadRequest, UpdateEServiceError(eServiceId))
         createDescriptor400(errorResponse)
     }
   }
@@ -710,10 +696,7 @@ final case class ProcessApiServiceImpl(
           ex
         )
         deleteEServiceDocumentById400(
-          problemOf(
-            StatusCodes.BadRequest,
-            List(DeleteDescriptorDocumentBadRequest(documentId, descriptorId, eServiceId))
-          )
+          problemOf(StatusCodes.BadRequest, DeleteDescriptorDocumentBadRequest(documentId, descriptorId, eServiceId))
         )
       case Failure(ex: ApiError[_]) if ex.code == 404 =>
         logger.error(
@@ -721,7 +704,7 @@ final case class ProcessApiServiceImpl(
           ex
         )
         deleteEServiceDocumentById404(
-          problemOf(StatusCodes.NotFound, List(DeleteDescriptorDocumentNotFound(documentId, descriptorId, eServiceId)))
+          problemOf(StatusCodes.NotFound, DeleteDescriptorDocumentNotFound(documentId, descriptorId, eServiceId))
         )
       case Failure(ex)                                =>
         logger.error(
@@ -730,7 +713,7 @@ final case class ProcessApiServiceImpl(
         )
         val error = problemOf(
           StatusCodes.InternalServerError,
-          List(DeleteDescriptorDocumentError(documentId, descriptorId, eServiceId))
+          DeleteDescriptorDocumentError(documentId, descriptorId, eServiceId)
         )
         complete(error.status, error)
     }
@@ -767,21 +750,18 @@ final case class ProcessApiServiceImpl(
       case Failure(ex: ApiError[_]) if ex.code == 400 =>
         logger.error(s"Error while updating e-service by id $eServiceId", ex)
         updateEServiceDocumentById400(
-          problemOf(
-            StatusCodes.BadRequest,
-            List(UpdateDescriptorDocumentBadRequest(documentId, descriptorId, eServiceId))
-          )
+          problemOf(StatusCodes.BadRequest, UpdateDescriptorDocumentBadRequest(documentId, descriptorId, eServiceId))
         )
       case Failure(ex: ApiError[_]) if ex.code == 404 =>
         logger.error(s"Error while updating e-service by id $eServiceId", ex)
         updateEServiceDocumentById404(
-          problemOf(StatusCodes.NotFound, List(UpdateDescriptorDocumentNotFound(documentId, descriptorId, eServiceId)))
+          problemOf(StatusCodes.NotFound, UpdateDescriptorDocumentNotFound(documentId, descriptorId, eServiceId))
         )
       case Failure(ex)                                =>
         logger.error(s"Error while updating e-service by id $eServiceId", ex)
         val error = problemOf(
           StatusCodes.InternalServerError,
-          List(UpdateDescriptorDocumentError(documentId, descriptorId, eServiceId))
+          UpdateDescriptorDocumentError(documentId, descriptorId, eServiceId)
         )
         complete(error.status, error)
     }
@@ -808,7 +788,7 @@ final case class ProcessApiServiceImpl(
       case Failure(ex)  =>
         logger.error(s"Error while cloning descriptor $descriptorId of e-service $eServiceId", ex)
         val errorResponse: Problem =
-          problemOf(StatusCodes.BadRequest, List(CloneDescriptorError(descriptorId, eServiceId)))
+          problemOf(StatusCodes.BadRequest, CloneDescriptorError(descriptorId, eServiceId))
         cloneEServiceByDescriptor400(errorResponse)
     }
   }
@@ -829,7 +809,7 @@ final case class ProcessApiServiceImpl(
         case Failure(ex) =>
           logger.error(s"Error while deleting e-service $eServiceId", ex)
           val error =
-            problemOf(StatusCodes.InternalServerError, List(EServiceDeletionError(eServiceId)))
+            problemOf(StatusCodes.InternalServerError, EServiceDeletionError(eServiceId))
           complete(error.status, error)
       }
     }
@@ -883,21 +863,21 @@ final case class ProcessApiServiceImpl(
       case Success(_)                                 => activateDescriptor204
       case Failure(ex: NotValidDescriptor)            =>
         logger.error(s"Activating descriptor $descriptorId for e-service $eServiceId", ex)
-        activateDescriptor400(problemOf(StatusCodes.BadRequest, List(ex)))
+        activateDescriptor400(problemOf(StatusCodes.BadRequest, ex))
       case Failure(ex: ApiError[_]) if ex.code == 400 =>
         logger.error(s"Activating descriptor $descriptorId for e-service $eServiceId", ex)
         activateDescriptor400(
-          problemOf(StatusCodes.BadRequest, List(ActivateDescriptorDocumentBadRequest(descriptorId, eServiceId)))
+          problemOf(StatusCodes.BadRequest, ActivateDescriptorDocumentBadRequest(descriptorId, eServiceId))
         )
       case Failure(ex: ApiError[_]) if ex.code == 404 =>
         logger.error(s"Activating descriptor $descriptorId for e-service $eServiceId", ex)
         activateDescriptor404(
-          problemOf(StatusCodes.NotFound, List(ActivateDescriptorDocumentNotFound(descriptorId, eServiceId)))
+          problemOf(StatusCodes.NotFound, ActivateDescriptorDocumentNotFound(descriptorId, eServiceId))
         )
       case Failure(ex)                                =>
         logger.error(s"Activating descriptor $descriptorId for e-service $eServiceId", ex)
         val error =
-          problemOf(StatusCodes.InternalServerError, List(ActivateDescriptorDocumentError(descriptorId, eServiceId)))
+          problemOf(StatusCodes.InternalServerError, ActivateDescriptorDocumentError(descriptorId, eServiceId))
         complete(error.status, error)
     }
   }
@@ -931,21 +911,21 @@ final case class ProcessApiServiceImpl(
       case Success(_)                                 => suspendDescriptor204
       case Failure(ex: NotValidDescriptor)            =>
         logger.error(s"Error during suspension of descriptor $descriptorId of e-service $eServiceId", ex)
-        suspendDescriptor400(problemOf(StatusCodes.BadRequest, List(ex)))
+        suspendDescriptor400(problemOf(StatusCodes.BadRequest, ex))
       case Failure(ex: ApiError[_]) if ex.code == 400 =>
         logger.error(s"Error during suspension of descriptor $descriptorId of e-service $eServiceId", ex)
         suspendDescriptor400(
-          problemOf(StatusCodes.BadRequest, List(SuspendDescriptorDocumentBadRequest(descriptorId, eServiceId)))
+          problemOf(StatusCodes.BadRequest, SuspendDescriptorDocumentBadRequest(descriptorId, eServiceId))
         )
       case Failure(ex: ApiError[_]) if ex.code == 404 =>
         logger.error(s"Error during suspension of descriptor $descriptorId of e-service $eServiceId", ex)
         suspendDescriptor404(
-          problemOf(StatusCodes.NotFound, List(SuspendDescriptorDocumentNotFound(descriptorId, eServiceId)))
+          problemOf(StatusCodes.NotFound, SuspendDescriptorDocumentNotFound(descriptorId, eServiceId))
         )
       case Failure(ex)                                =>
         logger.error(s"Error during suspension of descriptor $descriptorId of e-service $eServiceId", ex)
         val error =
-          problemOf(StatusCodes.InternalServerError, List(SuspendDescriptorDocumentError(descriptorId, eServiceId)))
+          problemOf(StatusCodes.InternalServerError, SuspendDescriptorDocumentError(descriptorId, eServiceId))
         complete(error.status, error)
     }
   }
