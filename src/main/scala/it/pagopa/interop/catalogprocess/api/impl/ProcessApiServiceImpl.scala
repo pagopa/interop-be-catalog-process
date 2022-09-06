@@ -377,6 +377,7 @@ final case class ProcessApiServiceImpl(
         )
         val error =
           problemOf(StatusCodes.InternalServerError, GetDescriptorDocumentError(documentId, descriptorId, eServiceId))
+
         complete(error.status, error)
     }
   }
@@ -923,7 +924,8 @@ final case class ProcessApiServiceImpl(
         )
       case Failure(ex)                                =>
         logger.error(s"Error during suspension of descriptor $descriptorId of e-service $eServiceId", ex)
-        val error = problemOf(StatusCodes.InternalServerError, SuspendDescriptorDocumentError(descriptorId, eServiceId))
+        val error =
+          problemOf(StatusCodes.InternalServerError, SuspendDescriptorDocumentError(descriptorId, eServiceId))
         complete(error.status, error)
     }
   }

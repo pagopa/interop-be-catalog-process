@@ -207,8 +207,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
     "succeed" in {
 
+      val attributeId1: UUID = UUID.randomUUID()
+      val attributeId2: UUID = UUID.randomUUID()
+      val attributeId3: UUID = UUID.randomUUID()
+
       val seed = CatalogManagementDependency.EServiceSeed(
-        producerId = UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824300"),
+        producerId = UUID.randomUUID(),
         name = "MyService",
         description = "My Service",
         technology = CatalogManagementDependency.EServiceTechnology.REST,
@@ -216,12 +220,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
           certified = List(
             CatalogManagementDependency
               .Attribute(
-                single = Some(
-                  CatalogManagementDependency.AttributeValue(
-                    UUID.fromString("a54aebcc-f469-4c5a-b232-8b7003824300"),
-                    explicitAttributeVerification = false
-                  )
-                ),
+                single =
+                  Some(CatalogManagementDependency.AttributeValue(attributeId1, explicitAttributeVerification = false)),
                 group = None
               )
           ),
@@ -230,24 +230,15 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
               .Attribute(
                 single = None,
                 group = Some(
-                  List(
-                    CatalogManagementDependency.AttributeValue(
-                      UUID.fromString("b54aebcc-f469-4c5a-b232-8b7003824300"),
-                      explicitAttributeVerification = false
-                    )
-                  )
+                  List(CatalogManagementDependency.AttributeValue(attributeId2, explicitAttributeVerification = false))
                 )
               )
           ),
           verified = List(
             CatalogManagementDependency
               .Attribute(
-                single = Some(
-                  CatalogManagementDependency.AttributeValue(
-                    UUID.fromString("d54aebcc-f469-4c5a-b232-8b7003824300"),
-                    explicitAttributeVerification = true
-                  )
-                ),
+                single =
+                  Some(CatalogManagementDependency.AttributeValue(attributeId3, explicitAttributeVerification = true)),
                 group = None
               )
           )
@@ -255,7 +246,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       )
 
       val eservice = CatalogManagementDependency.EService(
-        id = UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824301"),
+        id = UUID.randomUUID(),
         producerId = seed.producerId,
         name = seed.name,
         description = seed.description,
@@ -263,7 +254,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         attributes = seed.attributes,
         descriptors = List(
           CatalogManagementDependency.EServiceDescriptor(
-            id = UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824302"),
+            id = UUID.randomUUID(),
             version = "1",
             description = None,
             interface = None,
@@ -290,10 +281,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         institutionType = "",
         attributes = Seq.empty[PartyManagementApiAttribute]
       )
-
-      val attributeId1: UUID = UUID.fromString("a54aebcc-f469-4c5a-b232-8b7003824300")
-      val attributeId2: UUID = UUID.fromString("b54aebcc-f469-4c5a-b232-8b7003824300")
-      val attributeId3: UUID = UUID.fromString("d54aebcc-f469-4c5a-b232-8b7003824300")
 
       val attribute1 = AttributeRegistryManagementApiAttribute(
         id = attributeId1,
@@ -375,7 +362,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val response = request("eservices", HttpMethods.POST, Some(requestData))
 
       val expected = EService(
-        id = UUID.fromString("c54aebcc-f469-4c5a-b232-8b7003824301"),
+        id = eservice.id,
         producer = Organization(id = institution.id, name = institution.description),
         name = seed.name,
         description = seed.description,
