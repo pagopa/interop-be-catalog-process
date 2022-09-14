@@ -34,9 +34,9 @@ import it.pagopa.interop.selfcare.partymanagement.client.model.{BulkInstitutions
 
 import java.io.{File, FileOutputStream}
 import java.nio.file.{Files, Path}
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
-import java.util.UUID
 
 final case class ProcessApiServiceImpl(
   catalogManagementService: CatalogManagementService,
@@ -589,10 +589,11 @@ final case class ProcessApiServiceImpl(
       catalogManagementService.listEServices(producerId, status)
     else
       for {
-        agreements <- agreementStates.distinct
-          .map(convertToApiAgreementState)
-          .map(Some(_))
-          .flatTraverse(agreementManagementService.getAgreements(consumerId, producerId, _).map(_.toList))
+        agreements <- agreementManagementService.getAgreements(
+          consumerId,
+          producerId,
+          agreementStates.distinct.map(convertToApiAgreementState)
+        )
         ids = agreements.map(_.eserviceId.toString).distinct
         eservices <- Future.traverse(ids)(catalogManagementService.getEService(_))
       } yield eservices.filter(eService =>

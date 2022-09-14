@@ -17,7 +17,7 @@ final case class AgreementManagementServiceImpl(invoker: AgreementManagementInvo
   implicit val logger: LoggerTakingImplicit[ContextFieldsToLog] =
     Logger.takingImplicit[ContextFieldsToLog](this.getClass)
 
-  override def getAgreements(consumerId: Option[String], producerId: Option[String], state: Option[AgreementState])(
+  override def getAgreements(consumerId: Option[String], producerId: Option[String], states: List[AgreementState])(
     implicit contexts: Seq[(String, String)]
   ): Future[Seq[Agreement]] = for {
     (bearerToken, correlationId, ip) <- extractHeaders(contexts).toFuture
@@ -26,7 +26,7 @@ final case class AgreementManagementServiceImpl(invoker: AgreementManagementInvo
       xForwardedFor = ip,
       consumerId = consumerId,
       producerId = producerId,
-      state = state
+      states = states
     )(BearerToken(bearerToken))
     result <- invoker.invoke(request, s"Agreements retrieval for consumer ${consumerId.getOrElse("Unknown")}")
   } yield result

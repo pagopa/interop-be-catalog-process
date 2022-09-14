@@ -1,13 +1,13 @@
 package it.pagopa.interop.catalogprocess.api.impl
 
-import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
-import it.pagopa.interop.selfcare.partymanagement.client.{model => PartyManagementDependency}
-import it.pagopa.interop.attributeregistrymanagement.client.{model => AttributeManagementDependency}
 import it.pagopa.interop.agreementmanagement.client.{model => AgreementManagementDependency}
+import it.pagopa.interop.attributeregistrymanagement.client.{model => AttributeManagementDependency}
+import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.catalogprocess.model._
+import it.pagopa.interop.selfcare.partymanagement.client.{model => PartyManagementDependency}
 
-import scala.concurrent.Future
 import java.util.UUID
+import scala.concurrent.Future
 
 object Converter {
 
@@ -48,13 +48,15 @@ object Converter {
     prettyName = document.prettyName
   )
 
-  def convertToApiAgreementState(state: AgreementState): AgreementManagementDependency.AgreementState =
-    state match {
-      case AgreementState.ACTIVE    => AgreementManagementDependency.AgreementState.ACTIVE
-      case AgreementState.INACTIVE  => AgreementManagementDependency.AgreementState.INACTIVE
-      case AgreementState.PENDING   => AgreementManagementDependency.AgreementState.PENDING
-      case AgreementState.SUSPENDED => AgreementManagementDependency.AgreementState.SUSPENDED
-    }
+  def convertToApiAgreementState(state: AgreementState): AgreementManagementDependency.AgreementState = state match {
+    case AgreementState.DRAFT                        => AgreementManagementDependency.AgreementState.DRAFT
+    case AgreementState.PENDING                      => AgreementManagementDependency.AgreementState.PENDING
+    case AgreementState.ACTIVE                       => AgreementManagementDependency.AgreementState.ACTIVE
+    case AgreementState.SUSPENDED                    => AgreementManagementDependency.AgreementState.SUSPENDED
+    case AgreementState.ARCHIVED                     => AgreementManagementDependency.AgreementState.ARCHIVED
+    case AgreementState.MISSING_CERTIFIED_ATTRIBUTES =>
+      AgreementManagementDependency.AgreementState.MISSING_CERTIFIED_ATTRIBUTES
+  }
 
   private def convertToApiAttributes(
     currentAttributes: CatalogManagementDependency.Attributes,

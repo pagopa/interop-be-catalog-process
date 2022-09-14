@@ -124,21 +124,27 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val producerId1      = UUID.randomUUID()
 
       val activeAgreement = Agreement(
-        UUID.randomUUID(),
-        eserviceId1,
-        descriptorId1,
-        UUID.randomUUID(),
-        consumerId,
-        AgreementState.ACTIVE,
-        Seq.empty,
-        None,
-        None,
-        OffsetDateTime.now()
+        id = UUID.randomUUID(),
+        eserviceId = eserviceId1,
+        descriptorId = descriptorId1,
+        producerId = UUID.randomUUID(),
+        consumerId = consumerId,
+        state = AgreementState.ACTIVE,
+        verifiedAttributes = List.empty,
+        certifiedAttributes = List.empty,
+        declaredAttributes = List.empty,
+        suspendedByConsumer = None,
+        suspendedByProducer = None,
+        suspendedByPlatform = None,
+        consumerDocuments = List.empty,
+        createdAt = OffsetDateTime.now(),
+        updatedAt = None,
+        consumerNotes = None
       )
 
       (agreementManagementService
-        .getAgreements(_: Option[String], _: Option[String], _: Option[AgreementState])(_: Seq[(String, String)]))
-        .expects(Some(consumerId.toString), None, Some(AgreementState.ACTIVE), *)
+        .getAgreements(_: Option[String], _: Option[String], _: List[AgreementState])(_: Seq[(String, String)]))
+        .expects(Some(consumerId.toString), None, List(AgreementState.ACTIVE), *)
         .returning(Future.successful(Seq(activeAgreement)))
         .once()
 
