@@ -1142,10 +1142,12 @@ components:
       type: string
       description: Agreement State
       enum:
-        - ACTIVE
-        - INACTIVE
+        - DRAFT
         - PENDING
+        - ACTIVE
         - SUSPENDED
+        - ARCHIVED
+        - MISSING_CERTIFIED_ATTRIBUTES
     Problem:
       properties:
         type:
