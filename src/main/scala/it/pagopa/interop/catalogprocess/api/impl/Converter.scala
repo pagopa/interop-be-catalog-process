@@ -48,16 +48,15 @@ object Converter {
     prettyName = document.prettyName
   )
 
-  def convertToApiAgreementState(state: AgreementState): AgreementManagementDependency.AgreementState =
-    state match {
-      case AgreementState.DRAFT                        => AgreementManagementDependency.AgreementState.DRAFT
-      case AgreementState.PENDING                      => AgreementManagementDependency.AgreementState.PENDING
-      case AgreementState.ACTIVE                       => AgreementManagementDependency.AgreementState.ACTIVE
-      case AgreementState.SUSPENDED                    => AgreementManagementDependency.AgreementState.SUSPENDED
-      case AgreementState.ARCHIVED                     => AgreementManagementDependency.AgreementState.ARCHIVED
-      case AgreementState.MISSING_CERTIFIED_ATTRIBUTES =>
-        AgreementManagementDependency.AgreementState.MISSING_CERTIFIED_ATTRIBUTES
-    }
+  def convertToApiAgreementState(state: AgreementState): AgreementManagementDependency.AgreementState = state match {
+    case AgreementState.DRAFT                        => AgreementManagementDependency.AgreementState.DRAFT
+    case AgreementState.PENDING                      => AgreementManagementDependency.AgreementState.PENDING
+    case AgreementState.ACTIVE                       => AgreementManagementDependency.AgreementState.ACTIVE
+    case AgreementState.SUSPENDED                    => AgreementManagementDependency.AgreementState.SUSPENDED
+    case AgreementState.ARCHIVED                     => AgreementManagementDependency.AgreementState.ARCHIVED
+    case AgreementState.MISSING_CERTIFIED_ATTRIBUTES =>
+      AgreementManagementDependency.AgreementState.MISSING_CERTIFIED_ATTRIBUTES
+  }
 
   private def convertToApiAttributes(
     currentAttributes: CatalogManagementDependency.Attributes,
