@@ -33,7 +33,7 @@ package object impl extends SprayJsonSupport with DefaultJsonProtocol {
 
   implicit val flatAttributeValueFormat: RootJsonFormat[FlatAttributeValue] = jsonFormat1(FlatAttributeValue)
   implicit val flatAttributeFormat: RootJsonFormat[FlatAttribute]           = jsonFormat2(FlatAttribute)
-  implicit val flatEServiceFormat: RootJsonFormat[FlatEService]             = jsonFormat9(FlatEService)
+  implicit val flatEServiceFormat: RootJsonFormat[FlatEService]             = jsonFormat10(FlatEService)
 
   implicit val problemErrorFormat: RootJsonFormat[ProblemError] = jsonFormat2(ProblemError)
   implicit val problemFormat: RootJsonFormat[Problem]           = jsonFormat5(Problem)
