@@ -77,6 +77,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
           version = None,
           state = Some(PUBLISHED),
           descriptorId = Some("1d"),
+          description = "",
           callerSubscribed = None,
           certifiedAttributes = Seq.empty
         ),
@@ -88,6 +89,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
           version = None,
           state = Some(SUSPENDED),
           descriptorId = Some("2d"),
+          description = "",
           callerSubscribed = None,
           certifiedAttributes = Seq.empty
         ),
@@ -99,6 +101,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
           version = None,
           state = Some(SUSPENDED),
           descriptorId = Some("3d"),
+          description = "",
           callerSubscribed = None,
           certifiedAttributes = Seq.empty
         )

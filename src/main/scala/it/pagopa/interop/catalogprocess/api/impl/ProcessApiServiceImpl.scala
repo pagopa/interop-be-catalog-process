@@ -643,6 +643,7 @@ final case class ProcessApiServiceImpl(
       version = None,
       state = None,
       descriptorId = None,
+      description = eservice.description,
       callerSubscribed = agreementSubscribedEservices.find(agr => agr.eserviceId == eservice.id).map(_.id),
       certifiedAttributes = eservice.attributes.certified.map(toFlatAttribute)
     )
