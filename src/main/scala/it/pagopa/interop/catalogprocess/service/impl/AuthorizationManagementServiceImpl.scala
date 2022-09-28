@@ -4,8 +4,7 @@ import it.pagopa.interop.authorizationmanagement.client.api.PurposeApi
 import it.pagopa.interop.authorizationmanagement.client.invoker.BearerToken
 import it.pagopa.interop.authorizationmanagement.client.model.{ClientComponentState, ClientEServiceDetailsUpdate}
 import it.pagopa.interop.catalogprocess.service.{AuthorizationManagementInvoker, AuthorizationManagementService}
-import it.pagopa.interop.commons.utils.TypeConversions.EitherOps
-import it.pagopa.interop.commons.utils.extractHeaders
+import it.pagopa.interop.commons.utils._
 import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import java.util.UUID
@@ -24,8 +23,7 @@ final case class AuthorizationManagementServiceImpl(invoker: AuthorizationManage
     state: ClientComponentState,
     audience: Seq[String],
     voucherLifespan: Int
-  )(implicit contexts: Seq[(String, String)]): Future[Unit] = {
-
+  )(implicit contexts: Seq[(String, String)]): Future[Unit] = withHeaders { (bearerToken, correlationId, ip) =>
     val payload: ClientEServiceDetailsUpdate =
       ClientEServiceDetailsUpdate(
         descriptorId = descriptorId,
@@ -34,20 +32,17 @@ final case class AuthorizationManagementServiceImpl(invoker: AuthorizationManage
         voucherLifespan = voucherLifespan
       )
 
-    for {
-      (bearerToken, correlationId, ip) <- extractHeaders(contexts).toFuture
-      request = api.updateEServiceState(
-        xCorrelationId = correlationId,
-        eserviceId = eServiceId,
-        clientEServiceDetailsUpdate = payload,
-        xForwardedFor = ip
-      )(BearerToken(bearerToken))
-      result <- invoker
-        .invoke(request, s"Update EService state on all clients")
-        .recoverWith { case _ =>
-          Future.successful(())
-        } // Do not fail because this service should not be blocked by this update
-    } yield result
+    val request = api.updateEServiceState(
+      xCorrelationId = correlationId,
+      eserviceId = eServiceId,
+      clientEServiceDetailsUpdate = payload,
+      xForwardedFor = ip
+    )(BearerToken(bearerToken))
 
+    invoker
+      .invoke(request, s"Update EService state on all clients")
+      .recoverWith { case _ =>
+        Future.successful(())
+      } // Do not fail because this service should not be blocked by this update
   }
 }

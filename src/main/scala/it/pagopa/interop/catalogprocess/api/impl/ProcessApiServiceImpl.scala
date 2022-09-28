@@ -28,7 +28,7 @@ import it.pagopa.interop.commons.jwt._
 import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
-import it.pagopa.interop.commons.utils.TypeConversions.{EitherOps, OptionOps}
+import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.OperationForbidden
 import it.pagopa.interop.selfcare.partymanagement.client.model.{BulkInstitutions, BulkPartiesSeed}
 
@@ -76,7 +76,9 @@ final case class ProcessApiServiceImpl(
     } yield apiEservice
 
     onComplete(result) {
-      case Success(res) => createEService200(res)
+      case Success(res) =>
+        logger.info(s"E-Service created with id ${res.id}")
+        createEService200(res)
       case Failure(ex)  =>
         logger.error(
           s"Error while creating e-service for producer ${eServiceSeed.producerId} with service name ${eServiceSeed.name}",
@@ -781,12 +783,16 @@ final case class ProcessApiServiceImpl(
   ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     logger.info("Cloning descriptor {} of e-service {}", descriptorId, eServiceId)
     val result = for {
-      clonedEService <- catalogManagementService.cloneEservice(eServiceId, descriptorId)
+      eServiceUUID   <- eServiceId.toFutureUUID
+      descriptorUUID <- descriptorId.toFutureUUID
+      clonedEService <- catalogManagementService.cloneEservice(eServiceUUID, descriptorUUID)
       apiEservice    <- convertToApiEservice(clonedEService)
     } yield apiEservice
 
     onComplete(result) {
-      case Success(res) => cloneEServiceByDescriptor200(res)
+      case Success(res) =>
+        logger.info(s"E-Service cloned with id ${res.id}")
+        cloneEServiceByDescriptor200(res)
       case Failure(ex)  =>
         logger.error(s"Error while cloning descriptor $descriptorId of e-service $eServiceId", ex)
         val errorResponse: Problem =

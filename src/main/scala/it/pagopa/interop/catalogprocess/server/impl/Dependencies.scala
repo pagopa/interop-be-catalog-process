@@ -86,9 +86,9 @@ trait Dependencies {
   ): AgreementManagementInvoker =
     AgreementManagementInvoker(blockingEc)(actorSystem.classicSystem)
   private val agreementApi: AgreementApi          = AgreementApi(ApplicationConfiguration.agreementManagementUrl)
-  def agreementManagementService(
-    blockingEc: ExecutionContextExecutor
-  )(implicit ec: ExecutionContext, actorSystem: ActorSystem[_]): AgreementManagementService =
+  def agreementManagementService(blockingEc: ExecutionContextExecutor)(implicit
+    actorSystem: ActorSystem[_]
+  ): AgreementManagementService =
     AgreementManagementServiceImpl(agreementManagementInvoker(blockingEc), agreementApi)
 
   private def authorizationManagementInvoker(blockingEc: ExecutionContextExecutor)(implicit

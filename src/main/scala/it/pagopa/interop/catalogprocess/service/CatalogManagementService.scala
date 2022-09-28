@@ -4,6 +4,7 @@ import akka.http.scaladsl.server.directives.FileInfo
 import it.pagopa.interop.catalogmanagement.client.model._
 
 import java.io.File
+import java.util.UUID
 import scala.concurrent.Future
 
 trait CatalogManagementService {
@@ -16,9 +17,7 @@ trait CatalogManagementService {
   def updateEservice(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed)(implicit
     contexts: Seq[(String, String)]
   ): Future[EService]
-  def cloneEservice(eServiceId: String, descriptorId: String)(implicit
-    contexts: Seq[(String, String)]
-  ): Future[EService]
+  def cloneEservice(eServiceId: UUID, descriptorId: UUID)(implicit contexts: Seq[(String, String)]): Future[EService]
   def deleteEService(eServiceId: String)(implicit contexts: Seq[(String, String)]): Future[Unit]
 
   def createDescriptor(eServiceId: String, eServiceDescriptorSeed: EServiceDescriptorSeed)(implicit
