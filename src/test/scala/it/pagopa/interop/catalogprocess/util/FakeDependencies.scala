@@ -124,7 +124,7 @@ object FakeDependencies {
       )
     )
 
-    override def cloneEservice(eServiceId: String, descriptorId: String)(implicit
+    override def cloneEservice(eServiceId: UUID, descriptorId: UUID)(implicit
       contexts: Seq[(String, String)]
     ): Future[EService] = Future.successful(
       EService(
