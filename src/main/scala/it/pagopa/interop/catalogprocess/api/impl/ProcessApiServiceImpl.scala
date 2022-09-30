@@ -429,12 +429,10 @@ final case class ProcessApiServiceImpl(
       agreementStates           <- parseArrayParameters(agreementState).traverse(AgreementState.fromValue).toFuture
       retrievedEservices        <- retrieveEservices(producerId, consumerId, statusEnum, agreementStates)
       eservices                 <- processEservicesWithLatestFilter(retrievedEservices, latestPublishedOnly)
-      tenants                   <- Future.traverse(eservices.map(_.producerId))(tenantManagementService.getTenant)
-      selfcareIds               <- tenants.toList.traverse(_.selfcareId.toFuture(MissingSelfcareId))
-      eservicesAndSelfcareIds = eservices.fproduct(e => tenants.find(_.id == e.producerId).flatMap(_.selfcareId))
-      organizationsDetails <- partyManagementService.getBulkInstitutions(selfcareIds)
-      eservicesAndDescription = eservicesAndSelfcareIds.map { case (eservice, maybeSelfcareId) =>
-        (eservice, organizationsDetails.found.find(_.id == maybeSelfcareId).map(_.description).getOrElse("Unknown"))
+      eserviceAndSelfcareId     <- Future.traverse(eservices.toList)(getGetEserviceAndSelfcareId)
+      organizationsDetails <- partyManagementService.getBulkInstitutions(eserviceAndSelfcareId.map(_._2.toString()))
+      eservicesAndDescription = eserviceAndSelfcareId.map { case (eservice, selfcareId) =>
+        (eservice, organizationsDetails.found.find(_.id == selfcareId).map(_.description).getOrElse("Unknown"))
       }
       flattenServices         = eservicesAndDescription.flatMap { case (service, description) =>
         convertToFlattenEservice(service, callerSubscribedEservices, description)
@@ -454,6 +452,17 @@ final case class ProcessApiServiceImpl(
         complete(error.status, error)
     }
   }
+
+  def getGetEserviceAndSelfcareId(
+    eservice: client.model.EService
+  )(implicit contexts: Seq[(String, String)]): Future[(client.model.EService, UUID)] = eservice
+    .pure[Future]
+    .mproduct(eservice =>
+      tenantManagementService
+        .getTenant(eservice.producerId)
+        .flatMap(_.selfcareId.toFuture(MissingSelfcareId))
+        .flatMap(_.toFutureUUID)
+    )
 
   private def processEservicesWithLatestFilter(
     eservices: Seq[CatalogManagementDependency.EService],
@@ -644,7 +653,6 @@ final case class ProcessApiServiceImpl(
       id = eservice.id,
       producerId = eservice.producerId,
       name = eservice.name,
-      // TODO "Unknown" is a temporary flag
       producerName = description,
       version = None,
       state = None,
