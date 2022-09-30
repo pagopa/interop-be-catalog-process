@@ -432,7 +432,7 @@ final case class ProcessApiServiceImpl(
       eserviceAndSelfcareId     <- Future.traverse(eservices.toList)(getGetEserviceAndSelfcareId)
       organizationsDetails <- partyManagementService.getBulkInstitutions(eserviceAndSelfcareId.map(_._2.toString()))
       eservicesAndDescription = eserviceAndSelfcareId.map { case (eservice, selfcareId) =>
-        (eservice, organizationsDetails.found.find(_.id == selfcareId).map(_.description).getOrElse("Unknown"))
+        (eservice, organizationsDetails.found.find(_.id.toString == selfcareId).map(_.description).getOrElse("Unknown"))
       }
       flattenServices         = eservicesAndDescription.flatMap { case (service, description) =>
         convertToFlattenEservice(service, callerSubscribedEservices, description)
@@ -455,13 +455,12 @@ final case class ProcessApiServiceImpl(
 
   def getGetEserviceAndSelfcareId(
     eservice: client.model.EService
-  )(implicit contexts: Seq[(String, String)]): Future[(client.model.EService, UUID)] = eservice
+  )(implicit contexts: Seq[(String, String)]): Future[(client.model.EService, String)] = eservice
     .pure[Future]
     .mproduct(eservice =>
       tenantManagementService
         .getTenant(eservice.producerId)
         .flatMap(_.selfcareId.toFuture(MissingSelfcareId))
-        .flatMap(_.toFutureUUID)
     )
 
   private def processEservicesWithLatestFilter(
