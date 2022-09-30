@@ -13,6 +13,7 @@ object ApplicationConfiguration {
   val attributeRegistryManagementUrl: String =
     config.getString("catalog-process.services.attribute-registry-management")
   val partyManagementUrl: String             = config.getString("catalog-process.services.party-management")
+  val tenantManagementUrl: String            = config.getString("catalog-process.services.tenant-management")
 
   val partyManagementApiKey: String = config.getString("catalog-process.api-keys.party-management")
 

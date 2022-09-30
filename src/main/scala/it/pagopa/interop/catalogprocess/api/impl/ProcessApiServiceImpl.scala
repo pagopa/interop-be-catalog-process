@@ -30,7 +30,7 @@ import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLo
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.OperationForbidden
-import it.pagopa.interop.selfcare.partymanagement.client.model.{BulkInstitutions, BulkPartiesSeed}
+import it.pagopa.interop.selfcare.partymanagement.client.model.BulkInstitutions
 
 import java.io.{File, FileOutputStream}
 import java.nio.file.{Files, Path}
@@ -44,6 +44,7 @@ final case class ProcessApiServiceImpl(
   attributeRegistryManagementService: AttributeRegistryManagementService,
   agreementManagementService: AgreementManagementService,
   authorizationManagementService: AuthorizationManagementService,
+  tenantManagementService: TenantManagementService,
   fileManager: FileManager,
   jwtReader: JWTReader
 )(implicit ec: ExecutionContext)
@@ -429,9 +430,9 @@ final case class ProcessApiServiceImpl(
       agreementStates           <- parseArrayParameters(agreementState).traverse(AgreementState.fromValue).toFuture
       retrievedEservices        <- retrieveEservices(producerId, consumerId, statusEnum, agreementStates)
       eservices                 <- processEservicesWithLatestFilter(retrievedEservices, latestPublishedOnly)
-      organizationsDetails      <- partyManagementService.getBulkInstitutions(
-        BulkPartiesSeed(partyIdentifiers = eservices.map(_.producerId))
-      )
+      tenants                   <- Future.traverse(eservices.map(_.producerId))(tenantManagementService.getTenant)
+      selfcareIds               <- tenants.toList.traverse(_.selfcareId.toFuture(MissingSelfcareId))
+      organizationsDetails      <- partyManagementService.getBulkInstitutions(selfcareIds)
       flattenServices = eservices.flatMap(service =>
         convertToFlattenEservice(service, callerSubscribedEservices, organizationsDetails)
       )
@@ -563,7 +564,10 @@ final case class ProcessApiServiceImpl(
   private def convertToApiEservice(
     eservice: CatalogManagementDependency.EService
   )(implicit contexts: Seq[(String, String)]): Future[EService] = for {
-    organization <- partyManagementService.getInstitution(eservice.producerId)
+    selfcareId   <- tenantManagementService
+      .getTenant(eservice.producerId)
+      .flatMap(_.selfcareId.toFuture(MissingSelfcareId))
+    organization <- partyManagementService.getInstitution(selfcareId)
     attributes   <- attributeRegistryManagementService.getAttributesBulk(extractIdsFromAttributes(eservice.attributes))(
       contexts
     )

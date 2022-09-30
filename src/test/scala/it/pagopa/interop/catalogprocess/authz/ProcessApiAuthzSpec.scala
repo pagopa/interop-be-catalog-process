@@ -49,6 +49,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
       fakeAttributeRegistryManagementService,
       fakeAgreementManagementService,
       fakeAuthorizationManagementService,
+      new FakeTenantManagementService,
       fakeFileManager,
       fakeJwtReader
     )(ExecutionContext.global)

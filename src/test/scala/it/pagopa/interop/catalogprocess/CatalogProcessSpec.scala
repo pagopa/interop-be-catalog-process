@@ -8,6 +8,7 @@ import it.pagopa.interop.attributeregistrymanagement.client.model.{
   Attribute => AttributeRegistryManagementApiAttribute,
   AttributeKind => AttributeRegistryManagementApiAttributeKind
 }
+import cats.syntax.all._
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.catalogprocess.api.impl.Converter.convertToApiTechnology
@@ -32,6 +33,8 @@ import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Success
+import it.pagopa.interop.tenantmanagement.client.model.Tenant
+import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
 
 class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndAfterAll with MockFactory {
 
@@ -49,6 +52,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
           attributeRegistryManagementService = attributeRegistryManagementService,
           agreementManagementService = agreementManagementService,
           authorizationManagementService = authorizationManagementService,
+          tenantManagementService = tenantManagementService,
           fileManager = fileManager,
           jwtReader = jwtReader
         ),
@@ -125,6 +129,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val eserviceId1      = UUID.randomUUID()
       val descriptorId1    = UUID.randomUUID()
       val producerId1      = UUID.randomUUID()
+      val selfcareId1      = UUID.randomUUID().toString()
 
       val activeAgreement = Agreement(
         id = UUID.randomUUID(),
@@ -167,9 +172,19 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .returning(Future.successful(eservice1))
         .once()
 
+      val tenant = Tenant(
+        id = producerId1,
+        selfcareId = selfcareId1.some,
+        externalId = null,
+        features = Nil,
+        attributes = Nil,
+        createdAt = OffsetDateTimeSupplier.get(),
+        updatedAt = None
+      )
+
       val org1 =
         PartyManagementDependency.Institution(
-          producerId1,
+          UUID.fromString(selfcareId1),
           "",
           "",
           "description1",
@@ -182,9 +197,15 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
           Seq.empty
         )
 
+      (tenantManagementService
+        .getTenant(_: UUID)(_: Seq[(String, String)]))
+        .expects(producerId1, *)
+        .once()
+        .returning(Future.successful(tenant))
+
       (partyManagementService
-        .getInstitution(_: UUID)(_: Seq[(String, String)], _: ExecutionContext))
-        .expects(producerId1, *, *)
+        .getInstitution(_: String)(_: Seq[(String, String)], _: ExecutionContext))
+        .expects(selfcareId1, *, *)
         .returning(Future.successful(org1))
         .once()
 
@@ -277,6 +298,16 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         )
       )
 
+      val tenant = Tenant(
+        id = seed.producerId,
+        selfcareId = UUID.randomUUID.toString().some,
+        externalId = null,
+        features = Nil,
+        attributes = Nil,
+        createdAt = OffsetDateTimeSupplier.get(),
+        updatedAt = None
+      )
+
       val institution = PartyManagementDependency.Institution(
         id = seed.producerId,
         externalId = "institutionId",
@@ -325,9 +356,15 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .returning(Future.successful(eservice))
         .once()
 
+      (tenantManagementService
+        .getTenant(_: UUID)(_: Seq[(String, String)]))
+        .expects(seed.producerId, *)
+        .once()
+        .returning(Future.successful(tenant))
+
       (partyManagementService
-        .getInstitution(_: UUID)(_: Seq[(String, String)], _: ExecutionContext))
-        .expects(seed.producerId, *, *)
+        .getInstitution(_: String)(_: Seq[(String, String)], _: ExecutionContext))
+        .expects(tenant.selfcareId.get, *, *)
         .returning(Future.successful(institution))
         .once()
 
@@ -1056,6 +1093,7 @@ object CatalogProcessSpec extends MockFactory {
   val authorizationManagementService: AuthorizationManagementService         = mock[AuthorizationManagementService]
   val attributeRegistryManagementService: AttributeRegistryManagementService = mock[AttributeRegistryManagementService]
   val partyManagementService: PartyManagementService                         = mock[PartyManagementService]
+  val tenantManagementService: TenantManagementService                       = mock[TenantManagementService]
   val fileManager: FileManager                                               = mock[FileManager]
   val jwtReader: JWTReader                                                   = mock[JWTReader]
   def mockSubject(uuid: String): Success[JWTClaimsSet] = Success(new JWTClaimsSet.Builder().subject(uuid).build())

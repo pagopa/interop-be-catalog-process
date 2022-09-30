@@ -67,6 +67,8 @@ trait Dependencies {
         attributeRegistryManagementService = attributeRegistryManagementService(blockingEc),
         agreementManagementService = agreementManagementService(blockingEc),
         authorizationManagementService = authorizationManagementService(blockingEc),
+        tenantManagementService =
+          new TenantManagementServiceImpl(ApplicationConfiguration.tenantManagementUrl, blockingEc),
         fileManager = fileManager,
         jwtReader = jwtReader
       ),

@@ -1,5 +1,6 @@
 package it.pagopa.interop.catalogprocess.util
 
+import cats.syntax.all._
 import akka.http.scaladsl.server.directives.FileInfo
 import it.pagopa.interop.agreementmanagement.client.model.{Agreement, AgreementState}
 import it.pagopa.interop.attributeregistrymanagement.client.model.Attribute
@@ -24,12 +25,15 @@ import it.pagopa.interop.catalogprocess.service.{
   CatalogManagementService,
   PartyManagementService
 }
-import it.pagopa.interop.selfcare.partymanagement.client.model.{BulkInstitutions, BulkPartiesSeed, Institution}
+import it.pagopa.interop.selfcare.partymanagement.client.model.{BulkInstitutions, Institution}
 
 import java.io.File
 import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
+import it.pagopa.interop.catalogprocess.service.TenantManagementService
+import it.pagopa.interop.tenantmanagement.client.model.Tenant
+import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
 
 /**
  * Holds fake implementation of dependencies for tests not requiring neither mocks or stubs
@@ -38,7 +42,7 @@ object FakeDependencies {
 
   class FakePartyManagementService extends PartyManagementService {
     override def getInstitution(
-      id: UUID
+      id: String
     )(implicit contexts: Seq[(String, String)], ec: ExecutionContext): Future[Institution] =
       Future.successful(
         Institution(
@@ -57,7 +61,7 @@ object FakeDependencies {
       )
 
     override def getBulkInstitutions(
-      identifiers: BulkPartiesSeed
+      identifiers: List[String]
     )(implicit contexts: Seq[(String, String)], ec: ExecutionContext): Future[BulkInstitutions] =
       Future.successful(BulkInstitutions(Seq.empty, Seq.empty))
   }
@@ -249,6 +253,7 @@ object FakeDependencies {
       contexts: Seq[(String, String)]
     ): Future[Unit] = Future.successful(())
   }
+
   class FakeAuthorizationManagementService extends AuthorizationManagementService {
     override def updateStateOnClients(
       eServiceId: UUID,
@@ -257,7 +262,21 @@ object FakeDependencies {
       audience: Seq[String],
       voucherLifespan: Int
     )(implicit contexts: Seq[(String, String)]): Future[Unit] = Future.successful(())
+  }
 
+  class FakeTenantManagementService extends TenantManagementService {
+    override def getTenant(tenantId: UUID)(implicit contexts: Seq[(String, String)]): Future[Tenant] =
+      Future.successful(
+        Tenant(
+          id = UUID.randomUUID(),
+          selfcareId = UUID.randomUUID.toString().some,
+          externalId = null,
+          features = Nil,
+          attributes = Nil,
+          createdAt = OffsetDateTimeSupplier.get(),
+          updatedAt = None
+        )
+      )
   }
 
 }
