@@ -30,7 +30,6 @@ import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLo
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.OperationForbidden
-import it.pagopa.interop.selfcare.partymanagement.client.model.BulkInstitutions
 
 import java.io.{File, FileOutputStream}
 import java.nio.file.{Files, Path}
@@ -432,10 +431,14 @@ final case class ProcessApiServiceImpl(
       eservices                 <- processEservicesWithLatestFilter(retrievedEservices, latestPublishedOnly)
       tenants                   <- Future.traverse(eservices.map(_.producerId))(tenantManagementService.getTenant)
       selfcareIds               <- tenants.toList.traverse(_.selfcareId.toFuture(MissingSelfcareId))
-      organizationsDetails      <- partyManagementService.getBulkInstitutions(selfcareIds)
-      flattenServices = eservices.flatMap(service =>
-        convertToFlattenEservice(service, callerSubscribedEservices, organizationsDetails)
-      )
+      eservicesAndSelfcareIds = eservices.fproduct(e => tenants.find(_.id == e.producerId).flatMap(_.selfcareId))
+      organizationsDetails <- partyManagementService.getBulkInstitutions(selfcareIds)
+      eservicesAndDescription = eservicesAndSelfcareIds.map { case (eservice, maybeSelfcareId) =>
+        (eservice, organizationsDetails.found.find(_.id == maybeSelfcareId).map(_.description).getOrElse("Unknown"))
+      }
+      flattenServices         = eservicesAndDescription.flatMap { case (service, description) =>
+        convertToFlattenEservice(service, callerSubscribedEservices, description)
+      }
       stateProcessEnum <- state.traverse(EServiceDescriptorState.fromValue).toFuture
       filteredDescriptors = flattenServices.filter(item => stateProcessEnum.forall(item.state.contains))
     } yield filteredDescriptors
@@ -635,17 +638,14 @@ final case class ProcessApiServiceImpl(
   private def convertToFlattenEservice(
     eservice: client.model.EService,
     agreementSubscribedEservices: Seq[AgreementManagementDependency.Agreement],
-    institutionsDetails: BulkInstitutions
+    description: String
   ): Seq[FlatEService] = {
     val flatEServiceZero: FlatEService = FlatEService(
       id = eservice.id,
       producerId = eservice.producerId,
       name = eservice.name,
       // TODO "Unknown" is a temporary flag
-      producerName = institutionsDetails.found
-        .find(_.id == eservice.producerId)
-        .map(_.description)
-        .getOrElse("Unknown"),
+      producerName = description,
       version = None,
       state = None,
       descriptorId = None,
