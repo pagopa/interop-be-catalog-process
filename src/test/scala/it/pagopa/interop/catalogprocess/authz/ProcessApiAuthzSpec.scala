@@ -31,6 +31,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
     new FakeAttributeRegistryManagementService()
   val fakeAgreementManagementService: AgreementManagementService                 = new FakeAgreementManagementService()
   val fakeAuthorizationManagementService: AuthorizationManagementService = new FakeAuthorizationManagementService()
+  val fakeTenantManagementService: TenantManagementService               = new FakeTenantManagementService()
   private val threadPool: ExecutorService                                = Executors.newSingleThreadExecutor()
   private val blockingEc: ExecutionContextExecutor = ExecutionContext.fromExecutorService(threadPool)
   val fakeFileManager: FileManager                 = FileManager.get(FileManager.File)(blockingEc)
@@ -49,6 +50,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
       fakeAttributeRegistryManagementService,
       fakeAgreementManagementService,
       fakeAuthorizationManagementService,
+      fakeTenantManagementService,
       fakeFileManager,
       fakeJwtReader
     )(ExecutionContext.global)

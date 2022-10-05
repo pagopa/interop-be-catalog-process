@@ -123,4 +123,6 @@ object CatalogProcessErrors {
         "0038",
         s"Error retrieving document $documentId for E-Service $eServiceId and descriptor $descriptorId"
       )
+
+  final case object MissingSelfcareId extends ComponentError(s"0039", "SelfcareId missing from Tenant")
 }

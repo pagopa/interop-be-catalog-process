@@ -30,7 +30,6 @@ import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLo
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.OperationForbidden
-import it.pagopa.interop.selfcare.partymanagement.client.model.{BulkInstitutions, BulkPartiesSeed}
 
 import java.io.{File, FileOutputStream}
 import java.nio.file.{Files, Path}
@@ -44,6 +43,7 @@ final case class ProcessApiServiceImpl(
   attributeRegistryManagementService: AttributeRegistryManagementService,
   agreementManagementService: AgreementManagementService,
   authorizationManagementService: AuthorizationManagementService,
+  tenantManagementService: TenantManagementService,
   fileManager: FileManager,
   jwtReader: JWTReader
 )(implicit ec: ExecutionContext)
@@ -429,12 +429,14 @@ final case class ProcessApiServiceImpl(
       agreementStates           <- parseArrayParameters(agreementState).traverse(AgreementState.fromValue).toFuture
       retrievedEservices        <- retrieveEservices(producerId, consumerId, statusEnum, agreementStates)
       eservices                 <- processEservicesWithLatestFilter(retrievedEservices, latestPublishedOnly)
-      organizationsDetails      <- partyManagementService.getBulkInstitutions(
-        BulkPartiesSeed(partyIdentifiers = eservices.map(_.producerId))
-      )
-      flattenServices = eservices.flatMap(service =>
-        convertToFlattenEservice(service, callerSubscribedEservices, organizationsDetails)
-      )
+      eserviceAndSelfcareId     <- Future.traverse(eservices.toList)(getGetEserviceAndSelfcareId)
+      organizationsDetails <- partyManagementService.getBulkInstitutions(eserviceAndSelfcareId.map(_._2.toString()))
+      eservicesAndDescription = eserviceAndSelfcareId.map { case (eservice, selfcareId) =>
+        (eservice, organizationsDetails.found.find(_.id.toString == selfcareId).map(_.description).getOrElse("Unknown"))
+      }
+      flattenServices         = eservicesAndDescription.flatMap { case (service, description) =>
+        convertToFlattenEservice(service, callerSubscribedEservices, description)
+      }
       stateProcessEnum <- state.traverse(EServiceDescriptorState.fromValue).toFuture
       filteredDescriptors = flattenServices.filter(item => stateProcessEnum.forall(item.state.contains))
     } yield filteredDescriptors
@@ -450,6 +452,16 @@ final case class ProcessApiServiceImpl(
         complete(error.status, error)
     }
   }
+
+  def getGetEserviceAndSelfcareId(
+    eservice: client.model.EService
+  )(implicit contexts: Seq[(String, String)]): Future[(client.model.EService, String)] = eservice
+    .pure[Future]
+    .mproduct(eservice =>
+      tenantManagementService
+        .getTenant(eservice.producerId)
+        .flatMap(_.selfcareId.toFuture(MissingSelfcareId))
+    )
 
   private def processEservicesWithLatestFilter(
     eservices: Seq[CatalogManagementDependency.EService],
@@ -563,7 +575,10 @@ final case class ProcessApiServiceImpl(
   private def convertToApiEservice(
     eservice: CatalogManagementDependency.EService
   )(implicit contexts: Seq[(String, String)]): Future[EService] = for {
-    organization <- partyManagementService.getInstitution(eservice.producerId)
+    selfcareId   <- tenantManagementService
+      .getTenant(eservice.producerId)
+      .flatMap(_.selfcareId.toFuture(MissingSelfcareId))
+    organization <- partyManagementService.getInstitution(selfcareId)
     attributes   <- attributeRegistryManagementService.getAttributesBulk(extractIdsFromAttributes(eservice.attributes))(
       contexts
     )
@@ -631,17 +646,13 @@ final case class ProcessApiServiceImpl(
   private def convertToFlattenEservice(
     eservice: client.model.EService,
     agreementSubscribedEservices: Seq[AgreementManagementDependency.Agreement],
-    institutionsDetails: BulkInstitutions
+    description: String
   ): Seq[FlatEService] = {
     val flatEServiceZero: FlatEService = FlatEService(
       id = eservice.id,
       producerId = eservice.producerId,
       name = eservice.name,
-      // TODO "Unknown" is a temporary flag
-      producerName = institutionsDetails.found
-        .find(_.id == eservice.producerId)
-        .map(_.description)
-        .getOrElse("Unknown"),
+      producerName = description,
       version = None,
       state = None,
       descriptorId = None,
