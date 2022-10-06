@@ -10,6 +10,7 @@ import it.pagopa.interop.attributeregistrymanagement.client.model.{
 }
 import cats.syntax.all._
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
+import it.pagopa.interop.catalogmanagement.client.model.AgreementApprovalPolicy.AUTOMATIC
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.catalogprocess.api.impl.Converter.convertToApiTechnology
 import it.pagopa.interop.catalogprocess.api.impl._
@@ -293,7 +294,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
             audience = List("aud1"),
             voucherLifespan = 1000,
             dailyCallsPerConsumer = 1000,
-            dailyCallsTotal = 0
+            dailyCallsTotal = 0,
+            agreementApprovalPolicy = AUTOMATIC
           )
         )
       )
@@ -992,7 +994,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         audience = List("aud1"),
         voucherLifespan = 1000,
         dailyCallsPerConsumer = 1000,
-        dailyCallsTotal = 0
+        dailyCallsTotal = 0,
+        agreementApprovalPolicy = AUTOMATIC
       )
 
       val otherDescriptor = CatalogManagementDependency.EServiceDescriptor(
@@ -1005,7 +1008,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         audience = List("aud1"),
         voucherLifespan = 1000,
         dailyCallsPerConsumer = 1000,
-        dailyCallsTotal = 0
+        dailyCallsTotal = 0,
+        agreementApprovalPolicy = AUTOMATIC
       )
 
       val eservice = CatalogManagementDependency.EService(
@@ -1047,7 +1051,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         audience = List("aud1"),
         voucherLifespan = 1000,
         dailyCallsPerConsumer = 1000,
-        dailyCallsTotal = 0
+        dailyCallsTotal = 0,
+        agreementApprovalPolicy = AUTOMATIC
       )
 
       val eservice = CatalogManagementDependency.EService(

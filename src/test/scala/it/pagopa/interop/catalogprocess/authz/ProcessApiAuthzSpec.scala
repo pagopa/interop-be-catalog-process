@@ -6,6 +6,7 @@ import com.nimbusds.jose.proc.SecurityContext
 import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier
 import it.pagopa.interop.catalogprocess.api.impl.ProcessApiMarshallerImpl._
 import it.pagopa.interop.catalogprocess.api.impl.ProcessApiServiceImpl
+import it.pagopa.interop.catalogprocess.model.AgreementApprovalPolicy.AUTOMATIC
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.catalogprocess.util.FakeDependencies._
@@ -20,7 +21,8 @@ import java.io.File
 import java.util.UUID
 import scala.concurrent.ExecutionContext
 import org.scalatest.BeforeAndAfterAll
-import java.util.concurrent.{Executors, ExecutorService}
+
+import java.util.concurrent.{ExecutorService, Executors}
 import scala.concurrent.ExecutionContextExecutor
 
 class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with AuthzScalatestRouteTest {
@@ -114,7 +116,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
 
     "accept authorized roles for updateDraftDescriptor" in {
       val endpoint = AuthorizedRoutes.endpoints("updateDraftDescriptor")
-      val fakeSeed = UpdateEServiceDescriptorSeed(None, Seq.empty, 0, 0, 0)
+      val fakeSeed = UpdateEServiceDescriptorSeed(None, Seq.empty, 0, 0, 0, AUTOMATIC)
       validateAuthorization(
         endpoint,
         { implicit c: Seq[(String, String)] => service.updateDraftDescriptor("fake", "fake", fakeSeed) }
@@ -133,7 +135,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
 
     "accept authorized roles for createDescriptor" in {
       val endpoint = AuthorizedRoutes.endpoints("createDescriptor")
-      val fakeSeed = EServiceDescriptorSeed(None, Seq.empty, 0, 0, 0)
+      val fakeSeed = EServiceDescriptorSeed(None, Seq.empty, 0, 0, 0, AUTOMATIC)
       validateAuthorization(
         endpoint,
         { implicit c: Seq[(String, String)] => service.createDescriptor("fake", fakeSeed) }

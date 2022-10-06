@@ -38,7 +38,8 @@ object Converter {
       audience = descriptor.audience,
       voucherLifespan = descriptor.voucherLifespan,
       dailyCallsPerConsumer = descriptor.dailyCallsPerConsumer,
-      dailyCallsTotal = descriptor.dailyCallsTotal
+      dailyCallsTotal = descriptor.dailyCallsTotal,
+      agreementApprovalPolicy = convertToApiAgreementApprovalPolicy(descriptor.agreementApprovalPolicy)
     )
 
   def convertToApiEserviceDoc(document: CatalogManagementDependency.EServiceDoc): EServiceDoc = EServiceDoc(
@@ -108,7 +109,8 @@ object Converter {
       audience = descriptor.audience,
       voucherLifespan = descriptor.voucherLifespan,
       dailyCallsPerConsumer = descriptor.dailyCallsPerConsumer,
-      dailyCallsTotal = descriptor.dailyCallsTotal
+      dailyCallsTotal = descriptor.dailyCallsTotal,
+      agreementApprovalPolicy = convertFromApiAgreementApprovalPolicy(descriptor.agreementApprovalPolicy)
     )
   )
 
@@ -135,7 +137,8 @@ object Converter {
       voucherLifespan = seed.voucherLifespan,
       dailyCallsPerConsumer = seed.dailyCallsPerConsumer,
       dailyCallsTotal = seed.dailyCallsTotal,
-      state = CatalogManagementDependency.EServiceDescriptorState.DRAFT
+      state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
+      agreementApprovalPolicy = convertFromApiAgreementApprovalPolicy(seed.agreementApprovalPolicy)
     )
   )
 
@@ -148,6 +151,21 @@ object Converter {
     case CatalogManagementDependency.EServiceDescriptorState.SUSPENDED  => EServiceDescriptorState.SUSPENDED
     case CatalogManagementDependency.EServiceDescriptorState.ARCHIVED   => EServiceDescriptorState.ARCHIVED
   }
+
+  def convertToApiAgreementApprovalPolicy(
+    policy: CatalogManagementDependency.AgreementApprovalPolicy
+  ): AgreementApprovalPolicy = policy match {
+    case CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC => AgreementApprovalPolicy.AUTOMATIC
+    case CatalogManagementDependency.AgreementApprovalPolicy.MANUAL    => AgreementApprovalPolicy.MANUAL
+  }
+
+  def convertFromApiAgreementApprovalPolicy(
+    policy: AgreementApprovalPolicy
+  ): CatalogManagementDependency.AgreementApprovalPolicy =
+    policy match {
+      case AgreementApprovalPolicy.AUTOMATIC => CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC
+      case AgreementApprovalPolicy.MANUAL    => CatalogManagementDependency.AgreementApprovalPolicy.MANUAL
+    }
 
   def convertToApiTechnology(technology: CatalogManagementDependency.EServiceTechnology): EServiceTechnology =
     technology match {

@@ -6,6 +6,7 @@ import it.pagopa.interop.agreementmanagement.client.model.{Agreement, AgreementS
 import it.pagopa.interop.attributeregistrymanagement.client.model.Attribute
 import it.pagopa.interop.authorizationmanagement.client.model._
 import it.pagopa.interop.catalogmanagement.client.model.{
+  AgreementApprovalPolicy,
   Attributes,
   EService,
   EServiceDescriptor,
@@ -158,7 +159,8 @@ object FakeDependencies {
         dailyCallsTotal = 0,
         interface = None,
         docs = Seq.empty,
-        state = EServiceDescriptorState.PUBLISHED
+        state = EServiceDescriptorState.PUBLISHED,
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC
       )
     )
 

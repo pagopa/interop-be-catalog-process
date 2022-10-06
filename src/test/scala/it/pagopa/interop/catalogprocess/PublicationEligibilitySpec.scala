@@ -38,7 +38,8 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
           )
         ),
         docs = Seq.empty,
-        state = CatalogManagementDependency.EServiceDescriptorState.DRAFT
+        state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
+        agreementApprovalPolicy = CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC
       )
 
       Await.result(ProcessApiServiceImpl.verifyPublicationEligibility(descriptor), Duration.Inf) shouldBe ()
@@ -65,7 +66,8 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
           )
         ),
         docs = Seq.empty,
-        state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED
+        state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED,
+        agreementApprovalPolicy = CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC
       )
 
       Try(ProcessApiServiceImpl.verifyPublicationEligibility(descriptor).futureValue) shouldBe a[Failure[_]]
@@ -82,7 +84,8 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
         dailyCallsTotal = 0,
         interface = None,
         docs = Seq.empty,
-        state = CatalogManagementDependency.EServiceDescriptorState.DRAFT
+        state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
+        agreementApprovalPolicy = CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC
       )
 
       Try(ProcessApiServiceImpl.verifyPublicationEligibility(descriptor).futureValue) shouldBe a[Failure[_]]

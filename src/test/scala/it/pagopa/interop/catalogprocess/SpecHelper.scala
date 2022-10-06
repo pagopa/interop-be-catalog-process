@@ -49,7 +49,8 @@ abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.co
     dailyCallsTotal = 0,
     interface = None,
     docs = Seq.empty,
-    state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED
+    state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED,
+    agreementApprovalPolicy = CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC
   )
 
   def eServiceStub: CatalogManagementDependency.EService = CatalogManagementDependency.EService(
