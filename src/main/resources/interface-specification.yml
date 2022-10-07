@@ -826,6 +826,7 @@ components:
         - voucherLifespan
         - dailyCallsPerConsumer
         - dailyCallsTotal
+        - agreementApprovalPolicy
       type: object
       properties:
         description:
@@ -847,12 +848,15 @@ components:
           type: integer
           format: int32
           minimum: 0
+        agreementApprovalPolicy:
+          $ref: '#/components/schemas/AgreementApprovalPolicy'
     UpdateEServiceDescriptorSeed:
       required:
         - audience
         - voucherLifespan
         - dailyCallsPerConsumer
         - dailyCallsTotal
+        - agreementApprovalPolicy
       type: object
       properties:
         description:
@@ -874,6 +878,8 @@ components:
           type: integer
           format: int32
           minimum: 0
+        agreementApprovalPolicy:
+          $ref: '#/components/schemas/AgreementApprovalPolicy'
     UpdateEServiceDescriptorDocumentSeed:
       required:
         - prettyName
@@ -919,6 +925,15 @@ components:
       required:
         - id
         - explicitAttributeVerification
+    AgreementApprovalPolicy:
+      type: string
+      description: |
+        EService Descriptor policy for new Agreements approval.
+        AUTOMATIC - the agreement will be automatically approved if Consumer attributes are met
+        MANUAL - the Producer must approve every agreement for this Descriptor.
+      enum:
+        - AUTOMATIC
+        - MANUAL
     Organization:
       type: object
       required:
@@ -991,6 +1006,7 @@ components:
         - voucherLifespan
         - dailyCallsPerConsumer
         - dailyCallsTotal
+        - agreementApprovalPolicy
       properties:
         id:
           type: string
@@ -1024,6 +1040,8 @@ components:
           type: integer
           format: int32
           minimum: 0
+        agreementApprovalPolicy:
+          $ref: '#/components/schemas/AgreementApprovalPolicy'
     AttributeValue:
       type: object
       properties:
