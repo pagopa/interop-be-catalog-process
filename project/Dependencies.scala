@@ -8,6 +8,7 @@ object Dependencies {
     lazy val namespace           = "com.typesafe.akka"
     lazy val actorTyped          = namespace                       %% "akka-actor-typed"     % akkaVersion
     lazy val stream              = namespace                       %% "akka-stream"          % akkaVersion
+    lazy val streamTyped         = namespace                       %% "akka-stream-typed"    % akkaVersion
     lazy val http                = namespace                       %% "akka-http"            % akkaHttpVersion
     lazy val httpJson            = namespace                       %% "akka-http-spray-json" % akkaHttpVersion
     lazy val httpJson4s          = "de.heikoseeberger"             %% "akka-http-json4s"     % akkaHttpJson4sVersion
@@ -100,7 +101,8 @@ object Dependencies {
         pagopa.commonsJWT   % Compile,
         jackson.annotations % Compile,
         jackson.core        % Compile,
-        jackson.databind    % Compile
+        jackson.databind    % Compile,
+        akka.streamTyped    % Compile
       )
     lazy val `server`: Seq[ModuleID]  = Seq(
       // For making Java 12 happy
