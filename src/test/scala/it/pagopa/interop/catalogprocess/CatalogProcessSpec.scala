@@ -83,7 +83,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
           state = Some(PUBLISHED),
           descriptorId = Some("1d"),
           description = "",
-          callerSubscribed = None,
+          agreement = None,
           certifiedAttributes = Seq.empty
         ),
         FlatEService(
@@ -95,7 +95,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
           state = Some(SUSPENDED),
           descriptorId = Some("2d"),
           description = "",
-          callerSubscribed = None,
+          agreement = None,
           certifiedAttributes = Seq.empty
         ),
         FlatEService(
@@ -107,7 +107,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
           state = Some(SUSPENDED),
           descriptorId = Some("3d"),
           description = "",
-          callerSubscribed = None,
+          agreement = None,
           certifiedAttributes = Seq.empty
         )
       )
@@ -152,8 +152,10 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       )
 
       (agreementManagementService
-        .getAgreements(_: Option[String], _: Option[String], _: List[AgreementState])(_: Seq[(String, String)]))
-        .expects(Some(consumerId.toString), None, List(AgreementState.ACTIVE), *)
+        .getAgreements(_: Option[String], _: Option[String], _: List[AgreementState], _: Option[String])(
+          _: Seq[(String, String)]
+        ))
+        .expects(Some(consumerId.toString), None, List(AgreementState.ACTIVE), None, *)
         .returning(Future.successful(Seq(activeAgreement)))
         .once()
 

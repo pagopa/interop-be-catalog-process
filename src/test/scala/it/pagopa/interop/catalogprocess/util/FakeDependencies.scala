@@ -74,9 +74,12 @@ object FakeDependencies {
   }
 
   class FakeAgreementManagementService extends AgreementManagementService {
-    override def getAgreements(consumerId: Option[String], producerId: Option[String], states: List[AgreementState])(
-      implicit contexts: Seq[(String, String)]
-    ): Future[Seq[Agreement]] = Future.successful(Seq.empty)
+    override def getAgreements(
+      consumerId: Option[String],
+      producerId: Option[String],
+      states: List[AgreementState],
+      eServiceId: Option[String]
+    )(implicit contexts: Seq[(String, String)]): Future[Seq[Agreement]] = Future.successful(Seq.empty)
   }
   class FakeCatalogManagementService   extends CatalogManagementService   {
 
