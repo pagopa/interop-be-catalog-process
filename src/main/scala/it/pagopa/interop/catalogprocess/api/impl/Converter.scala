@@ -57,6 +57,19 @@ object Converter {
     case AgreementState.ARCHIVED                     => AgreementManagementDependency.AgreementState.ARCHIVED
     case AgreementState.MISSING_CERTIFIED_ATTRIBUTES =>
       AgreementManagementDependency.AgreementState.MISSING_CERTIFIED_ATTRIBUTES
+    case AgreementState.REJECTED                     => AgreementManagementDependency.AgreementState.REJECTED
+  }
+
+  def convertFromApiAgreementState(state: AgreementManagementDependency.AgreementState): AgreementState = state match {
+    case AgreementManagementDependency.AgreementState.DRAFT                        => AgreementState.DRAFT
+    case AgreementManagementDependency.AgreementState.PENDING                      => AgreementState.PENDING
+    case AgreementManagementDependency.AgreementState.ACTIVE                       => AgreementState.ACTIVE
+    case AgreementManagementDependency.AgreementState.SUSPENDED                    => AgreementState.SUSPENDED
+    case AgreementManagementDependency.AgreementState.ARCHIVED                     => AgreementState.ARCHIVED
+    case AgreementManagementDependency.AgreementState.MISSING_CERTIFIED_ATTRIBUTES =>
+      AgreementState.MISSING_CERTIFIED_ATTRIBUTES
+    case AgreementManagementDependency.AgreementState.REJECTED                     => AgreementState.REJECTED
+
   }
 
   private def convertToApiAttributes(

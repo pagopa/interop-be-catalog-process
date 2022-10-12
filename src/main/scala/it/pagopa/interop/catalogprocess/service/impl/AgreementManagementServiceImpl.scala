@@ -15,17 +15,22 @@ final case class AgreementManagementServiceImpl(invoker: AgreementManagementInvo
   implicit val logger: LoggerTakingImplicit[ContextFieldsToLog] =
     Logger.takingImplicit[ContextFieldsToLog](this.getClass)
 
-  override def getAgreements(consumerId: Option[String], producerId: Option[String], states: List[AgreementState])(
-    implicit contexts: Seq[(String, String)]
-  ): Future[Seq[Agreement]] = withHeaders { (bearerToken, correlationId, ip) =>
-    val request = api.getAgreements(
-      xCorrelationId = correlationId,
-      xForwardedFor = ip,
-      consumerId = consumerId,
-      producerId = producerId,
-      states = states
-    )(BearerToken(bearerToken))
-    invoker.invoke(request, s"Agreements retrieval for consumer ${consumerId.getOrElse("Unknown")}")
+  override def getAgreements(
+    consumerId: Option[String],
+    producerId: Option[String],
+    states: List[AgreementState],
+    eServiceId: Option[String]
+  )(implicit contexts: Seq[(String, String)]): Future[Seq[Agreement]] = withHeaders {
+    (bearerToken, correlationId, ip) =>
+      val request = api.getAgreements(
+        xCorrelationId = correlationId,
+        xForwardedFor = ip,
+        consumerId = consumerId,
+        producerId = producerId,
+        states = states,
+        eserviceId = eServiceId
+      )(BearerToken(bearerToken))
+      invoker.invoke(request, s"Agreements retrieval for consumer ${consumerId.getOrElse("Unknown")}")
   }
 
 }

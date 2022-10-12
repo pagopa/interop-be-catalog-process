@@ -18,7 +18,11 @@ import it.pagopa.interop.catalogmanagement.client.model.{
 }
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.catalogprocess.api.ProcessApiService
-import it.pagopa.interop.catalogprocess.api.impl.Converter.{convertToApiAgreementState, convertToApiDescriptorState}
+import it.pagopa.interop.catalogprocess.api.impl.Converter.{
+  convertFromApiAgreementState,
+  convertToApiAgreementState,
+  convertToApiDescriptorState
+}
 import it.pagopa.interop.catalogprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors._
 import it.pagopa.interop.catalogprocess.model._
@@ -164,7 +168,7 @@ final case class ProcessApiServiceImpl(
     logger.info("Getting e-service with producer = {}, consumer = {} and state = {}", producerId, consumerId, status)
     val result = for {
       statusEnum      <- status.traverse(CatalogManagementDependency.EServiceDescriptorState.fromValue).toFuture
-      agreementStates <- parseArrayParameters(agreementState).traverse(AgreementState.fromValue).toFuture
+      agreementStates <- parseArrayParameters(agreementState).distinct.traverse(AgreementState.fromValue).toFuture
       eservices       <- retrieveEservices(producerId, consumerId, statusEnum, agreementStates)
       apiEservices    <- Future.traverse(eservices)(service => convertToApiEservice(service))
     } yield apiEservices
@@ -424,18 +428,27 @@ final case class ProcessApiServiceImpl(
       latestPublishedOnly
     )
     val result = for {
-      statusEnum <- state.traverse(CatalogManagementDependency.EServiceDescriptorState.fromValue).toFuture
-      callerSubscribedEservices <- agreementManagementService.getAgreementsByConsumerId(callerId)
-      agreementStates           <- parseArrayParameters(agreementState).traverse(AgreementState.fromValue).toFuture
-      retrievedEservices        <- retrieveEservices(producerId, consumerId, statusEnum, agreementStates)
-      eservices                 <- processEservicesWithLatestFilter(retrievedEservices, latestPublishedOnly)
-      eserviceAndSelfcareId     <- Future.traverse(eservices.toList)(getGetEserviceAndSelfcareId)
-      organizationsDetails <- partyManagementService.getBulkInstitutions(eserviceAndSelfcareId.map(_._2.toString()))
+      statusEnum            <- state.traverse(CatalogManagementDependency.EServiceDescriptorState.fromValue).toFuture
+      agreementStates       <- parseArrayParameters(agreementState).distinct.traverse(AgreementState.fromValue).toFuture
+      retrievedEservices    <- retrieveEservices(producerId, consumerId, statusEnum, agreementStates)
+      eservices             <- processEservicesWithLatestFilter(retrievedEservices, latestPublishedOnly)
+      eserviceAndSelfcareId <- Future.traverse(eservices.toList)(getGetEserviceAndSelfcareId)
+      agreements            <- Future
+        .traverse(eservices.toList)(eService =>
+          agreementManagementService.getAgreements(
+            consumerId = callerId.some,
+            producerId = eService.producerId.toString.some,
+            eServiceId = eService.id.toString.some,
+            states = agreementStates.map(convertToApiAgreementState)
+          )
+        )
+        .map(_.flatten)
+      organizationsDetails  <- partyManagementService.getBulkInstitutions(eserviceAndSelfcareId.map(_._2))
       eservicesAndDescription = eserviceAndSelfcareId.map { case (eservice, selfcareId) =>
         (eservice, organizationsDetails.found.find(_.id.toString == selfcareId).map(_.description).getOrElse("Unknown"))
       }
       flattenServices         = eservicesAndDescription.flatMap { case (service, description) =>
-        convertToFlattenEservice(service, callerSubscribedEservices, description)
+        convertToFlattenEservice(service, agreements, description)
       }
       stateProcessEnum <- state.traverse(EServiceDescriptorState.fromValue).toFuture
       filteredDescriptors = flattenServices.filter(item => stateProcessEnum.forall(item.state.contains))
@@ -609,7 +622,8 @@ final case class ProcessApiServiceImpl(
         agreements <- agreementManagementService.getAgreements(
           consumerId,
           producerId,
-          agreementStates.distinct.map(convertToApiAgreementState)
+          agreementStates.distinct.map(convertToApiAgreementState),
+          eServiceId = None
         )
         ids = agreements.map(_.eserviceId.toString).distinct
         eservices <- Future.traverse(ids)(catalogManagementService.getEService(_))
@@ -645,7 +659,7 @@ final case class ProcessApiServiceImpl(
 
   private def convertToFlattenEservice(
     eservice: client.model.EService,
-    agreementSubscribedEservices: Seq[AgreementManagementDependency.Agreement],
+    agreements: Seq[AgreementManagementDependency.Agreement],
     description: String
   ): Seq[FlatEService] = {
     val flatEServiceZero: FlatEService = FlatEService(
@@ -657,7 +671,7 @@ final case class ProcessApiServiceImpl(
       state = None,
       descriptorId = None,
       description = eservice.description,
-      callerSubscribed = agreementSubscribedEservices.find(agr => agr.eserviceId == eservice.id).map(_.id),
+      agreement = agreements.find(agr => agr.eserviceId == eservice.id).map(toFlatAgreement),
       certifiedAttributes = eservice.attributes.certified.map(toFlatAttribute)
     )
 
@@ -671,6 +685,9 @@ final case class ProcessApiServiceImpl(
 
     Option(flatEServices).filter(_.nonEmpty).getOrElse(Seq(flatEServiceZero))
   }
+
+  private def toFlatAgreement(agreement: AgreementManagementDependency.Agreement): FlatAgreement =
+    FlatAgreement(id = agreement.id, state = convertFromApiAgreementState(agreement.state))
 
   private def toFlatAttribute(attribute: client.model.Attribute): FlatAttribute = FlatAttribute(
     single = attribute.single.map(a => FlatAttributeValue(a.id)),
