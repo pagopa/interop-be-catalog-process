@@ -3,7 +3,7 @@ package it.pagopa.interop.catalogprocess
 import akka.http.scaladsl.model.{HttpMethods, StatusCodes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import com.nimbusds.jwt.JWTClaimsSet
-import it.pagopa.interop.agreementmanagement.client.model.{Agreement, AgreementState}
+import it.pagopa.interop.agreementmanagement.client.model.{Agreement, AgreementState, Stamps}
 import it.pagopa.interop.attributeregistrymanagement.client.model.{
   Attribute => AttributeRegistryManagementApiAttribute,
   AttributeKind => AttributeRegistryManagementApiAttributeKind
@@ -148,7 +148,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         consumerDocuments = List.empty,
         createdAt = OffsetDateTime.now(),
         updatedAt = None,
-        consumerNotes = None
+        consumerNotes = None,
+        stamps = Stamps()
       )
 
       (agreementManagementService
