@@ -71,6 +71,8 @@ object Dependencies {
 
     lazy val catalogManagementClient =
       namespace %% "interop-be-catalog-management-client" % catalogManagementVersion
+    lazy val catalogManagementModels =
+      namespace %% "interop-be-catalog-management-models" % catalogManagementVersion
 
     lazy val agreementManagementClient =
       namespace %% "interop-be-agreement-management-client" % agreementManagementVersion
@@ -87,9 +89,10 @@ object Dependencies {
     lazy val authorizationManagementClient =
       namespace %% "interop-be-authorization-management-client" % authorizationManagementVersion
 
-    lazy val commons     = namespace %% "interop-commons-utils"        % commonsVersion
-    lazy val fileManager = namespace %% "interop-commons-file-manager" % commonsVersion
-    lazy val commonsJWT  = namespace %% "interop-commons-jwt"          % commonsVersion
+    lazy val commonsUtils = namespace %% "interop-commons-utils"        % commonsVersion
+    lazy val fileManager  = namespace %% "interop-commons-file-manager" % commonsVersion
+    lazy val commonsJWT   = namespace %% "interop-commons-jwt"          % commonsVersion
+    lazy val commonsCqrs  = namespace %% "interop-commons-cqrs"         % commonsVersion
   }
 
   object Jars {
@@ -112,21 +115,23 @@ object Dependencies {
       akka.slf4j                               % Compile,
       resilience4j.rateLimiter                 % Compile,
       pagopa.catalogManagementClient           % Compile,
+      pagopa.catalogManagementModels           % Compile,
       pagopa.agreementManagementClient         % Compile,
       pagopa.partyManagementClient             % Compile,
       pagopa.attributeRegistryManagementClient % Compile,
       pagopa.authorizationManagementClient     % Compile,
-      pagopa.commons                           % Compile,
+      pagopa.commonsUtils                      % Compile,
       pagopa.fileManager                       % Compile,
       pagopa.tenantManagementClient            % Compile,
       pagopa.commonsJWT                        % Compile,
+      pagopa.commonsCqrs                       % Compile,
       akka.testkit                             % Test,
       akka.httpTestkit                         % Test,
       scalatest.core                           % Test,
       scalamock.core                           % Test
     )
     lazy val client: Seq[ModuleID]    =
-      Seq(akka.stream, akka.http, akka.httpJson4s, akka.slf4j, json4s.jackson, json4s.ext, pagopa.commons).map(
+      Seq(akka.stream, akka.http, akka.httpJson4s, akka.slf4j, json4s.jackson, json4s.ext, pagopa.commonsUtils).map(
         _ % Compile
       )
   }

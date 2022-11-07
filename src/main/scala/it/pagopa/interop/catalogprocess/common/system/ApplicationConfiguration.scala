@@ -1,6 +1,7 @@
 package it.pagopa.interop.catalogprocess.common.system
 
 import com.typesafe.config.{Config, ConfigFactory}
+import it.pagopa.interop.commons.cqrs.model.ReadModelConfig
 
 object ApplicationConfiguration {
   val config: Config = ConfigFactory.load()
@@ -22,6 +23,13 @@ object ApplicationConfiguration {
   val storageKind: String = config.getString("catalog-process.storage.kind")
 
   val storageContainer: String = config.getString("catalog-process.storage.container")
+
+  val readModelConfig: ReadModelConfig = {
+    val connectionString: String = config.getString("catalog-process.read-model.db.connection-string")
+    val dbName: String           = config.getString("catalog-process.read-model.db.name")
+
+    ReadModelConfig(connectionString, dbName)
+  }
 
   require(jwtAudience.nonEmpty, "Audience cannot be empty")
 

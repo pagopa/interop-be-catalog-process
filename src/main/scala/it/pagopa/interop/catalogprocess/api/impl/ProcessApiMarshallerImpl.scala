@@ -6,6 +6,7 @@ import akka.http.scaladsl.model.ContentTypes
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import it.pagopa.interop.catalogprocess.api.ProcessApiMarshaller
 import it.pagopa.interop.catalogprocess.model.{
+  OldEService,
   EService,
   EServiceDescriptor,
   EServiceDescriptorSeed,
@@ -30,7 +31,8 @@ object ProcessApiMarshallerImpl extends ProcessApiMarshaller with SprayJsonSuppo
 
   override implicit def toEntityMarshallerProblem: ToEntityMarshaller[Problem] = entityMarshallerProblem
 
-  override implicit def toEntityMarshallerEService: ToEntityMarshaller[EService] = sprayJsonMarshaller[EService]
+  override implicit def toEntityMarshallerOldEService: ToEntityMarshaller[OldEService] =
+    sprayJsonMarshaller[OldEService]
 
   override implicit def toEntityMarshallerEServicearray: ToEntityMarshaller[Seq[EService]] =
     sprayJsonMarshaller[Seq[EService]]

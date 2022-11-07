@@ -1,8 +1,10 @@
 package it.pagopa.interop.catalogprocess.api.impl
 
+import cats.implicits.catsSyntaxOptionId
 import it.pagopa.interop.agreementmanagement.client.{model => AgreementManagementDependency}
 import it.pagopa.interop.attributeregistrymanagement.client.{model => AttributeManagementDependency}
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
+import it.pagopa.interop.catalogmanagement.{model => readmodel}
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.selfcare.partymanagement.client.{model => PartyManagementDependency}
 
@@ -13,19 +15,97 @@ object Converter {
 
   private final case class AttributeDetails(name: String, description: String)
 
-  def convertToApiEservice(
+  def convertToApiOldEservice(
     eservice: CatalogManagementDependency.EService,
     institution: PartyManagementDependency.Institution,
     attributes: Seq[AttributeManagementDependency.Attribute]
-  ): EService = EService(
+  ): OldEService = OldEService(
     id = eservice.id,
     producer = Organization(id = eservice.producerId, name = institution.description),
     name = eservice.name,
     description = eservice.description,
     technology = convertToApiTechnology(eservice.technology),
-    attributes = convertToApiAttributes(eservice.attributes, attributes),
+    attributes = convertToApiOldAttributes(eservice.attributes, attributes),
     descriptors = eservice.descriptors.map(convertToApiDescriptor)
   )
+
+  def convertToApiEService(eService: readmodel.CatalogItem): EService = EService(
+    id = eService.id,
+    producerId = eService.producerId,
+    name = eService.name,
+    description = eService.description,
+    technology = convertToApiTechnology2(eService.technology),
+    attributes = convertToApiAttributes(eService.attributes),
+    descriptors = eService.descriptors.map(convertToApiDescriptor2)
+  )
+
+  private def convertToApiAttributes(currentAttributes: readmodel.CatalogAttributes): Attributes =
+    Attributes(
+      certified = currentAttributes.certified.map(convertToApiAttribute),
+      declared = currentAttributes.declared.map(convertToApiAttribute),
+      verified = currentAttributes.verified.map(convertToApiAttribute)
+    )
+
+  private def convertToApiAttribute(attribute: readmodel.CatalogAttribute): Attribute = attribute match {
+    case a: readmodel.SingleAttribute =>
+      Attribute(single = AttributeValue(a.id.id, a.id.explicitAttributeVerification).some)
+    case a: readmodel.GroupAttribute  =>
+      Attribute(group = a.ids.map(attr => AttributeValue(attr.id, attr.explicitAttributeVerification)).some)
+  }
+
+  def convertToApiTechnology2(technology: readmodel.CatalogItemTechnology): EServiceTechnology = technology match {
+    case readmodel.Rest => EServiceTechnology.REST
+    case readmodel.Soap => EServiceTechnology.SOAP
+  }
+
+  def convertToApiDescriptor2(descriptor: readmodel.CatalogDescriptor): EServiceDescriptor =
+    EServiceDescriptor(
+      id = descriptor.id,
+      version = descriptor.version,
+      description = descriptor.description,
+      interface = descriptor.interface.map(convertToApiEServiceDoc2),
+      docs = descriptor.docs.map(convertToApiEServiceDoc2),
+      state = convertToApiDescriptorState2(descriptor.state),
+      audience = descriptor.audience,
+      voucherLifespan = descriptor.voucherLifespan,
+      dailyCallsPerConsumer = descriptor.dailyCallsPerConsumer,
+      dailyCallsTotal = descriptor.dailyCallsTotal,
+      agreementApprovalPolicy = convertToApiAgreementApprovalPolicy2(
+        descriptor.agreementApprovalPolicy.getOrElse(readmodel.PersistentAgreementApprovalPolicy.default)
+      )
+    )
+
+  def convertToApiEServiceDoc2(document: readmodel.CatalogDocument): EServiceDoc = EServiceDoc(
+    id = document.id,
+    name = document.name,
+    contentType = document.contentType,
+    prettyName = document.prettyName
+  )
+
+  def convertToApiDescriptorState2(clientStatus: readmodel.CatalogDescriptorState): EServiceDescriptorState =
+    clientStatus match {
+      case readmodel.Draft      => EServiceDescriptorState.DRAFT
+      case readmodel.Published  => EServiceDescriptorState.PUBLISHED
+      case readmodel.Deprecated => EServiceDescriptorState.DEPRECATED
+      case readmodel.Suspended  => EServiceDescriptorState.SUSPENDED
+      case readmodel.Archived   => EServiceDescriptorState.ARCHIVED
+    }
+
+  def convertFromApiDescriptorState2(state: EServiceDescriptorState): readmodel.CatalogDescriptorState =
+    state match {
+      case EServiceDescriptorState.DRAFT      => readmodel.Draft
+      case EServiceDescriptorState.PUBLISHED  => readmodel.Published
+      case EServiceDescriptorState.DEPRECATED => readmodel.Deprecated
+      case EServiceDescriptorState.SUSPENDED  => readmodel.Suspended
+      case EServiceDescriptorState.ARCHIVED   => readmodel.Archived
+    }
+
+  def convertToApiAgreementApprovalPolicy2(
+    policy: readmodel.PersistentAgreementApprovalPolicy
+  ): AgreementApprovalPolicy = policy match {
+    case readmodel.Automatic => AgreementApprovalPolicy.AUTOMATIC
+    case readmodel.Manual    => AgreementApprovalPolicy.MANUAL
+  }
 
   def convertToApiDescriptor(descriptor: CatalogManagementDependency.EServiceDescriptor): EServiceDescriptor =
     EServiceDescriptor(
@@ -72,30 +152,30 @@ object Converter {
 
   }
 
-  private def convertToApiAttributes(
+  private def convertToApiOldAttributes(
     currentAttributes: CatalogManagementDependency.Attributes,
     attributes: Seq[AttributeManagementDependency.Attribute]
-  ): Attributes = {
+  ): OldAttributes = {
     val attributeNames: Map[UUID, AttributeDetails] =
       attributes.map(attr => attr.id -> AttributeDetails(attr.name, attr.description)).toMap
 
-    Attributes(
-      certified = currentAttributes.certified.map(convertToApiAttribute(attributeNames)),
-      declared = currentAttributes.declared.map(convertToApiAttribute(attributeNames)),
-      verified = currentAttributes.verified.map(convertToApiAttribute(attributeNames))
+    OldAttributes(
+      certified = currentAttributes.certified.map(convertToApiOldAttribute(attributeNames)),
+      declared = currentAttributes.declared.map(convertToApiOldAttribute(attributeNames)),
+      verified = currentAttributes.verified.map(convertToApiOldAttribute(attributeNames))
     )
   }
 
-  private def convertToApiAttribute(
+  private def convertToApiOldAttribute(
     attributeNames: Map[UUID, AttributeDetails]
-  )(attribute: CatalogManagementDependency.Attribute): Attribute = Attribute(
-    single = attribute.single.map(convertToApiAttributeValue(attributeNames)),
-    group = attribute.group.map(values => values.map(convertToApiAttributeValue(attributeNames)))
+  )(attribute: CatalogManagementDependency.Attribute): OldAttribute = OldAttribute(
+    single = attribute.single.map(convertToApiOldAttributeValue(attributeNames)),
+    group = attribute.group.map(values => values.map(convertToApiOldAttributeValue(attributeNames)))
   )
 
-  private def convertToApiAttributeValue(
+  private def convertToApiOldAttributeValue(
     attributeNames: Map[UUID, AttributeDetails]
-  )(value: CatalogManagementDependency.AttributeValue) = AttributeValue(
+  )(value: CatalogManagementDependency.AttributeValue) = OldAttributeValue(
     id = value.id,
     // TODO how to manage this case? Raise an error/Default/Flat option values
     // TODO for now default value "Unknown"

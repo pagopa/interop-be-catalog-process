@@ -17,9 +17,12 @@ import it.pagopa.interop.catalogmanagement.client.model.{
   EServiceDescriptor => ManagementDescriptor
 }
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
+import it.pagopa.interop.catalogmanagement.model.CatalogItem
+import it.pagopa.interop.catalogmanagement.model.persistence.JsonFormats._
 import it.pagopa.interop.catalogprocess.api.ProcessApiService
 import it.pagopa.interop.catalogprocess.api.impl.Converter.{
   convertFromApiAgreementState,
+  convertFromApiDescriptorState2,
   convertToApiAgreementState,
   convertToApiDescriptorState
 }
@@ -27,6 +30,7 @@ import it.pagopa.interop.catalogprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors._
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.service._
+import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt._
 import it.pagopa.interop.commons.jwt.service.JWTReader
@@ -34,6 +38,9 @@ import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLo
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.OperationForbidden
+import org.mongodb.scala.Document
+import org.mongodb.scala.bson.conversions.Bson
+import org.mongodb.scala.model.{Aggregates, Filters, Projections, Sorts}
 
 import java.io.{File, FileOutputStream}
 import java.nio.file.{Files, Path}
@@ -48,6 +55,7 @@ final case class ProcessApiServiceImpl(
   agreementManagementService: AgreementManagementService,
   authorizationManagementService: AuthorizationManagementService,
   tenantManagementService: TenantManagementService,
+  readModel: ReadModelService,
   fileManager: FileManager,
   jwtReader: JWTReader
 )(implicit ec: ExecutionContext)
@@ -69,8 +77,8 @@ final case class ProcessApiServiceImpl(
     */
   override def createEService(eServiceSeed: EServiceSeed)(implicit
     contexts: Seq[(String, String)],
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
-    toEntityMarshallerEService: ToEntityMarshaller[EService]
+    toEntityMarshallerEService: ToEntityMarshaller[OldEService],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
   ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     logger.info("Creating e-service for producer {} with service name {}", eServiceSeed.producerId, eServiceSeed.name)
     val clientSeed: CatalogManagementDependency.EServiceSeed = Converter.convertToClientEServiceSeed(eServiceSeed)
@@ -156,32 +164,52 @@ final case class ProcessApiServiceImpl(
   /** Code: 200, Message: A list of E-Service, DataType: Seq[EService]
     * Code: 500, Message: Internal Server Error, DataType: Problem
     */
-  override def getEServices(
-    producerId: Option[String],
-    consumerId: Option[String],
-    agreementState: String,
-    status: Option[String]
-  )(implicit
+  override def getEServices(nameFilter: Option[String], producersId: String, states: String, offset: Int, limit: Int)(
+    implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerEServicearray: ToEntityMarshaller[Seq[EService]]
   ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
-    logger.info("Getting e-service with producer = {}, consumer = {} and state = {}", producerId, consumerId, status)
+    logger.info(s"Getting e-service with producers = $producersId, states = $states")
+
+    // TODO Improve code
+    def paramsToQuery(): Either[Throwable, Bson] = for {
+      apiStatesFilters <- parseArrayParameters(states).traverse(EServiceDescriptorState.fromValue)
+      persistenceStatesFilter = apiStatesFilters
+        .map(convertFromApiDescriptorState2)
+        .map(_.toString)
+        .map(Filters.eq("data.descriptors.state", _))
+      statesQuery = if (persistenceStatesFilter.isEmpty) None else Filters.or(persistenceStatesFilter: _*).some
+
+      nameQuery = nameFilter.map(Filters.regex("data.name", _, "i"))
+
+      producerIdFilters = parseArrayParameters(producersId).map(Filters.eq("data.producerId", _))
+      producerIdQuery   = if (producerIdFilters.isEmpty) None else Filters.or(producerIdFilters: _*).some
+      filters           = nameQuery.toList ++ producerIdQuery.toList ++ statesQuery.toList
+    } yield if (filters.isEmpty) Filters.empty() else Filters.and(filters: _*)
+
     val result = for {
-      statusEnum      <- status.traverse(CatalogManagementDependency.EServiceDescriptorState.fromValue).toFuture
-      agreementStates <- parseArrayParameters(agreementState).distinct.traverse(AgreementState.fromValue).toFuture
-      eservices       <- retrieveEservices(producerId, consumerId, statusEnum, agreementStates)
-      apiEservices    <- Future.traverse(eservices)(service => convertToApiEservice(service))
-    } yield apiEservices
+      query     <- paramsToQuery().toFuture
+      eServices <- readModel.aggregate[CatalogItem](
+        "eservices",
+        Seq(
+          Aggregates.`match`(query),
+          Aggregates
+            .project(
+              Projections.fields(
+                Projections.include("data"),
+                Projections.computed("lowerName", Document("""{ "$toLower" : "$data.name" }"""))
+              )
+            ),
+          Aggregates.sort(Sorts.ascending("lowerName"))
+        )
+      )
+    } yield eServices.map(Converter.convertToApiEService)
 
     onComplete(result) {
       case Success(response) => getEServices200(response)
       case Failure(ex)       =>
-        logger.error(
-          s"Error while getting e-service with producer = $producerId, consumer = $consumerId and state = $status",
-          ex
-        )
-        val error =
-          problemOf(StatusCodes.InternalServerError, EServicesRetrievalError)
+        logger.error(s"Error while getting e-service with producers = $producersId, states = $states", ex)
+        val error = problemOf(StatusCodes.InternalServerError, EServicesRetrievalError)
         complete(error.status, error)
     }
   }
@@ -251,8 +279,8 @@ final case class ProcessApiServiceImpl(
     */
   override def getEServiceById(eServiceId: String)(implicit
     contexts: Seq[(String, String)],
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
-    toEntityMarshallerEService: ToEntityMarshaller[EService]
+    toEntityMarshallerEService: ToEntityMarshaller[OldEService],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
   ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
     logger.info("Getting e-service {}", eServiceId)
     val result = for {
@@ -283,8 +311,8 @@ final case class ProcessApiServiceImpl(
     descriptorId: String
   )(implicit
     contexts: Seq[(String, String)],
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
-    toEntityMarshallerEService: ToEntityMarshaller[EService]
+    toEntityMarshallerEService: ToEntityMarshaller[OldEService],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
   ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     logger.info(
       "Creating e-service document of kind {} for e-service {} and descriptor {}",
@@ -534,11 +562,11 @@ final case class ProcessApiServiceImpl(
     updateEServiceDescriptorSeed: UpdateEServiceDescriptorSeed
   )(implicit
     contexts: Seq[(String, String)],
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
-    toEntityMarshallerEService: ToEntityMarshaller[EService]
+    toEntityMarshallerEService: ToEntityMarshaller[OldEService],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
   ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     logger.info("Updating draft descriptor {} of e-service {}", descriptorId, eServiceId)
-    val result: Future[EService] = for {
+    val result: Future[OldEService] = for {
       currentEService <- catalogManagementService.getEService(eServiceId)
       descriptor      <- currentEService.descriptors
         .find(_.id.toString == descriptorId)
@@ -564,8 +592,8 @@ final case class ProcessApiServiceImpl(
     */
   override def updateEServiceById(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed)(implicit
     contexts: Seq[(String, String)],
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
-    toEntityMarshallerEService: ToEntityMarshaller[EService]
+    toEntityMarshallerEService: ToEntityMarshaller[OldEService],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
   ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     logger.info("Updating e-service by id {}", eServiceId)
     val clientSeed: CatalogManagementDependency.UpdateEServiceSeed =
@@ -587,7 +615,7 @@ final case class ProcessApiServiceImpl(
 
   private def convertToApiEservice(
     eservice: CatalogManagementDependency.EService
-  )(implicit contexts: Seq[(String, String)]): Future[EService] = for {
+  )(implicit contexts: Seq[(String, String)]): Future[OldEService] = for {
     selfcareId   <- tenantManagementService
       .getTenant(eservice.producerId)
       .flatMap(_.selfcareId.toFuture(MissingSelfcareId))
@@ -595,7 +623,7 @@ final case class ProcessApiServiceImpl(
     attributes   <- attributeRegistryManagementService.getAttributesBulk(extractIdsFromAttributes(eservice.attributes))(
       contexts
     )
-  } yield Converter.convertToApiEservice(eservice, organization, attributes)
+  } yield Converter.convertToApiOldEservice(eservice, organization, attributes)
 
   private def extractIdsFromAttributes(attributes: CatalogManagementDependency.Attributes): Seq[UUID] =
     attributes.certified.flatMap(extractIdsFromAttribute) ++
@@ -806,8 +834,8 @@ final case class ProcessApiServiceImpl(
     */
   override def cloneEServiceByDescriptor(eServiceId: String, descriptorId: String)(implicit
     contexts: Seq[(String, String)],
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
-    toEntityMarshallerEService: ToEntityMarshaller[EService]
+    toEntityMarshallerEService: ToEntityMarshaller[OldEService],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
   ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     logger.info("Cloning descriptor {} of e-service {}", descriptorId, eServiceId)
     val result = for {

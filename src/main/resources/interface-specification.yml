@@ -40,26 +40,42 @@ paths:
       operationId: getEServices
       parameters:
         - in: query
-          name: producerId
+          name: nameFilter
           schema:
             type: string
         - in: query
-          name: consumerId
-          schema:
-            type: string
-        - in: query
-          name: agreementStates
-          description: comma separated sequence of agreement states to filter the response with
+          name: producersId
+          description: comma separated sequence of producers IDs
           schema:
             type: array
             items:
-              $ref: '#/components/schemas/AgreementState'
+              type: string
             default: []
           explode: false
         - in: query
-          name: state
+          name: states
+          description: comma separated sequence of states
           schema:
-            $ref: '#/components/schemas/EServiceDescriptorState'
+            type: array
+            items:
+              $ref: '#/components/schemas/EServiceDescriptorState'
+            default: []
+          explode: false
+        - in: query
+          name: offset
+          required: true
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+        - in: query
+          name: limit
+          required: true
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 50
       responses:
         '200':
           description: A list of E-Service
@@ -87,7 +103,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EService'
+                $ref: '#/components/schemas/OldEService'
         '400':
           description: Invalid input
           content:
@@ -168,7 +184,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EService'
+                $ref: '#/components/schemas/OldEService'
         '404':
           description: E-Service not found
           content:
@@ -208,7 +224,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EService'
+                $ref: '#/components/schemas/OldEService'
         '404':
           description: E-Service not found
           content:
@@ -367,7 +383,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EService'
+                $ref: '#/components/schemas/OldEService'
         '400':
           description: Invalid input
           content:
@@ -529,7 +545,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EService'
+                $ref: '#/components/schemas/OldEService'
         '400':
           description: Invalid input
           content:
@@ -595,7 +611,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EService'
+                $ref: '#/components/schemas/OldEService'
         '400':
           description: Invalid input
           content:
@@ -945,7 +961,7 @@ components:
           format: uuid
         name:
           type: string
-    EService:
+    OldEService:
       type: object
       required:
         - id
@@ -961,6 +977,35 @@ components:
           format: uuid
         producer:
           $ref: '#/components/schemas/Organization'
+        name:
+          type: string
+        description:
+          type: string
+        technology:
+          $ref: '#/components/schemas/EServiceTechnology'
+        attributes:
+          $ref: '#/components/schemas/OldAttributes'
+        descriptors:
+          type: array
+          items:
+            $ref: '#/components/schemas/EServiceDescriptor'
+    EService:
+      type: object
+      required:
+        - id
+        - producerId
+        - name
+        - description
+        - technology
+        - attributes
+        - descriptors
+      properties:
+        id:
+          type: string
+          format: uuid
+        producerId:
+          type: string
+          format: uuid
         name:
           type: string
         description:
@@ -1015,14 +1060,6 @@ components:
           type: string
         description:
           type: string
-        interface:
-          $ref: '#/components/schemas/EServiceDoc'
-        docs:
-          type: array
-          items:
-            $ref: '#/components/schemas/EServiceDoc'
-        state:
-          $ref: '#/components/schemas/EServiceDescriptorState'
         audience:
           type: array
           items:
@@ -1031,7 +1068,7 @@ components:
           type: integer
           format: int32
         dailyCallsPerConsumer:
-          description: 'maximum number of daily calls that this descriptor can afford.'
+          description: 'maximum number of daily calls that this descriptor can afford per consumer.'
           type: integer
           format: int32
           minimum: 0
@@ -1040,9 +1077,17 @@ components:
           type: integer
           format: int32
           minimum: 0
+        interface:
+          $ref: '#/components/schemas/EServiceDoc'
+        docs:
+          type: array
+          items:
+            $ref: '#/components/schemas/EServiceDoc'
+        state:
+          $ref: '#/components/schemas/EServiceDescriptorState'
         agreementApprovalPolicy:
           $ref: '#/components/schemas/AgreementApprovalPolicy'
-    AttributeValue:
+    OldAttributeValue:
       type: object
       properties:
         id:
@@ -1058,6 +1103,44 @@ components:
         - id
         - name
         - description
+        - explicitAttributeVerification
+    OldAttribute:
+      type: object
+      properties:
+        single:
+          $ref: '#/components/schemas/OldAttributeValue'
+        group:
+          type: array
+          items:
+            $ref: '#/components/schemas/OldAttributeValue'
+    OldAttributes:
+      properties:
+        certified:
+          type: array
+          items:
+            $ref: '#/components/schemas/OldAttribute'
+        declared:
+          type: array
+          items:
+            $ref: '#/components/schemas/OldAttribute'
+        verified:
+          type: array
+          items:
+            $ref: '#/components/schemas/OldAttribute'
+      required:
+        - certified
+        - declared
+        - verified
+    AttributeValue:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        explicitAttributeVerification:
+          type: boolean
+      required:
+        - id
         - explicitAttributeVerification
     Attribute:
       type: object
