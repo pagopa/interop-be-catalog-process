@@ -40,7 +40,7 @@ paths:
       operationId: getEServices
       parameters:
         - in: query
-          name: nameFilter
+          name: name
           schema:
             type: string
         - in: query

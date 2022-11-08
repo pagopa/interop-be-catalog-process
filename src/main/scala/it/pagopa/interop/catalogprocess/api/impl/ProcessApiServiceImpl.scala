@@ -17,15 +17,14 @@ import it.pagopa.interop.catalogmanagement.client.model.{
   EServiceDescriptor => ManagementDescriptor
 }
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
-import it.pagopa.interop.catalogmanagement.model.CatalogItem
-import it.pagopa.interop.catalogmanagement.model.persistence.JsonFormats._
 import it.pagopa.interop.catalogprocess.api.ProcessApiService
 import it.pagopa.interop.catalogprocess.api.impl.Converter.{
   convertFromApiAgreementState,
-  convertFromApiDescriptorState,
   convertToApiAgreementState,
-  convertToApiDescriptorState
+  convertToApiDescriptorState,
+  convertToApiEService
 }
+import it.pagopa.interop.catalogprocess.common.ReadModelQueries
 import it.pagopa.interop.catalogprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors._
 import it.pagopa.interop.catalogprocess.model._
@@ -38,9 +37,6 @@ import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLo
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.OperationForbidden
-import org.mongodb.scala.Document
-import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.{Aggregates, Filters, Projections, Sorts}
 
 import java.io.{File, FileOutputStream}
 import java.nio.file.{Files, Path}
@@ -161,54 +157,27 @@ final case class ProcessApiServiceImpl(
     }
   }
 
-  /** Code: 200, Message: A list of E-Service, DataType: Seq[EService]
-    * Code: 500, Message: Internal Server Error, DataType: Problem
-    */
-  override def getEServices(nameFilter: Option[String], producersId: String, states: String, offset: Int, limit: Int)(
-    implicit
+  override def getEServices(name: Option[String], producersId: String, states: String, offset: Int, limit: Int)(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerEServicearray: ToEntityMarshaller[Seq[EService]]
   ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
-    logger.info(s"Getting e-service with producers = $producersId, states = $states")
+    logger.info(
+      s"Getting e-service with name = $name, producers = $producersId, states = $states, limit = $limit, offset = $offset"
+    )
 
-    // TODO Improve code
-    def paramsToQuery(): Either[Throwable, Bson] = for {
-      apiStatesFilters <- parseArrayParameters(states).traverse(EServiceDescriptorState.fromValue)
-      persistenceStatesFilter = apiStatesFilters
-        .map(convertFromApiDescriptorState)
-        .map(_.toString)
-        .map(Filters.eq("data.descriptors.state", _))
-      statesQuery = if (persistenceStatesFilter.isEmpty) None else Filters.or(persistenceStatesFilter: _*).some
-
-      nameQuery = nameFilter.map(Filters.regex("data.name", _, "i"))
-
-      producerIdFilters = parseArrayParameters(producersId).map(Filters.eq("data.producerId", _))
-      producerIdQuery   = if (producerIdFilters.isEmpty) None else Filters.or(producerIdFilters: _*).some
-      filters           = nameQuery.toList ++ producerIdQuery.toList ++ statesQuery.toList
-    } yield if (filters.isEmpty) Filters.empty() else Filters.and(filters: _*)
-
-    val result = for {
-      query     <- paramsToQuery().toFuture
-      eServices <- readModel.aggregate[CatalogItem](
-        "eservices",
-        Seq(
-          Aggregates.`match`(query),
-          Aggregates
-            .project(
-              Projections.fields(
-                Projections.include("data"),
-                Projections.computed("lowerName", Document("""{ "$toLower" : "$data.name" }"""))
-              )
-            ),
-          Aggregates.sort(Sorts.ascending("lowerName"))
-        )
-      )
-    } yield eServices.map(Converter.convertToApiEService)
+    val result: Future[Seq[EService]] = for {
+      apiStates <- parseArrayParameters(states).traverse(EServiceDescriptorState.fromValue).toFuture
+      apiProducersId = parseArrayParameters(producersId)
+      eServices <- ReadModelQueries.listEServices(name, apiProducersId, apiStates, offset, limit)(readModel)
+    } yield eServices.map(convertToApiEService)
 
     onComplete(result) {
       case Success(response) => getEServices200(response)
       case Failure(ex)       =>
-        logger.error(s"Error while getting e-service with producers = $producersId, states = $states", ex)
+        logger.error(
+          s"Getting e-service with name = $name, producers = $producersId, states = $states, limit = $limit, offset = $offset",
+          ex
+        )
         val error = problemOf(StatusCodes.InternalServerError, EServicesRetrievalError)
         complete(error.status, error)
     }
