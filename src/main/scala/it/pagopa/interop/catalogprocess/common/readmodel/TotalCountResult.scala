@@ -3,6 +3,7 @@ package it.pagopa.interop.catalogprocess.common.readmodel
 import spray.json.DefaultJsonProtocol._
 import spray.json.RootJsonFormat
 
+// TODO This should go in commons once the $facet command will be integrated in the aggregate function
 final case class TotalCountResult(totalCount: Int)
 
 object TotalCountResult {
