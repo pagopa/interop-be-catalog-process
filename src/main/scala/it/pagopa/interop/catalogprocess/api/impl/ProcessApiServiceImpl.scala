@@ -22,7 +22,7 @@ import it.pagopa.interop.catalogmanagement.model.persistence.JsonFormats._
 import it.pagopa.interop.catalogprocess.api.ProcessApiService
 import it.pagopa.interop.catalogprocess.api.impl.Converter.{
   convertFromApiAgreementState,
-  convertFromApiDescriptorState2,
+  convertFromApiDescriptorState,
   convertToApiAgreementState,
   convertToApiDescriptorState
 }
@@ -175,7 +175,7 @@ final case class ProcessApiServiceImpl(
     def paramsToQuery(): Either[Throwable, Bson] = for {
       apiStatesFilters <- parseArrayParameters(states).traverse(EServiceDescriptorState.fromValue)
       persistenceStatesFilter = apiStatesFilters
-        .map(convertFromApiDescriptorState2)
+        .map(convertFromApiDescriptorState)
         .map(_.toString)
         .map(Filters.eq("data.descriptors.state", _))
       statesQuery = if (persistenceStatesFilter.isEmpty) None else Filters.or(persistenceStatesFilter: _*).some

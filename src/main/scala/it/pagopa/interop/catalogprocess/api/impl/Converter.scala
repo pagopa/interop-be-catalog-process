@@ -34,9 +34,9 @@ object Converter {
     producerId = eService.producerId,
     name = eService.name,
     description = eService.description,
-    technology = convertToApiTechnology2(eService.technology),
+    technology = convertToApiTechnology(eService.technology),
     attributes = convertToApiAttributes(eService.attributes),
-    descriptors = eService.descriptors.map(convertToApiDescriptor2)
+    descriptors = eService.descriptors.map(convertToApiDescriptor)
   )
 
   private def convertToApiAttributes(currentAttributes: readmodel.CatalogAttributes): Attributes =
@@ -53,36 +53,36 @@ object Converter {
       Attribute(group = a.ids.map(attr => AttributeValue(attr.id, attr.explicitAttributeVerification)).some)
   }
 
-  def convertToApiTechnology2(technology: readmodel.CatalogItemTechnology): EServiceTechnology = technology match {
+  def convertToApiTechnology(technology: readmodel.CatalogItemTechnology): EServiceTechnology = technology match {
     case readmodel.Rest => EServiceTechnology.REST
     case readmodel.Soap => EServiceTechnology.SOAP
   }
 
-  def convertToApiDescriptor2(descriptor: readmodel.CatalogDescriptor): EServiceDescriptor =
+  def convertToApiDescriptor(descriptor: readmodel.CatalogDescriptor): EServiceDescriptor =
     EServiceDescriptor(
       id = descriptor.id,
       version = descriptor.version,
       description = descriptor.description,
-      interface = descriptor.interface.map(convertToApiEServiceDoc2),
-      docs = descriptor.docs.map(convertToApiEServiceDoc2),
-      state = convertToApiDescriptorState2(descriptor.state),
+      interface = descriptor.interface.map(convertToApiEServiceDoc),
+      docs = descriptor.docs.map(convertToApiEServiceDoc),
+      state = convertToApiDescriptorState(descriptor.state),
       audience = descriptor.audience,
       voucherLifespan = descriptor.voucherLifespan,
       dailyCallsPerConsumer = descriptor.dailyCallsPerConsumer,
       dailyCallsTotal = descriptor.dailyCallsTotal,
-      agreementApprovalPolicy = convertToApiAgreementApprovalPolicy2(
+      agreementApprovalPolicy = convertToApiAgreementApprovalPolicy(
         descriptor.agreementApprovalPolicy.getOrElse(readmodel.PersistentAgreementApprovalPolicy.default)
       )
     )
 
-  def convertToApiEServiceDoc2(document: readmodel.CatalogDocument): EServiceDoc = EServiceDoc(
+  def convertToApiEServiceDoc(document: readmodel.CatalogDocument): EServiceDoc = EServiceDoc(
     id = document.id,
     name = document.name,
     contentType = document.contentType,
     prettyName = document.prettyName
   )
 
-  def convertToApiDescriptorState2(clientStatus: readmodel.CatalogDescriptorState): EServiceDescriptorState =
+  def convertToApiDescriptorState(clientStatus: readmodel.CatalogDescriptorState): EServiceDescriptorState =
     clientStatus match {
       case readmodel.Draft      => EServiceDescriptorState.DRAFT
       case readmodel.Published  => EServiceDescriptorState.PUBLISHED
@@ -91,7 +91,7 @@ object Converter {
       case readmodel.Archived   => EServiceDescriptorState.ARCHIVED
     }
 
-  def convertFromApiDescriptorState2(state: EServiceDescriptorState): readmodel.CatalogDescriptorState =
+  def convertFromApiDescriptorState(state: EServiceDescriptorState): readmodel.CatalogDescriptorState =
     state match {
       case EServiceDescriptorState.DRAFT      => readmodel.Draft
       case EServiceDescriptorState.PUBLISHED  => readmodel.Published
@@ -100,7 +100,7 @@ object Converter {
       case EServiceDescriptorState.ARCHIVED   => readmodel.Archived
     }
 
-  def convertToApiAgreementApprovalPolicy2(
+  def convertToApiAgreementApprovalPolicy(
     policy: readmodel.PersistentAgreementApprovalPolicy
   ): AgreementApprovalPolicy = policy match {
     case readmodel.Automatic => AgreementApprovalPolicy.AUTOMATIC
