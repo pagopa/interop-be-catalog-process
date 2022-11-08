@@ -24,7 +24,7 @@ import it.pagopa.interop.catalogprocess.api.impl.Converter.{
   convertToApiDescriptorState,
   convertToApiEService
 }
-import it.pagopa.interop.catalogprocess.common.ReadModelQueries
+import it.pagopa.interop.catalogprocess.common.readmodel.ReadModelQueries
 import it.pagopa.interop.catalogprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors._
 import it.pagopa.interop.catalogprocess.model._
@@ -159,17 +159,17 @@ final case class ProcessApiServiceImpl(
 
   override def getEServices(name: Option[String], producersId: String, states: String, offset: Int, limit: Int)(implicit
     contexts: Seq[(String, String)],
-    toEntityMarshallerEServicearray: ToEntityMarshaller[Seq[EService]]
+    toEntityMarshallerEServices: ToEntityMarshaller[EServices]
   ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
     logger.info(
       s"Getting e-service with name = $name, producers = $producersId, states = $states, limit = $limit, offset = $offset"
     )
 
-    val result: Future[Seq[EService]] = for {
+    val result: Future[EServices] = for {
       apiStates <- parseArrayParameters(states).traverse(EServiceDescriptorState.fromValue).toFuture
       apiProducersId = parseArrayParameters(producersId)
-      eServices <- ReadModelQueries.listEServices(name, apiProducersId, apiStates, offset, limit)(readModel)
-    } yield eServices.map(convertToApiEService)
+      result <- ReadModelQueries.listEServices(name, apiProducersId, apiStates, offset, limit)(readModel)
+    } yield EServices(eservices = result.results.map(convertToApiEService), totalCount = result.totalCount)
 
     onComplete(result) {
       case Success(response) => getEServices200(response)

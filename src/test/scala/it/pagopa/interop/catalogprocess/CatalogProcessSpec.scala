@@ -19,6 +19,7 @@ import it.pagopa.interop.catalogprocess.model.EServiceDescriptorState._
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.server.Controller
 import it.pagopa.interop.catalogprocess.service._
+import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.utils.SprayCommonFormats.uuidFormat
@@ -1103,6 +1104,7 @@ object CatalogProcessSpec extends MockFactory {
   val partyManagementService: PartyManagementService                         = mock[PartyManagementService]
   val tenantManagementService: TenantManagementService                       = mock[TenantManagementService]
   val fileManager: FileManager                                               = mock[FileManager]
+  val readModel: ReadModelService                                            = mock[ReadModelService]
   val jwtReader: JWTReader                                                   = mock[JWTReader]
   def mockSubject(uuid: String): Success[JWTClaimsSet] = Success(new JWTClaimsSet.Builder().subject(uuid).build())
 }

@@ -1019,9 +1019,18 @@ components:
           items:
             $ref: '#/components/schemas/EServiceDescriptor'
     EServices:
-      type: array
-      items:
-        $ref: '#/components/schemas/EService'
+      type: object
+      properties:
+        eservices:
+          type: array
+          items:
+            $ref: '#/components/schemas/EService'
+        totalCount:
+          type: integer
+          format: int32
+      required:
+        - eservices
+        - totalCount
     EServiceDoc:
       type: object
       required:

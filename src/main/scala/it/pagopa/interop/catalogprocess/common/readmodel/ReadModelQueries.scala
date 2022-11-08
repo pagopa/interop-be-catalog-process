@@ -1,6 +1,5 @@
-package it.pagopa.interop.catalogprocess.common
+package it.pagopa.interop.catalogprocess.common.readmodel
 
-import cats.implicits._
 import it.pagopa.interop.catalogmanagement.model.CatalogItem
 import it.pagopa.interop.catalogmanagement.model.persistence.JsonFormats._
 import it.pagopa.interop.catalogprocess.api.impl.Converter.convertFromApiDescriptorState
@@ -8,10 +7,11 @@ import it.pagopa.interop.catalogprocess.model.EServiceDescriptorState
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import org.mongodb.scala.Document
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.Aggregates._
+import org.mongodb.scala.model.Aggregates.{`match`, count, project, sort}
 import org.mongodb.scala.model.Filters
-import org.mongodb.scala.model.Projections._
-import org.mongodb.scala.model.Sorts._
+import org.mongodb.scala.model.Projections.{computed, fields, include}
+import org.mongodb.scala.model.Sorts.ascending
+import cats.implicits._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -23,7 +23,7 @@ object ReadModelQueries {
     states: List[EServiceDescriptorState],
     offset: Int,
     limit: Int
-  )(readModel: ReadModelService)(implicit ec: ExecutionContext): Future[Seq[CatalogItem]] = {
+  )(readModel: ReadModelService)(implicit ec: ExecutionContext): Future[PaginatedResult[CatalogItem]] = {
     val query = listEServicesFilters(name, producersId, states)
 
     for {
@@ -39,7 +39,19 @@ object ReadModelQueries {
         offset = offset,
         limit = limit
       )
-    } yield eServices
+      // Note: This could be obtained using $facet function (avoiding to execute the query twice),
+      //   but it is not supported by DocumentDB
+      count     <- readModel.aggregate[TotalCountResult](
+        "eservices",
+        Seq(
+          `match`(query),
+          count("totalCount"),
+          project(computed("data", Document("""{ "totalCount" : "$totalCount" }""")))
+        ),
+        offset = 0,
+        limit = Int.MaxValue
+      )
+    } yield PaginatedResult(results = eServices, totalCount = count.headOption.map(_.totalCount).getOrElse(0))
   }
 
   def listEServicesFilters(
