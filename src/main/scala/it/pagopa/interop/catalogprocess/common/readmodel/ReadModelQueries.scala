@@ -11,7 +11,6 @@ import org.mongodb.scala.model.Aggregates.{`match`, count, project, sort}
 import org.mongodb.scala.model.Filters
 import org.mongodb.scala.model.Projections.{computed, fields, include}
 import org.mongodb.scala.model.Sorts.ascending
-import cats.implicits._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -72,6 +71,5 @@ object ReadModelQueries {
       .getOrElse(Filters.empty())
   }
 
-  def mapToVarArgs[A, B](l: Seq[A])(f: Seq[A] => B): Option[B] = if (l.isEmpty) None else f(l).some
-
+  def mapToVarArgs[A, B](l: Seq[A])(f: Seq[A] => B): Option[B] = Option.when(l.nonEmpty)(f(l))
 }
