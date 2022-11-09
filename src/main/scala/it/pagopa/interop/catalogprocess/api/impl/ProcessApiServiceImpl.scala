@@ -157,25 +157,26 @@ final case class ProcessApiServiceImpl(
     }
   }
 
-  override def getEServices(name: Option[String], producersId: String, states: String, offset: Int, limit: Int)(implicit
+  override def getEServices(name: Option[String], producersIds: String, states: String, offset: Int, limit: Int)(
+    implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerEServices: ToEntityMarshaller[EServices]
   ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
     logger.info(
-      s"Getting e-service with name = $name, producers = $producersId, states = $states, limit = $limit, offset = $offset"
+      s"Getting e-service with name = $name, producers = $producersIds, states = $states, limit = $limit, offset = $offset"
     )
 
     val result: Future[EServices] = for {
       apiStates <- parseArrayParameters(states).traverse(EServiceDescriptorState.fromValue).toFuture
-      apiProducersId = parseArrayParameters(producersId)
-      result <- ReadModelQueries.listEServices(name, apiProducersId, apiStates, offset, limit)(readModel)
+      apiProducersIds = parseArrayParameters(producersIds)
+      result <- ReadModelQueries.listEServices(name, apiProducersIds, apiStates, offset, limit)(readModel)
     } yield EServices(eservices = result.results.map(convertToApiEService), totalCount = result.totalCount)
 
     onComplete(result) {
       case Success(response) => getEServices200(response)
       case Failure(ex)       =>
         logger.error(
-          s"Getting e-service with name = $name, producers = $producersId, states = $states, limit = $limit, offset = $offset",
+          s"Getting e-service with name = $name, producers = $producersIds, states = $states, limit = $limit, offset = $offset",
           ex
         )
         val error = problemOf(StatusCodes.InternalServerError, EServicesRetrievalError)
