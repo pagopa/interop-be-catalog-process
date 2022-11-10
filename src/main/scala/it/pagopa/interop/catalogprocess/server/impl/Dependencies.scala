@@ -24,6 +24,7 @@ import it.pagopa.interop.catalogprocess.api.{HealthApi, ProcessApi}
 import it.pagopa.interop.catalogprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.catalogprocess.service.impl._
+import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.jwt.service.impl.{DefaultJWTReader, getClaimsVerifier}
@@ -56,6 +57,8 @@ trait Dependencies {
     )
     .toFuture
 
+  val readModelService: ReadModelService = new ReadModelService(ApplicationConfiguration.readModelConfig)
+
   def processApi(jwtReader: JWTReader, fileManager: FileManager, blockingEc: ExecutionContextExecutor)(implicit
     ec: ExecutionContext,
     actorSystem: ActorSystem[_]
@@ -69,6 +72,7 @@ trait Dependencies {
         authorizationManagementService = authorizationManagementService(blockingEc),
         tenantManagementService =
           new TenantManagementServiceImpl(ApplicationConfiguration.tenantManagementUrl, blockingEc),
+        readModel = readModelService,
         fileManager = fileManager,
         jwtReader = jwtReader
       ),
