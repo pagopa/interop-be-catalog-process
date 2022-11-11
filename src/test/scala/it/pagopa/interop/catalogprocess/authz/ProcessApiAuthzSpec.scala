@@ -101,7 +101,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
       val endpoint = AuthorizedRoutes.endpoints("getEServices")
       validateAuthorization(
         endpoint,
-        { implicit c: Seq[(String, String)] => service.getEServices(None, "fake", "fake", 0, 0) }
+        { implicit c: Seq[(String, String)] => service.getEServices(None, "fake", "fake", "fake", 0, 0) }
       )
     }
 
