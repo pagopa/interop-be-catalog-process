@@ -37,6 +37,7 @@ import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLo
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.OperationForbidden
+import it.pagopa.interop.tenantmanagement.client.{model => TenantManagementDependency}
 
 import java.io.{File, FileOutputStream}
 import java.nio.file.{Files, Path}
@@ -447,13 +448,26 @@ final case class ProcessApiServiceImpl(
           )
         )
         .map(_.flatten)
-      organizationsDetails  <- partyManagementService.getBulkInstitutions(eserviceAndSelfcareId.map(_._2))
-      eservicesAndDescription = eserviceAndSelfcareId.map { case (eservice, selfcareId) =>
+
+      // organizationsDetails  <- partyManagementService.getBulkInstitutions(eserviceAndSelfcareId.map(_._2))
+
+      /*
+      eservicesAndDescription = eserviceAndSelfcareId.map { case (eservice, _) =>
+        (eservice, tenantManagementService.getTenant(eservice.producerId))
+      }*/
+
+      flattenServices = eserviceAndSelfcareId.flatMap { case (service, _) =>
+        convertToFlattenEservice(service, agreements, tenantManagementService.getTenant(service.producerId))
+      }
+
+      /*eservicesAndDescription = eserviceAndSelfcareId.map { case (eservice, selfcareId) =>
         (eservice, organizationsDetails.found.find(_.id.toString == selfcareId).map(_.description).getOrElse("Unknown"))
       }
+
       flattenServices         = eservicesAndDescription.flatMap { case (service, description) =>
         convertToFlattenEservice(service, agreements, description)
-      }
+      }*/
+
       stateProcessEnum <- state.traverse(EServiceDescriptorState.fromValue).toFuture
       filteredDescriptors = flattenServices.filter(item => stateProcessEnum.forall(item.state.contains))
     } yield filteredDescriptors
@@ -592,14 +606,11 @@ final case class ProcessApiServiceImpl(
   private def convertToApiEservice(
     eservice: CatalogManagementDependency.EService
   )(implicit contexts: Seq[(String, String)]): Future[OldEService] = for {
-    selfcareId   <- tenantManagementService
-      .getTenant(eservice.producerId)
-      .flatMap(_.selfcareId.toFuture(MissingSelfcareId))
-    organization <- partyManagementService.getInstitution(selfcareId)
-    attributes   <- attributeRegistryManagementService.getAttributesBulk(extractIdsFromAttributes(eservice.attributes))(
+    tenant     <- tenantManagementService.getTenant(eservice.producerId)
+    attributes <- attributeRegistryManagementService.getAttributesBulk(extractIdsFromAttributes(eservice.attributes))(
       contexts
     )
-  } yield Converter.convertToApiOldEservice(eservice, organization, attributes)
+  } yield Converter.convertToApiOldEservice(eservice, tenant, attributes)
 
   private def extractIdsFromAttributes(attributes: CatalogManagementDependency.Attributes): Seq[UUID] =
     attributes.certified.flatMap(extractIdsFromAttribute) ++
@@ -664,13 +675,18 @@ final case class ProcessApiServiceImpl(
   private def convertToFlattenEservice(
     eservice: client.model.EService,
     agreements: Seq[AgreementManagementDependency.Agreement],
-    description: String
+    tenant: Future[TenantManagementDependency.Tenant]
   ): Seq[FlatEService] = {
     val flatEServiceZero: FlatEService = FlatEService(
       id = eservice.id,
       producerId = eservice.producerId,
       name = eservice.name,
-      producerName = description,
+      producerName = tenant
+        .onComplete({
+          case Success(value) => value.name
+          case Failure(_)     => ""
+        })
+        .toString,
       version = None,
       state = None,
       descriptorId = None,

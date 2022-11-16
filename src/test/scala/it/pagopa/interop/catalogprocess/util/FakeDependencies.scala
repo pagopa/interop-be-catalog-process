@@ -24,7 +24,8 @@ import it.pagopa.interop.catalogprocess.service.{
   AttributeRegistryManagementService,
   AuthorizationManagementService,
   CatalogManagementService,
-  PartyManagementService
+  PartyManagementService,
+  TenantManagementService
 }
 import it.pagopa.interop.selfcare.partymanagement.client.model.{BulkInstitutions, Institution}
 
@@ -32,7 +33,6 @@ import java.io.File
 import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
-import it.pagopa.interop.catalogprocess.service.TenantManagementService
 import it.pagopa.interop.tenantmanagement.client.model.Tenant
 import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
 

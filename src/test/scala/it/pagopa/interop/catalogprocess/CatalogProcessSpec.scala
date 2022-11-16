@@ -23,8 +23,6 @@ import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.utils.SprayCommonFormats.uuidFormat
-import it.pagopa.interop.selfcare.partymanagement.client.model.{Attribute => PartyManagementApiAttribute}
-import it.pagopa.interop.selfcare.partymanagement.client.{model => PartyManagementDependency}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -33,7 +31,7 @@ import spray.json._
 import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, Future}
 import scala.util.Success
 import it.pagopa.interop.tenantmanagement.client.model.Tenant
 import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
@@ -318,20 +316,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         name = "test_name"
       )
 
-      val institution = PartyManagementDependency.Institution(
-        id = seed.producerId,
-        externalId = "institutionId",
-        originId = "",
-        description = "organization description",
-        digitalAddress = "digitalAddress",
-        address = "address",
-        zipCode = "zipCode",
-        taxCode = "code",
-        origin = "",
-        institutionType = "",
-        attributes = Seq.empty[PartyManagementApiAttribute]
-      )
-
       val attribute1 = AttributeRegistryManagementApiAttribute(
         id = attributeId1,
         code = None,
@@ -371,12 +355,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .expects(seed.producerId, *)
         .once()
         .returning(Future.successful(tenant))
-
-      (partyManagementService
-        .getInstitution(_: String)(_: Seq[(String, String)], _: ExecutionContext))
-        .expects(tenant.selfcareId.get, *, *)
-        .returning(Future.successful(institution))
-        .once()
 
       (attributeRegistryManagementService
         .getAttributesBulk(_: Seq[UUID])(_: Seq[(String, String)]))
@@ -419,7 +397,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       val expected = OldEService(
         id = eservice.id,
-        producer = Organization(id = institution.id, name = institution.description),
+        producer = Organization(id = eservice.producerId, name = tenant.name),
         name = seed.name,
         description = seed.description,
         technology = convertToApiTechnology(seed.technology),
