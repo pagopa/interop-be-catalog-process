@@ -281,7 +281,8 @@ object FakeDependencies {
           attributes = Nil,
           createdAt = OffsetDateTimeSupplier.get(),
           updatedAt = None,
-          mails = Nil
+          mails = Nil,
+          name = "test_name"
         )
       )
   }
