@@ -157,32 +157,39 @@ final case class ProcessApiServiceImpl(
     }
   }
 
-  override def getEServices(name: Option[String], producersIds: String, states: String, offset: Int, limit: Int)(
-    implicit
-    contexts: Seq[(String, String)],
-    toEntityMarshallerEServices: ToEntityMarshaller[EServices]
-  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
-    logger.info(
-      s"Getting e-service with name = $name, producers = $producersIds, states = $states, limit = $limit, offset = $offset"
-    )
+  override def getEServices(
+    name: Option[String],
+    eServicesIds: String,
+    producersIds: String,
+    states: String,
+    offset: Int,
+    limit: Int
+  )(implicit contexts: Seq[(String, String)], toEntityMarshallerEServices: ToEntityMarshaller[EServices]): Route =
+    authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
+      logger.info(
+        s"Getting e-service with name = $name, ids = $eServicesIds, producers = $producersIds, states = $states, limit = $limit, offset = $offset"
+      )
 
-    val result: Future[EServices] = for {
-      apiStates <- parseArrayParameters(states).traverse(EServiceDescriptorState.fromValue).toFuture
-      apiProducersIds = parseArrayParameters(producersIds)
-      result <- ReadModelQueries.listEServices(name, apiProducersIds, apiStates, offset, limit)(readModel)
-    } yield EServices(eservices = result.results.map(convertToApiEService), totalCount = result.totalCount)
-
-    onComplete(result) {
-      case Success(response) => getEServices200(response)
-      case Failure(ex)       =>
-        logger.error(
-          s"Getting e-service with name = $name, producers = $producersIds, states = $states, limit = $limit, offset = $offset",
-          ex
+      val result: Future[EServices] = for {
+        apiStates <- parseArrayParameters(states).traverse(EServiceDescriptorState.fromValue).toFuture
+        apiProducersIds = parseArrayParameters(producersIds)
+        apiEServicesIds = parseArrayParameters(eServicesIds)
+        result <- ReadModelQueries.listEServices(name, apiEServicesIds, apiProducersIds, apiStates, offset, limit)(
+          readModel
         )
-        val error = problemOf(StatusCodes.InternalServerError, EServicesRetrievalError)
-        complete(error.status, error)
+      } yield EServices(eservices = result.results.map(convertToApiEService), totalCount = result.totalCount)
+
+      onComplete(result) {
+        case Success(response) => getEServices200(response)
+        case Failure(ex)       =>
+          logger.error(
+            s"Getting e-service with name = $name, producers = $producersIds, states = $states, limit = $limit, offset = $offset",
+            ex
+          )
+          val error = problemOf(StatusCodes.InternalServerError, EServicesRetrievalError)
+          complete(error.status, error)
+      }
     }
-  }
 
   /** Code: 200, Message: E-Service Descriptor published, DataType: EService
     * Code: 400, Message: Invalid input, DataType: Problem
