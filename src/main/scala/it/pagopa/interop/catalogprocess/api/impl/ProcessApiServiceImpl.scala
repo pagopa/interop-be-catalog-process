@@ -436,7 +436,6 @@ final case class ProcessApiServiceImpl(
       agreementStates    <- parseArrayParameters(agreementState).distinct.traverse(AgreementState.fromValue).toFuture
       retrievedEservices <- retrieveEservices(producerId, consumerId, statusEnum, agreementStates)
       eservices          <- processEservicesWithLatestFilter(retrievedEservices, latestPublishedOnly)
-      // eserviceAndSelfcareId <- Future.traverse(eservices.toList)(getGetEserviceAndSelfcareId)
       eserviceAndTenant  <- Future.traverse(eservices.toList)(getGetEserviceAndTenant)
       agreements         <- Future
         .traverse(eservices.toList)(eService =>
@@ -452,16 +451,6 @@ final case class ProcessApiServiceImpl(
       flattenServices = eserviceAndTenant.flatMap { case (service, tenant) =>
         convertToFlattenEservice(service, agreements, tenant)
       }
-
-      /* Working solution but ugly.
-      tenants <- Future.traverse(eservices.toList)(eservice => tenantManagementService.getTenant(eservice.producerId))
-      flattenServices = eserviceAndSelfcareId.flatMap { case (service, selfcareId) =>
-        convertToFlattenEservice(
-          service,
-          agreements,
-          tenants.find(tenant => tenant.id.toString == selfcareId).map(_.name).getOrElse("Unknown")
-        )
-      } */
 
       stateProcessEnum <- state.traverse(EServiceDescriptorState.fromValue).toFuture
       filteredDescriptors = flattenServices.filter(item => stateProcessEnum.forall(item.state.contains))
@@ -479,23 +468,11 @@ final case class ProcessApiServiceImpl(
     }
   }
 
-  /*
-  def getGetEserviceAndSelfcareId(
-    eservice: client.model.EService
-  )(implicit contexts: Seq[(String, String)]): Future[(client.model.EService, String)] = eservice
-    .pure[Future]
-    .mproduct(eservice =>
-      tenantManagementService
-        .getTenant(eservice.producerId)
-        .flatMap(_.selfcareId.toFuture(MissingSelfcareId))
-    )
-  */
-
-  def getGetEserviceAndTenant(eservice: client.model.EService)(implicit contexts: Seq[(String, String)])
-  : Future[(client.model.EService, TenantManagementDependency.Tenant)] =
-    eservice
-    .pure[Future]
-    .mproduct(eservice => tenantManagementService.getTenant(eservice.producerId))
+  def getGetEserviceAndTenant(eservice: client.model.EService)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[(client.model.EService, TenantManagementDependency.Tenant)] = tenantManagementService
+    .getTenant(eservice.producerId)
+    .tupleLeft(eservice)
 
   private def processEservicesWithLatestFilter(
     eservices: Seq[CatalogManagementDependency.EService],
