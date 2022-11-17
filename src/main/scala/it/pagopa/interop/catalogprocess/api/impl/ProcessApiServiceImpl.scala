@@ -432,12 +432,13 @@ final case class ProcessApiServiceImpl(
       latestPublishedOnly
     )
     val result = for {
-      statusEnum            <- state.traverse(CatalogManagementDependency.EServiceDescriptorState.fromValue).toFuture
-      agreementStates       <- parseArrayParameters(agreementState).distinct.traverse(AgreementState.fromValue).toFuture
-      retrievedEservices    <- retrieveEservices(producerId, consumerId, statusEnum, agreementStates)
-      eservices             <- processEservicesWithLatestFilter(retrievedEservices, latestPublishedOnly)
-      eserviceAndSelfcareId <- Future.traverse(eservices.toList)(getGetEserviceAndSelfcareId)
-      agreements            <- Future
+      statusEnum         <- state.traverse(CatalogManagementDependency.EServiceDescriptorState.fromValue).toFuture
+      agreementStates    <- parseArrayParameters(agreementState).distinct.traverse(AgreementState.fromValue).toFuture
+      retrievedEservices <- retrieveEservices(producerId, consumerId, statusEnum, agreementStates)
+      eservices          <- processEservicesWithLatestFilter(retrievedEservices, latestPublishedOnly)
+      // eserviceAndSelfcareId <- Future.traverse(eservices.toList)(getGetEserviceAndSelfcareId)
+      eserviceAndTenant  <- Future.traverse(eservices.toList)(getGetEserviceAndTenant)
+      agreements         <- Future
         .traverse(eservices.toList)(eService =>
           agreementManagementService.getAgreements(
             consumerId = callerId.some,
@@ -448,9 +449,19 @@ final case class ProcessApiServiceImpl(
         )
         .map(_.flatten)
 
-      flattenServices = eserviceAndSelfcareId.flatMap { case (service, _) =>
-        convertToFlattenEservice(service, agreements, tenantManagementService.getTenant(service.producerId))
+      flattenServices = eserviceAndTenant.flatMap { case (service, tenant) =>
+        convertToFlattenEservice(service, agreements, tenant)
       }
+
+      /* Working solution but ugly.
+      tenants <- Future.traverse(eservices.toList)(eservice => tenantManagementService.getTenant(eservice.producerId))
+      flattenServices = eserviceAndSelfcareId.flatMap { case (service, selfcareId) =>
+        convertToFlattenEservice(
+          service,
+          agreements,
+          tenants.find(tenant => tenant.id.toString == selfcareId).map(_.name).getOrElse("Unknown")
+        )
+      } */
 
       stateProcessEnum <- state.traverse(EServiceDescriptorState.fromValue).toFuture
       filteredDescriptors = flattenServices.filter(item => stateProcessEnum.forall(item.state.contains))
@@ -468,6 +479,7 @@ final case class ProcessApiServiceImpl(
     }
   }
 
+  /*
   def getGetEserviceAndSelfcareId(
     eservice: client.model.EService
   )(implicit contexts: Seq[(String, String)]): Future[(client.model.EService, String)] = eservice
@@ -477,6 +489,13 @@ final case class ProcessApiServiceImpl(
         .getTenant(eservice.producerId)
         .flatMap(_.selfcareId.toFuture(MissingSelfcareId))
     )
+  */
+
+  def getGetEserviceAndTenant(eservice: client.model.EService)(implicit contexts: Seq[(String, String)])
+  : Future[(client.model.EService, TenantManagementDependency.Tenant)] =
+    eservice
+    .pure[Future]
+    .mproduct(eservice => tenantManagementService.getTenant(eservice.producerId))
 
   private def processEservicesWithLatestFilter(
     eservices: Seq[CatalogManagementDependency.EService],
@@ -659,18 +678,14 @@ final case class ProcessApiServiceImpl(
   private def convertToFlattenEservice(
     eservice: client.model.EService,
     agreements: Seq[AgreementManagementDependency.Agreement],
-    tenant: Future[TenantManagementDependency.Tenant]
+    tenant: TenantManagementDependency.Tenant
+    // tenantName: String
   ): Seq[FlatEService] = {
     val flatEServiceZero: FlatEService = FlatEService(
       id = eservice.id,
       producerId = eservice.producerId,
       name = eservice.name,
-      producerName = tenant
-        .onComplete({
-          case Success(value) => value.name
-          case Failure(_)     => ""
-        })
-        .toString,
+      producerName = tenant.name,
       version = None,
       state = None,
       descriptorId = None,
