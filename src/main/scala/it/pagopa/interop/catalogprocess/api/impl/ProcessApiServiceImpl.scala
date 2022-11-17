@@ -47,7 +47,6 @@ import scala.util.{Failure, Success}
 
 final case class ProcessApiServiceImpl(
   catalogManagementService: CatalogManagementService,
-  partyManagementService: PartyManagementService,
   attributeRegistryManagementService: AttributeRegistryManagementService,
   agreementManagementService: AgreementManagementService,
   authorizationManagementService: AuthorizationManagementService,
@@ -449,24 +448,9 @@ final case class ProcessApiServiceImpl(
         )
         .map(_.flatten)
 
-      // organizationsDetails  <- partyManagementService.getBulkInstitutions(eserviceAndSelfcareId.map(_._2))
-
-      /*
-      eservicesAndDescription = eserviceAndSelfcareId.map { case (eservice, _) =>
-        (eservice, tenantManagementService.getTenant(eservice.producerId))
-      }*/
-
       flattenServices = eserviceAndSelfcareId.flatMap { case (service, _) =>
         convertToFlattenEservice(service, agreements, tenantManagementService.getTenant(service.producerId))
       }
-
-      /*eservicesAndDescription = eserviceAndSelfcareId.map { case (eservice, selfcareId) =>
-        (eservice, organizationsDetails.found.find(_.id.toString == selfcareId).map(_.description).getOrElse("Unknown"))
-      }
-
-      flattenServices         = eservicesAndDescription.flatMap { case (service, description) =>
-        convertToFlattenEservice(service, agreements, description)
-      }*/
 
       stateProcessEnum <- state.traverse(EServiceDescriptorState.fromValue).toFuture
       filteredDescriptors = flattenServices.filter(item => stateProcessEnum.forall(item.state.contains))

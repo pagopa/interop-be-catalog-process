@@ -48,7 +48,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       new ProcessApi(
         ProcessApiServiceImpl(
           catalogManagementService = catalogManagementService,
-          partyManagementService = partyManagementService,
           attributeRegistryManagementService = attributeRegistryManagementService,
           agreementManagementService = agreementManagementService,
           authorizationManagementService = authorizationManagementService,
@@ -1083,7 +1082,6 @@ object CatalogProcessSpec extends MockFactory {
   val agreementManagementService: AgreementManagementService                 = mock[AgreementManagementService]
   val authorizationManagementService: AuthorizationManagementService         = mock[AuthorizationManagementService]
   val attributeRegistryManagementService: AttributeRegistryManagementService = mock[AttributeRegistryManagementService]
-  val partyManagementService: PartyManagementService                         = mock[PartyManagementService]
   val tenantManagementService: TenantManagementService                       = mock[TenantManagementService]
   val fileManager: FileManager                                               = mock[FileManager]
   val readModel: ReadModelService = new ReadModelService(ReadModelConfig("mongodb://localhost", "db"))

@@ -24,15 +24,13 @@ import it.pagopa.interop.catalogprocess.service.{
   AttributeRegistryManagementService,
   AuthorizationManagementService,
   CatalogManagementService,
-  PartyManagementService,
   TenantManagementService
 }
-import it.pagopa.interop.selfcare.partymanagement.client.model.{BulkInstitutions, Institution}
 
 import java.io.File
 import java.time.OffsetDateTime
 import java.util.UUID
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import it.pagopa.interop.tenantmanagement.client.model.Tenant
 import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
 
@@ -40,33 +38,6 @@ import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
  * Holds fake implementation of dependencies for tests not requiring neither mocks or stubs
  */
 object FakeDependencies {
-
-  class FakePartyManagementService extends PartyManagementService {
-    override def getInstitution(
-      id: String
-    )(implicit contexts: Seq[(String, String)], ec: ExecutionContext): Future[Institution] =
-      Future.successful(
-        Institution(
-          id = UUID.randomUUID(),
-          externalId = "test",
-          originId = "test",
-          description = "test",
-          digitalAddress = "???",
-          address = "???",
-          zipCode = "???",
-          taxCode = "???",
-          origin = "???",
-          institutionType = "???",
-          attributes = Seq.empty
-        )
-      )
-
-    override def getBulkInstitutions(
-      identifiers: List[String]
-    )(implicit contexts: Seq[(String, String)], ec: ExecutionContext): Future[BulkInstitutions] =
-      Future.successful(BulkInstitutions(Seq.empty, Seq.empty))
-  }
-
   class FakeAttributeRegistryManagementService extends AttributeRegistryManagementService {
     override def getAttributesBulk(attributeIds: Seq[UUID])(implicit
       contexts: Seq[(String, String)]
