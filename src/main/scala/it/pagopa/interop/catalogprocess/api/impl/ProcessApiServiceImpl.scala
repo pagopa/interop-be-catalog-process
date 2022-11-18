@@ -177,7 +177,7 @@ final case class ProcessApiServiceImpl(
         result <- ReadModelQueries.listEServices(name, apiEServicesIds, apiProducersIds, apiStates, offset, limit)(
           readModel
         )
-      } yield EServices(eservices = result.results.map(convertToApiEService), totalCount = result.totalCount)
+      } yield EServices(results = result.results.map(convertToApiEService), totalCount = result.totalCount)
 
       onComplete(result) {
         case Success(response) => getEServices200(response)
