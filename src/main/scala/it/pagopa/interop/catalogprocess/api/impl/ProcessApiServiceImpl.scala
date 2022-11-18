@@ -656,7 +656,6 @@ final case class ProcessApiServiceImpl(
     eservice: client.model.EService,
     agreements: Seq[AgreementManagementDependency.Agreement],
     tenant: TenantManagementDependency.Tenant
-    // tenantName: String
   ): Seq[FlatEService] = {
     val flatEServiceZero: FlatEService = FlatEService(
       id = eservice.id,
