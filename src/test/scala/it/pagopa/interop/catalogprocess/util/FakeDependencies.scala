@@ -275,7 +275,7 @@ object FakeDependencies {
         Tenant(
           id = UUID.randomUUID(),
           name = "a_name",
-          selfcareId = UUID.randomUUID.toString().some,
+          selfcareId = UUID.randomUUID.toString.some,
           externalId = null,
           features = Nil,
           attributes = Nil,
