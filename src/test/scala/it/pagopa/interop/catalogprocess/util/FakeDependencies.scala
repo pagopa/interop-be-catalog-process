@@ -274,13 +274,14 @@ object FakeDependencies {
       Future.successful(
         Tenant(
           id = UUID.randomUUID(),
-          selfcareId = UUID.randomUUID.toString().some,
+          selfcareId = UUID.randomUUID.toString.some,
           externalId = null,
           features = Nil,
           attributes = Nil,
           createdAt = OffsetDateTimeSupplier.get(),
           updatedAt = None,
-          mails = Nil
+          mails = Nil,
+          "name"
         )
       )
   }
