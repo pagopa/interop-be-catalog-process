@@ -307,14 +307,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       val tenant = Tenant(
         id = seed.producerId,
+        name = "a_name",
         selfcareId = UUID.randomUUID.toString.some,
         externalId = null,
         features = Nil,
         attributes = Nil,
         createdAt = OffsetDateTimeSupplier.get(),
         updatedAt = None,
-        mails = Nil,
-        name = "name"
+        mails = Nil
       )
 
       val institution = PartyManagementDependency.Institution(
