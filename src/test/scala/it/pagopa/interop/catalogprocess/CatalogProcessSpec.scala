@@ -314,8 +314,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         attributes = Nil,
         createdAt = OffsetDateTimeSupplier.get(),
         updatedAt = None,
-        mails = Nil,
-        name = "name"
+        mails = Nil
       )
 
       val institution = PartyManagementDependency.Institution(
