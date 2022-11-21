@@ -256,17 +256,16 @@ final case class ProcessApiServiceImpl(
     */
   override def getEServiceById(eServiceId: String)(implicit
     contexts: Seq[(String, String)],
-    toEntityMarshallerEService: ToEntityMarshaller[OldEService],
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerEService: ToEntityMarshaller[EService]
   ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
     logger.info("Getting e-service {}", eServiceId)
-    val result = for {
-      eservice    <- catalogManagementService.getEService(eServiceId)
-      apiEservice <- convertToApiEservice(eservice)
-    } yield apiEservice
+    val result: Future[EService] = for {
+      eService <- catalogManagementService.getEService(eServiceId)
+    } yield Converter.convertToApiEService(eService)
 
     onComplete(result) {
-      case Success(response) => getEServiceById200(response)
+      case Success(eService) => getEServiceById200(eService)
       case Failure(ex)       =>
         logger.error(s"Error while getting e-service $eServiceId", ex)
         val error =

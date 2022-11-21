@@ -19,6 +19,8 @@ object ProcessApiMarshallerImpl extends ProcessApiMarshaller with SprayJsonSuppo
 
   override implicit def toEntityMarshallerProblem: ToEntityMarshaller[Problem] = entityMarshallerProblem
 
+  override implicit def toEntityMarshallerEService: ToEntityMarshaller[EService] = sprayJsonMarshaller[EService]
+
   override implicit def toEntityMarshallerOldEService: ToEntityMarshaller[OldEService] =
     sprayJsonMarshaller[OldEService]
 

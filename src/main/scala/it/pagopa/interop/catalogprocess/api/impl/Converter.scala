@@ -29,7 +29,16 @@ object Converter {
     descriptors = eservice.descriptors.map(convertToApiDescriptor)
   )
 
-  def convertToApiEService(eService: readmodel.CatalogItem): EService = EService(
+  def convertToApiEService(eService: CatalogManagementDependency.EService): EService = EService(
+    id = eService.id,
+    producerId = eService.producerId,
+    name = eService.name,
+    description = eService.description,
+    technology = convertToApiTechnology(eService.technology),
+    attributes = convertToApiAttributes(eService.attributes),
+    descriptors = eService.descriptors.map(convertToApiDescriptor)
+  )
+  def convertToApiEService(eService: readmodel.CatalogItem): EService                = EService(
     id = eService.id,
     producerId = eService.producerId,
     name = eService.name,
@@ -39,12 +48,28 @@ object Converter {
     descriptors = eService.descriptors.map(convertToApiDescriptor)
   )
 
-  private def convertToApiAttributes(currentAttributes: readmodel.CatalogAttributes): Attributes =
+  private def convertToApiAttributes(attributes: CatalogManagementDependency.Attributes): Attributes =
     Attributes(
-      certified = currentAttributes.certified.map(convertToApiAttribute),
-      declared = currentAttributes.declared.map(convertToApiAttribute),
-      verified = currentAttributes.verified.map(convertToApiAttribute)
+      certified = attributes.certified.map(convertToApiAttribute),
+      declared = attributes.declared.map(convertToApiAttribute),
+      verified = attributes.verified.map(convertToApiAttribute)
     )
+
+  private def convertToApiAttributes(attributes: readmodel.CatalogAttributes): Attributes =
+    Attributes(
+      certified = attributes.certified.map(convertToApiAttribute),
+      declared = attributes.declared.map(convertToApiAttribute),
+      verified = attributes.verified.map(convertToApiAttribute)
+    )
+
+  private def convertToApiAttribute(attribute: CatalogManagementDependency.Attribute): Attribute = {
+    Attribute(
+      single = attribute.single.map(attr => AttributeValue(attr.id, attr.explicitAttributeVerification)),
+      group =
+        attribute.group.map(attrs => attrs.map(attr => AttributeValue(attr.id, attr.explicitAttributeVerification)))
+    )
+
+  }
 
   private def convertToApiAttribute(attribute: readmodel.CatalogAttribute): Attribute = attribute match {
     case a: readmodel.SingleAttribute =>
