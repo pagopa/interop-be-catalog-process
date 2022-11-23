@@ -274,7 +274,8 @@ object FakeDependencies {
       Future.successful(
         Tenant(
           id = UUID.randomUUID(),
-          selfcareId = UUID.randomUUID.toString().some,
+          name = "a_name",
+          selfcareId = UUID.randomUUID.toString.some,
           externalId = null,
           features = Nil,
           attributes = Nil,

@@ -1036,7 +1036,7 @@ components:
     EServices:
       type: object
       properties:
-        eservices:
+        results:
           type: array
           items:
             $ref: '#/components/schemas/EService'
@@ -1044,7 +1044,7 @@ components:
           type: integer
           format: int32
       required:
-        - eservices
+        - results
         - totalCount
     EServiceDoc:
       type: object
