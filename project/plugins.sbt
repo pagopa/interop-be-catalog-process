@@ -13,3 +13,4 @@ addSbtPlugin("com.codecommit" % "sbt-github-packages" % "0.5.3")
 addSbtPlugin("io.chrisdavenport" % "sbt-no-publish" % "0.1.0")
 
 ThisBuild / libraryDependencySchemes ++= Seq("org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always)
+
