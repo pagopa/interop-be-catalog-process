@@ -7,9 +7,9 @@ ThisBuild / organizationName  := "Pagopa S.p.A."
 ThisBuild / dependencyOverrides ++= Dependencies.Jars.overrides
 ThisBuild / version           := ComputeVersion.version
 Global / onChangedBuildSource := ReloadOnSourceChanges
-
-ThisBuild / resolvers += "Pagopa Nexus Snapshots" at s"https://${System.getenv("MAVEN_REPO")}/nexus/repository/maven-snapshots/"
-ThisBuild / resolvers += "Pagopa Nexus Releases" at s"https://${System.getenv("MAVEN_REPO")}/nexus/repository/maven-releases/"
+ThisBuild / githubOwner       := "pagopa"
+ThisBuild / githubRepository  := "interop-be-catalog-process"
+ThisBuild / resolvers += Resolver.githubPackages("pagopa")
 
 lazy val generateCode = taskKey[Unit]("A task for generating the code starting from the swagger definition")
 
@@ -63,8 +63,6 @@ cleanFiles += baseDirectory.value / "client" / "src"
 
 cleanFiles += baseDirectory.value / "client" / "target"
 
-ThisBuild / credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
-
 val runStandalone = inputKey[Unit]("Run the app using standalone configuration")
 runStandalone := {
   task(System.setProperty("config.file", "src/main/resources/application-standalone.conf")).value
@@ -74,6 +72,7 @@ runStandalone := {
 lazy val generated = project
   .in(file("generated"))
   .settings(scalacOptions := Seq(), scalafmtOnCompile := true, libraryDependencies := Dependencies.Jars.`server`)
+  .enablePlugins(NoPublishPlugin)
   .setupBuildInfo
 
 lazy val client = project
@@ -84,15 +83,7 @@ lazy val client = project
     scalafmtOnCompile   := true,
     libraryDependencies := Dependencies.Jars.client,
     updateOptions       := updateOptions.value.withGigahorse(false),
-    Docker / publish    := {},
-    publishTo           := {
-      val nexus = s"https://${System.getenv("MAVEN_REPO")}/nexus/repository/"
-
-      if (isSnapshot.value)
-        Some("snapshots" at nexus + "maven-snapshots/")
-      else
-        Some("releases" at nexus + "maven-releases/")
-    }
+    Docker / publish    := {}
   )
 
 lazy val root = (project in file("."))
@@ -114,6 +105,7 @@ lazy val root = (project in file("."))
   .aggregate(client)
   .dependsOn(generated)
   .enablePlugins(JavaAppPackaging)
+  .enablePlugins(NoPublishPlugin)
   .setupBuildInfo
 
 Test / fork := true
