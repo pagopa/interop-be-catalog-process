@@ -92,7 +92,7 @@ lazy val root = (project in file("."))
     Test / parallelExecution    := false,
     scalafmtOnCompile           := true,
     dockerBuildOptions ++= Seq("--network=host"),
-    dockerRepository            := Some(System.getenv("DOCKER_REPO")),
+    dockerRepository            := Some(System.getenv("ECR_REGISTRY")),
     dockerBaseImage             := "adoptopenjdk:11-jdk-hotspot",
     daemonUser                  := "daemon",
     Docker / version            := (ThisBuild / version).value.replaceAll("-SNAPSHOT", "-latest").toLowerCase,
