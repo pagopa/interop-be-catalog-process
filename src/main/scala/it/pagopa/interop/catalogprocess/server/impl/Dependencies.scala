@@ -31,13 +31,10 @@ import it.pagopa.interop.commons.jwt.service.impl.{DefaultJWTReader, getClaimsVe
 import it.pagopa.interop.commons.jwt.{JWTConfiguration, KID, PublicKeysHolder, SerializedKey}
 import it.pagopa.interop.commons.utils.TypeConversions.TryOps
 import it.pagopa.interop.commons.utils.{AkkaUtils, OpenapiUtils}
-import it.pagopa.interop.selfcare.partymanagement.client.api.PartyApi
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 
 trait Dependencies {
-
-  implicit val partyManagementApiKeyValue: PartyManagementApiKeyValue = PartyManagementApiKeyValue()
 
   def getFileManager(blockingEc: ExecutionContextExecutor): FileManager =
     FileManager.get(ApplicationConfiguration.storageKind match {
@@ -66,7 +63,6 @@ trait Dependencies {
     new ProcessApi(
       ProcessApiServiceImpl(
         catalogManagementService = catalogManagementService(blockingEc),
-        partyManagementService = partyManagementService(),
         attributeRegistryManagementService = attributeRegistryManagementService(blockingEc),
         agreementManagementService = agreementManagementService(blockingEc),
         authorizationManagementService = authorizationManagementService(blockingEc),
@@ -127,12 +123,6 @@ trait Dependencies {
     blockingEc: ExecutionContextExecutor
   )(implicit actorSystem: ActorSystem[_], ec: ExecutionContext): CatalogManagementService =
     CatalogManagementServiceImpl(catalogManagementInvoker(blockingEc), catalogApi)
-
-  private def partyManagementInvoker()(implicit actorSystem: ActorSystem[_]): PartyManagementInvoker =
-    PartyManagementInvoker()(actorSystem.classicSystem)
-  private def partyApi: PartyApi = PartyApi(ApplicationConfiguration.partyManagementUrl)
-  def partyManagementService()(implicit actorSystem: ActorSystem[_]): PartyManagementService =
-    PartyManagementServiceImpl(partyManagementInvoker(), partyApi)
 
   val validationExceptionToRoute: ValidationReport => Route = report => {
     val error =

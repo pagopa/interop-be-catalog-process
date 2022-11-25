@@ -77,9 +77,6 @@ object Dependencies {
     lazy val agreementManagementClient =
       namespace %% "interop-be-agreement-management-client" % agreementManagementVersion
 
-    lazy val partyManagementClient =
-      namespace %% "interop-selfcare-party-management-client" % partyManagementVersion
-
     lazy val tenantManagementClient =
       namespace %% "interop-be-tenant-management-client" % tenantManagementVersion
 
@@ -117,7 +114,6 @@ object Dependencies {
       pagopa.catalogManagementClient           % Compile,
       pagopa.catalogManagementModels           % Compile,
       pagopa.agreementManagementClient         % Compile,
-      pagopa.partyManagementClient             % Compile,
       pagopa.attributeRegistryManagementClient % Compile,
       pagopa.authorizationManagementClient     % Compile,
       pagopa.commonsUtils                      % Compile,

@@ -23,8 +23,6 @@ import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.utils.SprayCommonFormats.uuidFormat
-import it.pagopa.interop.selfcare.partymanagement.client.model.{Attribute => PartyManagementApiAttribute}
-import it.pagopa.interop.selfcare.partymanagement.client.{model => PartyManagementDependency}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -33,7 +31,7 @@ import spray.json._
 import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, Future}
 import scala.util.Success
 import it.pagopa.interop.tenantmanagement.client.model.Tenant
 import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
@@ -50,7 +48,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       new ProcessApi(
         ProcessApiServiceImpl(
           catalogManagementService = catalogManagementService,
-          partyManagementService = partyManagementService,
           attributeRegistryManagementService = attributeRegistryManagementService,
           agreementManagementService = agreementManagementService,
           authorizationManagementService = authorizationManagementService,
@@ -307,28 +304,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       val tenant = Tenant(
         id = seed.producerId,
-        name = "a_name",
         selfcareId = UUID.randomUUID.toString.some,
         externalId = null,
         features = Nil,
         attributes = Nil,
         createdAt = OffsetDateTimeSupplier.get(),
         updatedAt = None,
-        mails = Nil
-      )
-
-      val institution = PartyManagementDependency.Institution(
-        id = seed.producerId,
-        externalId = "institutionId",
-        originId = "",
-        description = "organization description",
-        digitalAddress = "digitalAddress",
-        address = "address",
-        zipCode = "zipCode",
-        taxCode = "code",
-        origin = "",
-        institutionType = "",
-        attributes = Seq.empty[PartyManagementApiAttribute]
+        mails = Nil,
+        name = "test_name"
       )
 
       val attribute1 = AttributeRegistryManagementApiAttribute(
@@ -371,12 +354,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
         .returning(Future.successful(tenant))
 
-      (partyManagementService
-        .getInstitution(_: String)(_: Seq[(String, String)], _: ExecutionContext))
-        .expects(tenant.selfcareId.get, *, *)
-        .returning(Future.successful(institution))
-        .once()
-
       (attributeRegistryManagementService
         .getAttributesBulk(_: Seq[UUID])(_: Seq[(String, String)]))
         .expects(Seq(attributeId1, attributeId2, attributeId3), *)
@@ -418,7 +395,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       val expected = OldEService(
         id = eservice.id,
-        producer = Organization(id = institution.id, name = institution.description),
+        producer = Organization(id = eservice.producerId, name = tenant.name),
         name = seed.name,
         description = seed.description,
         technology = convertToApiTechnology(seed.technology),
@@ -1104,7 +1081,6 @@ object CatalogProcessSpec extends MockFactory {
   val agreementManagementService: AgreementManagementService                 = mock[AgreementManagementService]
   val authorizationManagementService: AuthorizationManagementService         = mock[AuthorizationManagementService]
   val attributeRegistryManagementService: AttributeRegistryManagementService = mock[AttributeRegistryManagementService]
-  val partyManagementService: PartyManagementService                         = mock[PartyManagementService]
   val tenantManagementService: TenantManagementService                       = mock[TenantManagementService]
   val fileManager: FileManager                                               = mock[FileManager]
   val readModel: ReadModelService = new ReadModelService(ReadModelConfig("mongodb://localhost", "db"))
