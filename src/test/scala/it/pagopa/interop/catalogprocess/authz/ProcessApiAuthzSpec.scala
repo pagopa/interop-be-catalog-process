@@ -30,7 +30,6 @@ import scala.concurrent.ExecutionContextExecutor
 class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with AuthzScalatestRouteTest {
 
   val fakeCatalogManagementService: CatalogManagementService                     = new FakeCatalogManagementService()
-  val fakePartyManagementService: PartyManagementService                         = new FakePartyManagementService()
   val fakeAttributeRegistryManagementService: AttributeRegistryManagementService =
     new FakeAttributeRegistryManagementService()
   val fakeAgreementManagementService: AgreementManagementService                 = new FakeAgreementManagementService()
@@ -51,7 +50,6 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
   val service: ProcessApiServiceImpl =
     ProcessApiServiceImpl(
       fakeCatalogManagementService,
-      fakePartyManagementService,
       fakeAttributeRegistryManagementService,
       fakeAgreementManagementService,
       fakeAuthorizationManagementService,

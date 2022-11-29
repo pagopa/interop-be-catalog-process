@@ -6,7 +6,7 @@ import it.pagopa.interop.attributeregistrymanagement.client.{model => AttributeM
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.catalogmanagement.{model => readmodel}
 import it.pagopa.interop.catalogprocess.model._
-import it.pagopa.interop.selfcare.partymanagement.client.{model => PartyManagementDependency}
+import it.pagopa.interop.tenantmanagement.client.{model => TenantManagementDependency}
 
 import java.util.UUID
 import scala.concurrent.Future
@@ -17,11 +17,11 @@ object Converter {
 
   def convertToApiOldEservice(
     eservice: CatalogManagementDependency.EService,
-    institution: PartyManagementDependency.Institution,
+    tenant: TenantManagementDependency.Tenant,
     attributes: Seq[AttributeManagementDependency.Attribute]
   ): OldEService = OldEService(
     id = eservice.id,
-    producer = Organization(id = eservice.producerId, name = institution.description),
+    producer = Organization(id = eservice.producerId, name = tenant.name),
     name = eservice.name,
     description = eservice.description,
     technology = convertToApiTechnology(eservice.technology),
