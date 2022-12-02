@@ -36,6 +36,7 @@ import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
+import it.pagopa.interop.commons.utils.errors.{Problem => CommonProblem}
 import it.pagopa.interop.tenantmanagement.client.{model => TenantManagementDependency}
 
 import java.io.{File, FileOutputStream}
@@ -307,7 +308,7 @@ final case class ProcessApiServiceImpl(
           s"Error while getting flatten e-services list for caller $callerId where producer = $producerId, consumer = $consumerId, state = $state and latest published only = $latestPublishedOnly",
           ex
         )
-        val error = problemOf(StatusCodes.InternalServerError, FlattenedEServicesRetrievalError)
+        val error = CommonProblem(StatusCodes.InternalServerError, FlattenedEServicesRetrievalError, serviceCode)
         complete(error.status, error)
     }
   }
