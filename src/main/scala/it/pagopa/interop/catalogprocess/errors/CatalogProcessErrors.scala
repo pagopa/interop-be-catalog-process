@@ -5,7 +5,10 @@ import it.pagopa.interop.commons.utils.errors.ComponentError
 object CatalogProcessErrors {
 
   final case class ContentTypeParsingError(contentType: String, documentPath: String, errors: List[String])
-      extends ComponentError("0001", s"Error trying to parse content type $contentType for document ${documentPath}.")
+      extends ComponentError(
+        "0001",
+        s"Error parsing content type $contentType for document $documentPath. Reasons: ${errors.mkString(",")}"
+      )
 
   final case class EServiceDescriptorNotFound(eServiceId: String, descriptorId: String)
       extends ComponentError("0002", s"Descriptor $descriptorId for EService $eServiceId not found")
@@ -18,8 +21,6 @@ object CatalogProcessErrors {
         "0004",
         s"Descriptor $descriptorId has a not valid status for this operation $descriptorStatus"
       )
-
-  final case class ForbiddenOperation(message: String) extends ComponentError("0005", s"Operation forbidden: $message")
 
   final case class EServiceCreationError(message: String)             extends ComponentError("0006", message)
   final case class DraftDescriptorDeletionBadRequest(message: String) extends ComponentError("0007", message)
@@ -113,7 +114,7 @@ object CatalogProcessErrors {
         "0036",
         s"Error retrieving document $documentId for E-Service $eServiceId and descriptor $descriptorId"
       )
-  final case class GetDescriptorDocumentNotFound(documentId: String, descriptorId: String, eServiceId: String)
+  final case class DescriptorDocumentNotFound(eServiceId: String, descriptorId: String, documentId: String)
       extends ComponentError(
         "0037",
         s"Error retrieving document $documentId for E-Service $eServiceId and descriptor $descriptorId"
@@ -125,4 +126,14 @@ object CatalogProcessErrors {
       )
 
   final case object MissingSelfcareId extends ComponentError(s"0039", "SelfcareId missing from Tenant")
+
+  final case class EServiceNotFound(eServiceId: String)
+      extends ComponentError("0040", s"EService $eServiceId not found")
+
+  final case class DraftDescriptorAlreadyExists(eServiceId: String)
+      extends ComponentError("0041", s"EService $eServiceId already contains a draft descriptor")
+
+  final case class EServiceCannotBeUpdated(eServiceId: String)
+      extends ComponentError("0042", s"EService $eServiceId contains valid descriptors and cannot be updated")
+
 }
