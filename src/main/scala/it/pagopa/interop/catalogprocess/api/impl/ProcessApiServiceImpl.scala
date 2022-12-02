@@ -463,7 +463,7 @@ final case class ProcessApiServiceImpl(
   ): Future[Unit] = catalogManagementService
     .deprecateDescriptor(eServiceId = eServiceId, descriptorId = descriptorId)
     .recoverWith { case ex =>
-      logger.error(s"Unable to deprecate descriptor $descriptorId on E-Service $eServiceId", ex)
+      logger.error(s"Unable to deprecate descriptor $descriptorId on EService $eServiceId", ex)
       Future.failed(ex)
     }
 
@@ -472,7 +472,7 @@ final case class ProcessApiServiceImpl(
   ): Future[Unit] = catalogManagementService
     .draftDescriptor(eServiceId = eServiceId, descriptorId = descriptorId)
     .map { result =>
-      logger.info(s"Publication cancelled for descriptor $descriptorId in E-Service $eServiceId")
+      logger.info(s"Publication cancelled for descriptor $descriptorId in EService $eServiceId")
       result
     }
 
