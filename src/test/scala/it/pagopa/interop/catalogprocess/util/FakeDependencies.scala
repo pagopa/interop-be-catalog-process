@@ -89,7 +89,7 @@ object FakeDependencies {
       contexts: Seq[(String, String)]
     ): Future[Unit] = Future.successful(())
 
-    override def updateEservice(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed)(implicit
+    override def updateEServiceById(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed)(implicit
       contexts: Seq[(String, String)]
     ): Future[EService] = Future.successful(
       EService(
@@ -103,7 +103,7 @@ object FakeDependencies {
       )
     )
 
-    override def cloneEservice(eServiceId: UUID, descriptorId: UUID)(implicit
+    override def cloneEService(eServiceId: UUID, descriptorId: UUID)(implicit
       contexts: Seq[(String, String)]
     ): Future[EService] = Future.successful(
       EService(

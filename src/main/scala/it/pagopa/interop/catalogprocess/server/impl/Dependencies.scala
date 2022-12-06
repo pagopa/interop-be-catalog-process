@@ -16,12 +16,11 @@ import it.pagopa.interop.catalogprocess.api.impl.{
   HealthApiMarshallerImpl,
   HealthServiceApiImpl,
   ProcessApiMarshallerImpl,
-  ProcessApiServiceImpl,
-  entityMarshallerProblem,
-  problemOf
+  ProcessApiServiceImpl
 }
 import it.pagopa.interop.catalogprocess.api.{HealthApi, ProcessApi}
 import it.pagopa.interop.catalogprocess.common.system.ApplicationConfiguration
+import it.pagopa.interop.catalogprocess.errors.Handlers.serviceCode
 import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.catalogprocess.service.impl._
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
@@ -30,6 +29,7 @@ import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.jwt.service.impl.{DefaultJWTReader, getClaimsVerifier}
 import it.pagopa.interop.commons.jwt.{JWTConfiguration, KID, PublicKeysHolder, SerializedKey}
 import it.pagopa.interop.commons.utils.TypeConversions.TryOps
+import it.pagopa.interop.commons.utils.errors.{Problem => CommonProblem}
 import it.pagopa.interop.commons.utils.{AkkaUtils, OpenapiUtils}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
@@ -126,8 +126,8 @@ trait Dependencies {
 
   val validationExceptionToRoute: ValidationReport => Route = report => {
     val error =
-      problemOf(StatusCodes.BadRequest, OpenapiUtils.errorFromRequestValidationReport(report))
-    complete(error.status, error)(entityMarshallerProblem)
+      CommonProblem(StatusCodes.BadRequest, OpenapiUtils.errorFromRequestValidationReport(report), serviceCode)
+    complete(error.status, error)
   }
 
 }

@@ -9,7 +9,6 @@ import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.tenantmanagement.client.{model => TenantManagementDependency}
 
 import java.util.UUID
-import scala.concurrent.Future
 
 object Converter {
 
@@ -221,7 +220,7 @@ object Converter {
 
   def convertToClientEServiceDescriptorSeed(
     descriptor: EServiceDescriptorSeed
-  ): Future[CatalogManagementDependency.EServiceDescriptorSeed] = Future.successful(
+  ): CatalogManagementDependency.EServiceDescriptorSeed =
     CatalogManagementDependency.EServiceDescriptorSeed(
       description = descriptor.description,
       audience = descriptor.audience,
@@ -230,7 +229,6 @@ object Converter {
       dailyCallsTotal = descriptor.dailyCallsTotal,
       agreementApprovalPolicy = convertFromApiAgreementApprovalPolicy(descriptor.agreementApprovalPolicy)
     )
-  )
 
   def convertToClientUpdateEServiceSeed(
     eServiceSeed: UpdateEServiceSeed
@@ -243,12 +241,12 @@ object Converter {
 
   def convertToClientEServiceDescriptorDocumentSeed(
     seed: UpdateEServiceDescriptorDocumentSeed
-  ): Future[CatalogManagementDependency.UpdateEServiceDescriptorDocumentSeed] =
-    Future.successful(CatalogManagementDependency.UpdateEServiceDescriptorDocumentSeed(prettyName = seed.prettyName))
+  ): CatalogManagementDependency.UpdateEServiceDescriptorDocumentSeed =
+    CatalogManagementDependency.UpdateEServiceDescriptorDocumentSeed(prettyName = seed.prettyName)
 
   def convertToClientUpdateEServiceDescriptorSeed(
     seed: UpdateEServiceDescriptorSeed
-  ): Future[CatalogManagementDependency.UpdateEServiceDescriptorSeed] = Future.successful(
+  ): CatalogManagementDependency.UpdateEServiceDescriptorSeed =
     CatalogManagementDependency.UpdateEServiceDescriptorSeed(
       description = seed.description,
       audience = seed.audience,
@@ -258,7 +256,6 @@ object Converter {
       state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
       agreementApprovalPolicy = convertFromApiAgreementApprovalPolicy(seed.agreementApprovalPolicy)
     )
-  )
 
   def convertToApiDescriptorState(
     clientStatus: CatalogManagementDependency.EServiceDescriptorState
