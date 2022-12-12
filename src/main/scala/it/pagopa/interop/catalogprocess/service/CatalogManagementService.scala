@@ -1,7 +1,10 @@
 package it.pagopa.interop.catalogprocess.service
 
 import akka.http.scaladsl.server.directives.FileInfo
+import it.pagopa.interop.catalogmanagement.client.model.EServiceDescriptorState.DRAFT
 import it.pagopa.interop.catalogmanagement.client.model._
+import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors.EServiceCannotBeUpdated
+import it.pagopa.interop.commons.utils.TypeConversions._
 
 import java.io.File
 import java.util.UUID
@@ -14,10 +17,10 @@ trait CatalogManagementService {
   def getEService(eServiceId: String)(implicit contexts: Seq[(String, String)]): Future[EService]
   def createEService(eServiceSeed: EServiceSeed)(implicit contexts: Seq[(String, String)]): Future[EService]
   def deleteDraft(eServiceId: String, descriptorId: String)(implicit contexts: Seq[(String, String)]): Future[Unit]
-  def updateEservice(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed)(implicit
+  def updateEServiceById(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed)(implicit
     contexts: Seq[(String, String)]
   ): Future[EService]
-  def cloneEservice(eServiceId: UUID, descriptorId: UUID)(implicit contexts: Seq[(String, String)]): Future[EService]
+  def cloneEService(eServiceId: UUID, descriptorId: UUID)(implicit contexts: Seq[(String, String)]): Future[EService]
   def deleteEService(eServiceId: String)(implicit contexts: Seq[(String, String)]): Future[Unit]
 
   def createDescriptor(eServiceId: String, eServiceDescriptorSeed: EServiceDescriptorSeed)(implicit
@@ -63,4 +66,15 @@ trait CatalogManagementService {
   def deleteEServiceDocument(eServiceId: String, descriptorId: String, documentId: String)(implicit
     contexts: Seq[(String, String)]
   ): Future[Unit]
+}
+
+object CatalogManagementService {
+  def eServiceCanBeUpdated(eService: EService): Future[Unit] = Either
+    .cond(
+      eService.descriptors.isEmpty ||
+        (eService.descriptors.length == 1 && eService.descriptors.exists(_.state == DRAFT)),
+      (),
+      EServiceCannotBeUpdated(eService.id.toString)
+    )
+    .toFuture
 }
