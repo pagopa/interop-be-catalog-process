@@ -20,7 +20,7 @@ import it.pagopa.interop.catalogprocess.api.impl.{
 }
 import it.pagopa.interop.catalogprocess.api.{HealthApi, ProcessApi}
 import it.pagopa.interop.catalogprocess.common.system.ApplicationConfiguration
-import it.pagopa.interop.catalogprocess.errors.Handlers.serviceCode
+import it.pagopa.interop.catalogprocess.api.impl.ResponseHandlers.serviceCode
 import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.catalogprocess.service.impl._
 import it.pagopa.interop.commons.cqrs.service.ReadModelService

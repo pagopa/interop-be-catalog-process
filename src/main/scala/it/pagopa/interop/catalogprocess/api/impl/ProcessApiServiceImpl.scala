@@ -23,10 +23,10 @@ import it.pagopa.interop.catalogprocess.api.impl.Converter.{
   convertToApiDescriptorState,
   convertToApiEService
 }
+import it.pagopa.interop.catalogprocess.api.impl.ResponseHandlers._
 import it.pagopa.interop.catalogprocess.common.readmodel.ReadModelQueries
 import it.pagopa.interop.catalogprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors._
-import it.pagopa.interop.catalogprocess.errors.Handlers._
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
@@ -71,13 +71,13 @@ final case class ProcessApiServiceImpl(
       s"Creating E-Service for producer ${eServiceSeed.producerId} with service name ${eServiceSeed.name}"
     logger.info(operationLabel)
     val clientSeed: CatalogManagementDependency.EServiceSeed = Converter.convertToClientEServiceSeed(eServiceSeed)
-    val result                                               = for {
+    val result: Future[OldEService]                          = for {
       createdEService <- catalogManagementService.createEService(clientSeed)
       apiEService     <- convertToApiEservice(createdEService)
     } yield apiEService
 
     onComplete(result) {
-      handleEServiceCreationError(operationLabel) orElse { case Success(res) =>
+      createEServiceResponse[OldEService](operationLabel) { res =>
         logger.info(s"E-Service created with id ${res.id}")
         createEService200(res)
       }
@@ -97,14 +97,14 @@ final case class ProcessApiServiceImpl(
       else
         catalogManagementService.deleteEService(eServiceId)
 
-    val result = for {
+    val result: Future[Unit] = for {
       eService <- catalogManagementService.getEService(eServiceId)
       result   <- catalogManagementService.deleteDraft(eServiceId, descriptorId)
       _        <- deleteEServiceIfEmpty(eService)
     } yield result
 
     onComplete(result) {
-      handleDraftDeletionError(operationLabel) orElse { case Success(_) => deleteDraft204 }
+      deleteDraftResponse[Unit](operationLabel)(_ => deleteDraft204)
     }
   }
 
@@ -131,7 +131,7 @@ final case class ProcessApiServiceImpl(
       } yield EServices(results = result.results.map(convertToApiEService), totalCount = result.totalCount)
 
       onComplete(result) {
-        handleListingError(operationLabel) orElse { case Success(response) => getEServices200(response) }
+        getEServicesResponse(operationLabel)(getEServices200)
       }
     }
 
@@ -139,9 +139,9 @@ final case class ProcessApiServiceImpl(
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
   ): Route = authorize(ADMIN_ROLE, API_ROLE) {
-    val operationLabel = s"Publishing descriptor $descriptorId for EService $eServiceId"
+    val operationLabel       = s"Publishing descriptor $descriptorId for EService $eServiceId"
     logger.info(operationLabel)
-    val result         = for {
+    val result: Future[Unit] = for {
       currentEService <- catalogManagementService.getEService(eServiceId)
       descriptor      <- currentEService.descriptors
         .find(_.id.toString == descriptorId)
@@ -170,7 +170,7 @@ final case class ProcessApiServiceImpl(
     } yield ()
 
     onComplete(result) {
-      handlePublishError(operationLabel) orElse { case Success(_) => publishDescriptor204 }
+      publishDescriptorResponse[Unit](operationLabel)(_ => publishDescriptor204)
     }
   }
 
@@ -185,7 +185,7 @@ final case class ProcessApiServiceImpl(
     val result: Future[EService] = catalogManagementService.getEService(eServiceId).map(Converter.convertToApiEService)
 
     onComplete(result) {
-      handleRetrieveError(operationLabel) orElse { case Success(eService) => getEServiceById200(eService) }
+      getEServiceByIdResponse[EService](operationLabel)(getEServiceById200)
     }
   }
 
@@ -204,15 +204,13 @@ final case class ProcessApiServiceImpl(
       s"Creating EService document of kind $kind for EService $eServiceId and descriptor $descriptorId"
     logger.info(operationLabel)
 
-    val result = for {
+    val result: Future[OldEService] = for {
       eService    <- catalogManagementService.createEServiceDocument(eServiceId, descriptorId, kind, prettyName, doc)
       apiEService <- convertToApiEservice(eService)
     } yield apiEService
 
     onComplete(result) {
-      handleDocumentCreationError(operationLabel) orElse { case Success(response) =>
-        createEServiceDocument200(response)
-      }
+      createEServiceDocumentResponse[OldEService](operationLabel)(createEServiceDocument200)
     }
   }
 
@@ -232,7 +230,7 @@ final case class ProcessApiServiceImpl(
     } yield DocumentDetails(document.name, contentType, response)
 
     onComplete(result) {
-      handleDocumentRetrieveError(operationLabel) orElse { case Success(documentDetails) =>
+      getEServiceDocumentByIdResponse[DocumentDetails](operationLabel) { documentDetails =>
         val output: MessageEntity = convertToMessageEntity(documentDetails)
         complete(output)
       }
@@ -347,7 +345,7 @@ final case class ProcessApiServiceImpl(
     val operationLabel = s"Creating descriptor for EService $eServiceId"
     logger.info(operationLabel)
 
-    val result = for {
+    val result: Future[EServiceDescriptor] = for {
       currentEService <- catalogManagementService.getEService(eServiceId)
       _               <- catalogManagementService.hasNotDraftDescriptor(currentEService)
       clientSeed = Converter.convertToClientEServiceDescriptorSeed(eServiceDescriptorSeed)
@@ -355,7 +353,7 @@ final case class ProcessApiServiceImpl(
     } yield Converter.convertToApiDescriptor(createdEServiceDescriptor)
 
     onComplete(result) {
-      handleDescriptorCreationError(operationLabel) orElse { case Success(res) => createDescriptor200(res) }
+      createDescriptorResponse[EServiceDescriptor](operationLabel)(createDescriptor200)
     }
   }
 
@@ -383,7 +381,7 @@ final case class ProcessApiServiceImpl(
     } yield apiEService
 
     onComplete(result) {
-      handleDescriptorUpdateError(operationLabel) orElse { case Success(res) => updateDraftDescriptor200(res) }
+      updateDraftDescriptorResponse[OldEService](operationLabel)(updateDraftDescriptor200)
     }
   }
 
@@ -404,7 +402,7 @@ final case class ProcessApiServiceImpl(
     } yield apiEService
 
     onComplete(result) {
-      handleEServiceUpdateError(operationLabel) orElse { case Success(res) => updateEServiceById200(res) }
+      updateEServiceByIdResponse(operationLabel)(updateEServiceById200)
     }
   }
 
@@ -539,7 +537,7 @@ final case class ProcessApiServiceImpl(
     val result: Future[Unit] = catalogManagementService.deleteEServiceDocument(eServiceId, descriptorId, documentId)
 
     onComplete(result) {
-      handleDocumentDeletionError(operationLabel) orElse { case Success(_) => deleteEServiceDocumentById204 }
+      deleteEServiceDocumentByIdResponse[Unit](operationLabel)(_ => deleteEServiceDocumentById204)
     }
   }
 
@@ -564,9 +562,7 @@ final case class ProcessApiServiceImpl(
       .map(Converter.convertToApiEserviceDoc)
 
     onComplete(result) {
-      handleDocumentUpdateError(operationLabel) orElse { case Success(updatedDocument) =>
-        updateEServiceDocumentById200(updatedDocument)
-      }
+      updateEServiceDocumentByIdResponse[EServiceDoc](operationLabel)(updateEServiceDocumentById200)
     }
   }
 
@@ -578,7 +574,7 @@ final case class ProcessApiServiceImpl(
     val operationLabel = s"Cloning descriptor $descriptorId of EService $eServiceId"
     logger.info(operationLabel)
 
-    val result = for {
+    val result: Future[OldEService] = for {
       eServiceUUID   <- eServiceId.toFutureUUID
       descriptorUUID <- descriptorId.toFutureUUID
       clonedEService <- catalogManagementService.cloneEService(eServiceUUID, descriptorUUID)
@@ -586,7 +582,7 @@ final case class ProcessApiServiceImpl(
     } yield apiEService
 
     onComplete(result) {
-      handleEServiceCloneError(operationLabel) orElse { case Success(res) =>
+      cloneEServiceByDescriptorResponse[OldEService](operationLabel) { res =>
         logger.info(s"EService cloned with id ${res.id}")
         cloneEServiceByDescriptor200(res)
       }
@@ -603,7 +599,7 @@ final case class ProcessApiServiceImpl(
       val result: Future[Unit] = catalogManagementService.deleteEService(eServiceId)
 
       onComplete(result) {
-        handleEServiceDeletionError(operationLabel) orElse { case Success(_) => deleteEService204 }
+        deleteEServiceResponse[Unit](operationLabel)(_ => deleteEService204)
       }
     }
 
@@ -651,7 +647,7 @@ final case class ProcessApiServiceImpl(
     } yield ()
 
     onComplete(result) {
-      handleEServiceActivationError(operationLabel) orElse { case Success(_) => activateDescriptor204 }
+      activateDescriptorResponse[Unit](operationLabel)(_ => activateDescriptor204)
     }
   }
 
@@ -679,7 +675,7 @@ final case class ProcessApiServiceImpl(
     } yield ()
 
     onComplete(result) {
-      handleEServiceSuspensionError(operationLabel) orElse { case Success(_) => suspendDescriptor204 }
+      suspendDescriptorResponse[Unit](operationLabel)(_ => suspendDescriptor204)
     }
   }
 }
