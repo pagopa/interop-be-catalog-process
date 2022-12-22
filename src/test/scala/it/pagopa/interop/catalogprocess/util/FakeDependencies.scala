@@ -134,7 +134,8 @@ object FakeDependencies {
         interface = None,
         docs = Seq.empty,
         state = EServiceDescriptorState.PUBLISHED,
-        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        serverUrls = Nil
       )
     )
 
