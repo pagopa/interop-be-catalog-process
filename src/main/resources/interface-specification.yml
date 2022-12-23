@@ -1076,6 +1076,7 @@ components:
         - dailyCallsPerConsumer
         - dailyCallsTotal
         - agreementApprovalPolicy
+        - serverUrls
       properties:
         id:
           type: string
@@ -1111,6 +1112,10 @@ components:
           $ref: '#/components/schemas/EServiceDescriptorState'
         agreementApprovalPolicy:
           $ref: '#/components/schemas/AgreementApprovalPolicy'
+        serverUrls:
+          type: array
+          items:
+            type: string
     OldAttributeValue:
       type: object
       properties:
