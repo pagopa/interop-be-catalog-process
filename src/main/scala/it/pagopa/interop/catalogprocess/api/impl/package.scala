@@ -38,7 +38,7 @@ package object impl extends SprayJsonSupport with DefaultJsonProtocol {
   implicit val flatEServiceFormat: RootJsonFormat[FlatEService]             = jsonFormat10(FlatEService)
 
   implicit val problemErrorFormat: RootJsonFormat[ProblemError] = jsonFormat2(ProblemError)
-  implicit val problemFormat: RootJsonFormat[Problem]           = jsonFormat5(Problem)
+  implicit val problemFormat: RootJsonFormat[Problem]           = jsonFormat6(Problem)
 
   final val entityMarshallerProblem: ToEntityMarshaller[Problem] = sprayJsonMarshaller[Problem]
 

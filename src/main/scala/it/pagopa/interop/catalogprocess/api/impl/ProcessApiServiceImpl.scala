@@ -306,7 +306,7 @@ final case class ProcessApiServiceImpl(
           s"Error while getting flatten e-services list for caller $callerId where producer = $producerId, consumer = $consumerId, state = $state and latest published only = $latestPublishedOnly",
           ex
         )
-        val error = CommonProblem(StatusCodes.InternalServerError, FlattenedEServicesRetrievalError, serviceCode)
+        val error = CommonProblem(StatusCodes.InternalServerError, FlattenedEServicesRetrievalError, serviceCode, None)
         complete(error.status, error)
     }
   }
