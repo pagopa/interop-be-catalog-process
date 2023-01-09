@@ -33,7 +33,7 @@ import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
-import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.OperationForbidden
+import it.pagopa.interop.commons.utils.errors.GenericComponentErrors.{GenericError, OperationForbidden}
 
 import java.io.{File, FileOutputStream}
 import java.nio.file.{Files, Path}
@@ -261,8 +261,11 @@ final case class ProcessApiServiceImpl(
     } yield apiEservice
 
     onComplete(result) {
-      case Success(response) => getEServiceById200(response)
-      case Failure(ex)       =>
+      case Success(response)                          => getEServiceById200(response)
+      case Failure(ex: ApiError[_]) if ex.code == 404 =>
+        logger.error(s"Failure in e-service retrieval with id $eServiceId", ex)
+        getEServiceById404(problemOf(StatusCodes.NotFound, GenericError(s"EService $eServiceId not found")))
+      case Failure(ex)                                =>
         logger.error(s"Error while getting e-service $eServiceId", ex)
         val error =
           problemOf(StatusCodes.InternalServerError, EServiceRetrievalError(eServiceId))
