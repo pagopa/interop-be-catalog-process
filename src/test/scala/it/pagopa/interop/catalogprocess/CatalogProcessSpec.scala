@@ -2,12 +2,12 @@ package it.pagopa.interop.catalogprocess
 
 import akka.http.scaladsl.model.{HttpMethods, StatusCodes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
+import cats.syntax.all._
 import com.nimbusds.jwt.JWTClaimsSet
 import it.pagopa.interop.attributeregistrymanagement.client.model.{
   Attribute => AttributeRegistryManagementApiAttribute,
   AttributeKind => AttributeRegistryManagementApiAttributeKind
 }
-import cats.syntax.all._
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
 import it.pagopa.interop.catalogmanagement.client.model.AgreementApprovalPolicy.AUTOMATIC
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
@@ -18,11 +18,12 @@ import it.pagopa.interop.catalogprocess.model.EServiceDescriptorState._
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.server.Controller
 import it.pagopa.interop.catalogprocess.service._
-import it.pagopa.interop.commons.cqrs.model.ReadModelConfig
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.utils.SprayCommonFormats.uuidFormat
+import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
+import it.pagopa.interop.tenantmanagement.client.model.Tenant
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -33,8 +34,6 @@ import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.util.Success
-import it.pagopa.interop.tenantmanagement.client.model.Tenant
-import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
 
 class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndAfterAll with MockFactory {
 
@@ -1087,7 +1086,7 @@ object CatalogProcessSpec extends MockFactory {
   val attributeRegistryManagementService: AttributeRegistryManagementService = mock[AttributeRegistryManagementService]
   val tenantManagementService: TenantManagementService                       = mock[TenantManagementService]
   val fileManager: FileManager                                               = mock[FileManager]
-  val readModel: ReadModelService = new ReadModelService(ReadModelConfig("mongodb://localhost", "db"))
-  val jwtReader: JWTReader        = mock[JWTReader]
+  val readModel: ReadModelService                                            = mock[ReadModelService]
+  val jwtReader: JWTReader                                                   = mock[JWTReader]
   def mockSubject(uuid: String): Success[JWTClaimsSet] = Success(new JWTClaimsSet.Builder().subject(uuid).build())
 }
