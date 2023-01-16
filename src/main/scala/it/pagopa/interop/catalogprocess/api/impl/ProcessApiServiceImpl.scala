@@ -550,7 +550,14 @@ final case class ProcessApiServiceImpl(
     val operationLabel = s"Delete document $documentId of descriptor $descriptorId for EService $eServiceId"
     logger.info(operationLabel)
 
-    val result: Future[Unit] = catalogManagementService.deleteEServiceDocument(eServiceId, descriptorId, documentId)
+    val result: Future[Unit] = {
+      for {
+        organizationId <- getOrganizationIdFutureUUID(contexts)
+        eService       <- catalogManagementService.getEService(eServiceId)
+        _              <- assertRequesterAllowed(eService.producerId)(organizationId)
+        result         <- catalogManagementService.deleteEServiceDocument(eServiceId, descriptorId, documentId)
+      } yield result
+    }
 
     onComplete(result) {
       deleteEServiceDocumentByIdResponse[Unit](operationLabel)(_ => deleteEServiceDocumentById204)

@@ -1285,6 +1285,37 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
   }
 
+  "Document deletion" must {
+
+    "fail if requester is not the Producer" in {
+
+      val eServiceId: UUID = UUID.randomUUID()
+
+      val eservice = CatalogManagementDependency.EService(
+        id = eServiceId,
+        producerId = UUID.randomUUID(),
+        name = "name",
+        description = "description",
+        technology = CatalogManagementDependency.EServiceTechnology.REST,
+        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil),
+        descriptors = Nil
+      )
+
+      (catalogManagementService
+        .getEService(_: String)(_: Seq[(String, String)]))
+        .expects(eservice.id.toString, *)
+        .returning(Future.successful(eservice))
+        .once()
+
+      val response = request(
+        s"eservices/${eservice.id}/descriptors/${UUID.randomUUID()}/documents/${UUID.randomUUID()}",
+        HttpMethods.DELETE
+      )
+
+      response.status shouldBe StatusCodes.Forbidden
+    }
+  }
+
 }
 
 object CatalogProcessSpec extends MockFactory {
