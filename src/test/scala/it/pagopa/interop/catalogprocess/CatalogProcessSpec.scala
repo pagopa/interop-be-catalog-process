@@ -997,7 +997,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       val eservice = CatalogManagementDependency.EService(
         id = UUID.randomUUID(),
-        producerId = UUID.randomUUID(),
+        producerId = AdminMockAuthenticator.requesterId,
         name = "Name",
         description = "Description",
         technology = CatalogManagementDependency.EServiceTechnology.REST,
@@ -1041,7 +1041,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       val eservice = CatalogManagementDependency.EService(
         id = UUID.randomUUID(),
-        producerId = UUID.randomUUID(),
+        producerId = AdminMockAuthenticator.requesterId,
         name = "Name",
         description = "Description",
         technology = CatalogManagementDependency.EServiceTechnology.REST,
@@ -1070,6 +1070,29 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val response = request(s"eservices/${eservice.id}/descriptors/${draftDescriptor.id}", HttpMethods.DELETE)
 
       response.status shouldBe StatusCodes.NoContent
+    }
+
+    "fail if requester is not the Producer" in {
+
+      val eservice = CatalogManagementDependency.EService(
+        id = UUID.randomUUID(),
+        producerId = UUID.randomUUID(),
+        name = "Name",
+        description = "Description",
+        technology = CatalogManagementDependency.EServiceTechnology.REST,
+        attributes = CatalogManagementDependency.Attributes(certified = Nil, verified = Nil, declared = Nil),
+        descriptors = Nil
+      )
+
+      (catalogManagementService
+        .getEService(_: String)(_: Seq[(String, String)]))
+        .expects(eservice.id.toString, *)
+        .returning(Future.successful(eservice))
+        .once()
+
+      val response = request(s"eservices/${eservice.id}/descriptors/${UUID.randomUUID().toString}", HttpMethods.DELETE)
+
+      response.status shouldBe StatusCodes.Forbidden
     }
   }
 

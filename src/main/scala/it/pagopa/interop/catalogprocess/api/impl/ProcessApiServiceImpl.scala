@@ -36,7 +36,7 @@ import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
-import it.pagopa.interop.commons.utils.errors.{Problem => CommonProblem}
+import it.pagopa.interop.commons.utils.errors.{GenericComponentErrors, Problem => CommonProblem}
 import it.pagopa.interop.tenantmanagement.client.{model => TenantManagementDependency}
 import it.pagopa.interop.commons.utils.AkkaUtils.getOrganizationIdFutureUUID
 
@@ -100,9 +100,11 @@ final case class ProcessApiServiceImpl(
         catalogManagementService.deleteEService(eServiceId)
 
     val result: Future[Unit] = for {
-      eService <- catalogManagementService.getEService(eServiceId)
-      result   <- catalogManagementService.deleteDraft(eServiceId, descriptorId)
-      _        <- deleteEServiceIfEmpty(eService)
+      organizationId <- getOrganizationIdFutureUUID(contexts)
+      eService       <- catalogManagementService.getEService(eServiceId)
+      _              <- assertRequesterAllowed(eService.producerId)(organizationId)
+      result         <- catalogManagementService.deleteDraft(eServiceId, descriptorId)
+      _              <- deleteEServiceIfEmpty(eService)
     } yield result
 
     onComplete(result) {
@@ -695,5 +697,8 @@ object ProcessApiServiceImpl {
     case CatalogManagementDependency.EServiceDescriptorState.DRAFT => Future.successful(descriptor)
     case _ => Future.failed(NotValidDescriptor(descriptor.id.toString, descriptor.state.toString))
   }
+
+  private def assertRequesterAllowed(resourceId: UUID)(requesterId: UUID)(implicit ec: ExecutionContext): Future[Unit] =
+    Future.failed(GenericComponentErrors.OperationForbidden).unlessA(resourceId == requesterId)
 
 }
