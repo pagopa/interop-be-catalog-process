@@ -1,7 +1,7 @@
 package it.pagopa.interop.catalogprocess
 
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{HttpMethods, HttpRequest, MediaTypes, Multipart, StatusCodes}
+import akka.http.scaladsl.model.{HttpMethods, HttpRequest, HttpResponse, MediaTypes, Multipart, StatusCodes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import cats.syntax.all._
 import com.nimbusds.jwt.JWTClaimsSet
@@ -26,7 +26,7 @@ import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
 import it.pagopa.interop.tenantmanagement.client.model.Tenant
 import org.scalamock.scalatest.MockFactory
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.{Assertion, BeforeAndAfterAll}
 import org.scalatest.wordspec.AnyWordSpecLike
 import spray.json._
 
@@ -456,25 +456,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
   "EService update" must {
 
     "fail if requester is not the Producer" in {
-
-      val eServiceId: UUID = UUID.randomUUID()
-
-      val eservice = CatalogManagementDependency.EService(
-        id = eServiceId,
-        producerId = UUID.randomUUID(),
-        name = "name",
-        description = "description",
-        technology = CatalogManagementDependency.EServiceTechnology.REST,
-        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil),
-        descriptors = Nil
-      )
-
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eservice.id.toString, *)
-        .returning(Future.successful(eservice))
-        .once()
-
       val seed = UpdateEServiceSeed(
         name = "newName",
         description = "newDescription",
@@ -482,93 +463,29 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
-      val response =
-        request(s"eservices/$eServiceId", HttpMethods.PUT, Some(seed.toJson.toString))
-
-      response.status shouldBe StatusCodes.Forbidden
+      failOnRequesterNotProducer(id => request(s"eservices/$id", HttpMethods.PUT, Some(seed.toJson.toString)))
     }
   }
 
   "EService clone" must {
 
     "fail if requester is not the Producer" in {
-
-      val eServiceId: UUID = UUID.randomUUID()
-
-      val eservice = CatalogManagementDependency.EService(
-        id = eServiceId,
-        producerId = UUID.randomUUID(),
-        name = "name",
-        description = "description",
-        technology = CatalogManagementDependency.EServiceTechnology.REST,
-        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil),
-        descriptors = Nil
+      failOnRequesterNotProducer(id =>
+        request(s"eservices/$id/descriptors/${UUID.randomUUID()}/clone", HttpMethods.POST)
       )
-
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eservice.id.toString, *)
-        .returning(Future.successful(eservice))
-        .once()
-
-      val response =
-        request(s"eservices/$eServiceId/descriptors/${UUID.randomUUID()}/clone", HttpMethods.POST)
-
-      response.status shouldBe StatusCodes.Forbidden
     }
   }
 
   "EService deletion" must {
 
     "fail if requester is not the Producer" in {
-
-      val eServiceId: UUID = UUID.randomUUID()
-
-      val eservice = CatalogManagementDependency.EService(
-        id = eServiceId,
-        producerId = UUID.randomUUID(),
-        name = "name",
-        description = "description",
-        technology = CatalogManagementDependency.EServiceTechnology.REST,
-        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil),
-        descriptors = Nil
-      )
-
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eservice.id.toString, *)
-        .returning(Future.successful(eservice))
-        .once()
-
-      val response =
-        request(s"eservices/$eServiceId", HttpMethods.DELETE)
-
-      response.status shouldBe StatusCodes.Forbidden
+      failOnRequesterNotProducer(id => request(s"eservices/$id", HttpMethods.DELETE))
     }
   }
 
   "Descriptor creation" must {
 
     "fail if requester is not the Producer" in {
-
-      val eServiceId: UUID = UUID.randomUUID()
-
-      val eservice = CatalogManagementDependency.EService(
-        id = eServiceId,
-        producerId = UUID.randomUUID(),
-        name = "name",
-        description = "description",
-        technology = CatalogManagementDependency.EServiceTechnology.REST,
-        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil),
-        descriptors = Nil
-      )
-
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eservice.id.toString, *)
-        .returning(Future.successful(eservice))
-        .once()
-
       val seed = EServiceDescriptorSeed(
         description = None,
         audience = Seq("aud"),
@@ -578,33 +495,15 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC
       )
 
-      val response = request(s"eservices/$eServiceId/descriptors", HttpMethods.POST, Some(seed.toJson.toString))
-
-      response.status shouldBe StatusCodes.Forbidden
+      failOnRequesterNotProducer(id =>
+        request(s"eservices/$id/descriptors", HttpMethods.POST, Some(seed.toJson.toString))
+      )
     }
   }
 
   "Descriptor draft update" must {
 
     "fail if requester is not the Producer" in {
-
-      val eServiceId: UUID = UUID.randomUUID()
-
-      val eservice = CatalogManagementDependency.EService(
-        id = eServiceId,
-        producerId = UUID.randomUUID(),
-        name = "name",
-        description = "description",
-        technology = CatalogManagementDependency.EServiceTechnology.REST,
-        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil),
-        descriptors = Nil
-      )
-
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eservice.id.toString, *)
-        .returning(Future.successful(eservice))
-        .once()
 
       val seed = UpdateEServiceDescriptorSeed(
         description = None,
@@ -615,39 +514,18 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC
       )
 
-      val response =
-        request(s"eservices/$eServiceId/descriptors/${UUID.randomUUID()}", HttpMethods.PUT, Some(seed.toJson.toString))
-
-      response.status shouldBe StatusCodes.Forbidden
+      failOnRequesterNotProducer(id =>
+        request(s"eservices/$id/descriptors/${UUID.randomUUID()}", HttpMethods.PUT, Some(seed.toJson.toString))
+      )
     }
   }
 
   "Descriptor publication" must {
 
     "fail if requester is not the Producer" in {
-
-      val eServiceId: UUID = UUID.randomUUID()
-
-      val eservice = CatalogManagementDependency.EService(
-        id = eServiceId,
-        producerId = UUID.randomUUID(),
-        name = "name",
-        description = "description",
-        technology = CatalogManagementDependency.EServiceTechnology.REST,
-        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil),
-        descriptors = Nil
+      failOnRequesterNotProducer(id =>
+        request(s"eservices/$id/descriptors/${UUID.randomUUID()}/publish", HttpMethods.POST)
       )
-
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eservice.id.toString, *)
-        .returning(Future.successful(eservice))
-        .once()
-
-      val response =
-        request(s"eservices/$eServiceId/descriptors/${UUID.randomUUID().toString}/publish", HttpMethods.POST)
-
-      response.status shouldBe StatusCodes.Forbidden
     }
   }
 
@@ -813,29 +691,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if requester is not the Producer" in {
-
-      val eServiceId: UUID = UUID.randomUUID()
-
-      val eservice = CatalogManagementDependency.EService(
-        id = eServiceId,
-        producerId = UUID.randomUUID(),
-        name = "name",
-        description = "description",
-        technology = CatalogManagementDependency.EServiceTechnology.REST,
-        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil),
-        descriptors = Nil
+      failOnRequesterNotProducer(id =>
+        request(s"eservices/$id/descriptors/${UUID.randomUUID()}/suspend", HttpMethods.POST)
       )
-
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eservice.id.toString, *)
-        .returning(Future.successful(eservice))
-        .once()
-
-      val response =
-        request(s"eservices/$eServiceId/descriptors/${UUID.randomUUID().toString}/suspend", HttpMethods.POST)
-
-      response.status shouldBe StatusCodes.Forbidden
     }
 
   }
@@ -1191,28 +1049,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if requester is not the Producer" in {
-
-      val eServiceId: UUID = UUID.randomUUID()
-
-      val eservice = CatalogManagementDependency.EService(
-        id = eServiceId,
-        producerId = UUID.randomUUID(),
-        name = "name",
-        description = "description",
-        technology = CatalogManagementDependency.EServiceTechnology.REST,
-        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil),
-        descriptors = Nil
+      failOnRequesterNotProducer(id =>
+        request(s"eservices/$id/descriptors/${UUID.randomUUID()}/activate", HttpMethods.POST)
       )
-
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eservice.id.toString, *)
-        .returning(Future.successful(eservice))
-        .once()
-
-      val response = request(s"eservices/$eServiceId/descriptors/${UUID.randomUUID()}/activate", HttpMethods.POST)
-
-      response.status shouldBe StatusCodes.Forbidden
     }
 
   }
@@ -1329,51 +1168,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if requester is not the Producer" in {
-
-      val eservice = CatalogManagementDependency.EService(
-        id = UUID.randomUUID(),
-        producerId = UUID.randomUUID(),
-        name = "Name",
-        description = "Description",
-        technology = CatalogManagementDependency.EServiceTechnology.REST,
-        attributes = CatalogManagementDependency.Attributes(certified = Nil, verified = Nil, declared = Nil),
-        descriptors = Nil
-      )
-
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eservice.id.toString, *)
-        .returning(Future.successful(eservice))
-        .once()
-
-      val response = request(s"eservices/${eservice.id}/descriptors/${UUID.randomUUID().toString}", HttpMethods.DELETE)
-
-      response.status shouldBe StatusCodes.Forbidden
+      failOnRequesterNotProducer(id => request(s"eservices/$id/descriptors/${UUID.randomUUID()}", HttpMethods.DELETE))
     }
   }
 
   "Document creation" must {
 
     "fail if requester is not the Producer" in {
-
-      val eServiceId: UUID = UUID.randomUUID()
-
-      val eservice = CatalogManagementDependency.EService(
-        id = eServiceId,
-        producerId = UUID.randomUUID(),
-        name = "name",
-        description = "description",
-        technology = CatalogManagementDependency.EServiceTechnology.REST,
-        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil),
-        descriptors = Nil
-      )
-
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eservice.id.toString, *)
-        .returning(Future.successful(eservice))
-        .once()
-
       val file = new File("src/test/resources/application-test.conf")
 
       val formData =
@@ -1383,87 +1184,68 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
           Multipart.FormData.BodyPart.Strict("prettyName", file.getName)
         )
 
-      val response =
+      failOnRequesterNotProducer(id =>
         Http()
           .singleRequest(
             HttpRequest(
-              uri = s"$serviceURL/eservices/$eServiceId/descriptors/${UUID.randomUUID()}/documents",
+              uri = s"$serviceURL/eservices/$id/descriptors/${UUID.randomUUID()}/documents",
               method = HttpMethods.POST,
               entity = formData.toEntity,
               headers = requestHeaders
             )
           )
           .futureValue
-
-      response.status shouldBe StatusCodes.Forbidden
+      )
     }
   }
 
   "Document update" must {
 
     "fail if requester is not the Producer" in {
-
-      val eServiceId: UUID = UUID.randomUUID()
-
-      val eservice = CatalogManagementDependency.EService(
-        id = eServiceId,
-        producerId = UUID.randomUUID(),
-        name = "name",
-        description = "description",
-        technology = CatalogManagementDependency.EServiceTechnology.REST,
-        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil),
-        descriptors = Nil
-      )
-
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eservice.id.toString, *)
-        .returning(Future.successful(eservice))
-        .once()
-
       val seed = UpdateEServiceDescriptorDocumentSeed(prettyName = "newPrettyName")
 
-      val response = request(
-        s"eservices/${eservice.id}/descriptors/${UUID.randomUUID()}/documents/${UUID.randomUUID()}/update",
-        HttpMethods.POST,
-        Some(seed.toJson.toString)
+      failOnRequesterNotProducer(id =>
+        request(
+          s"eservices/$id/descriptors/${UUID.randomUUID()}/documents/${UUID.randomUUID()}/update",
+          HttpMethods.POST,
+          Some(seed.toJson.toString)
+        )
       )
-
-      response.status shouldBe StatusCodes.Forbidden
     }
   }
 
   "Document deletion" must {
 
     "fail if requester is not the Producer" in {
-
-      val eServiceId: UUID = UUID.randomUUID()
-
-      val eservice = CatalogManagementDependency.EService(
-        id = eServiceId,
-        producerId = UUID.randomUUID(),
-        name = "name",
-        description = "description",
-        technology = CatalogManagementDependency.EServiceTechnology.REST,
-        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil),
-        descriptors = Nil
+      failOnRequesterNotProducer(id =>
+        request(s"eservices/$id/descriptors/${UUID.randomUUID()}/documents/${UUID.randomUUID()}", HttpMethods.DELETE)
       )
-
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eservice.id.toString, *)
-        .returning(Future.successful(eservice))
-        .once()
-
-      val response = request(
-        s"eservices/${eservice.id}/descriptors/${UUID.randomUUID()}/documents/${UUID.randomUUID()}",
-        HttpMethods.DELETE
-      )
-
-      response.status shouldBe StatusCodes.Forbidden
     }
   }
 
+  def failOnRequesterNotProducer(response: UUID => HttpResponse): Assertion = {
+
+    val eServiceId: UUID = UUID.randomUUID()
+
+    val eservice = CatalogManagementDependency.EService(
+      id = eServiceId,
+      producerId = UUID.randomUUID(),
+      name = "name",
+      description = "description",
+      technology = CatalogManagementDependency.EServiceTechnology.REST,
+      attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil),
+      descriptors = Nil
+    )
+
+    (catalogManagementService
+      .getEService(_: String)(_: Seq[(String, String)]))
+      .expects(eservice.id.toString, *)
+      .returning(Future.successful(eservice))
+      .once()
+
+    response(eServiceId).status shouldBe StatusCodes.Forbidden
+
+  }
 }
 
 object CatalogProcessSpec extends MockFactory {
