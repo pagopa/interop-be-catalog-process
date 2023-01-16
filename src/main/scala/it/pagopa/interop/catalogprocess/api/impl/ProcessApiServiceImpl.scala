@@ -382,7 +382,9 @@ final case class ProcessApiServiceImpl(
     logger.info(operationLabel)
 
     val result: Future[OldEService] = for {
+      organizationId  <- getOrganizationIdFutureUUID(contexts)
       currentEService <- catalogManagementService.getEService(eServiceId)
+      _               <- assertRequesterAllowed(currentEService.producerId)(organizationId)
       descriptor      <- currentEService.descriptors
         .find(_.id.toString == descriptorId)
         .toFuture(EServiceDescriptorNotFound(eServiceId, descriptorId))
