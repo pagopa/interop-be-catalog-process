@@ -601,6 +601,9 @@ final case class ProcessApiServiceImpl(
     logger.info(operationLabel)
 
     val result: Future[OldEService] = for {
+      organizationId <- getOrganizationIdFutureUUID(contexts)
+      eService       <- catalogManagementService.getEService(eServiceId)
+      _              <- assertRequesterAllowed(eService.producerId)(organizationId)
       eServiceUUID   <- eServiceId.toFutureUUID
       descriptorUUID <- descriptorId.toFutureUUID
       clonedEService <- catalogManagementService.cloneEService(eServiceUUID, descriptorUUID)
