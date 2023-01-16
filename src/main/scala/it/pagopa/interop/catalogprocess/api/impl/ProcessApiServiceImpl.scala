@@ -695,13 +695,15 @@ final case class ProcessApiServiceImpl(
     logger.info(operationLabel)
 
     val result = for {
-      eService   <- catalogManagementService.getEService(eServiceId)
-      descriptor <- eService.descriptors
+      organizationId <- getOrganizationIdFutureUUID(contexts)
+      eService       <- catalogManagementService.getEService(eServiceId)
+      _              <- assertRequesterAllowed(eService.producerId)(organizationId)
+      descriptor     <- eService.descriptors
         .find(_.id.toString == descriptorId)
         .toFuture(EServiceDescriptorNotFound(eServiceId, descriptorId))
-      _          <- descriptorCanBeSuspended(descriptor)
-      _          <- catalogManagementService.suspendDescriptor(eServiceId, descriptorId)
-      _          <- authorizationManagementService.updateStateOnClients(
+      _              <- descriptorCanBeSuspended(descriptor)
+      _              <- catalogManagementService.suspendDescriptor(eServiceId, descriptorId)
+      _              <- authorizationManagementService.updateStateOnClients(
         eService.id,
         descriptor.id,
         AuthorizationManagementDependency.ClientComponentState.INACTIVE,
