@@ -665,13 +665,15 @@ final case class ProcessApiServiceImpl(
     }
 
     val result: Future[Unit] = for {
-      eService   <- catalogManagementService.getEService(eServiceId)
-      descriptor <- eService.descriptors
+      organizationId <- getOrganizationIdFutureUUID(contexts)
+      eService       <- catalogManagementService.getEService(eServiceId)
+      _              <- assertRequesterAllowed(eService.producerId)(organizationId)
+      descriptor     <- eService.descriptors
         .find(_.id.toString == descriptorId)
         .toFuture(EServiceDescriptorNotFound(eServiceId, descriptorId))
-      _          <- descriptorCanBeActivated(descriptor)
-      _          <- activateDescriptor(eService, descriptor)
-      _          <- authorizationManagementService.updateStateOnClients(
+      _              <- descriptorCanBeActivated(descriptor)
+      _              <- activateDescriptor(eService, descriptor)
+      _              <- authorizationManagementService.updateStateOnClients(
         eService.id,
         descriptor.id,
         AuthorizationManagementDependency.ClientComponentState.ACTIVE,

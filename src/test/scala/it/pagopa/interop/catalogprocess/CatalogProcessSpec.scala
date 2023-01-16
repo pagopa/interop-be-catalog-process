@@ -814,30 +814,33 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
   }
 
   "Descriptor activation" must {
-    val eService1 = eServiceStub.copy(descriptors =
-      Seq(
+    val eService1 = eServiceStub.copy(
+      descriptors = Seq(
         descriptorStub.copy(version = "1", state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED),
         descriptorStub.copy(version = "2", state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED),
         descriptorStub.copy(version = "3", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED),
         descriptorStub.copy(version = "4", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED),
         descriptorStub.copy(version = "5", state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
-      )
+      ),
+      producerId = AdminMockAuthenticator.requesterId
     )
-    val eService2 = eServiceStub.copy(descriptors =
-      Seq(
+    val eService2 = eServiceStub.copy(
+      descriptors = Seq(
         descriptorStub.copy(version = "1", state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED),
         descriptorStub.copy(version = "2", state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED),
         descriptorStub.copy(version = "3", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED),
         descriptorStub.copy(version = "4", state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED),
         descriptorStub.copy(version = "5", state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
-      )
+      ),
+      producerId = AdminMockAuthenticator.requesterId
     )
-    val eService3 = eServiceStub.copy(descriptors =
-      Seq(
+    val eService3 = eServiceStub.copy(
+      descriptors = Seq(
         descriptorStub.copy(version = "1", state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED),
         descriptorStub.copy(version = "2", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED),
         descriptorStub.copy(version = "3", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED)
-      )
+      ),
+      producerId = AdminMockAuthenticator.requesterId
     )
 
     "activate Deprecated descriptor - case 1" in {
@@ -1045,9 +1048,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Draft" in {
-      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
-      val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
-      val eServiceId   = eService.id.toString
+      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
+      val eService   = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
+      val eServiceId = eService.id.toString
       val descriptorId = descriptor.id.toString
 
       (jwtReader
@@ -1074,9 +1077,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Deprecated" in {
-      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED)
-      val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
-      val eServiceId   = eService.id.toString
+      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED)
+      val eService   = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
+      val eServiceId = eService.id.toString
       val descriptorId = descriptor.id.toString
 
       (jwtReader
@@ -1103,9 +1106,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Published" in {
-      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED)
-      val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
-      val eServiceId   = eService.id.toString
+      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED)
+      val eService   = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
+      val eServiceId = eService.id.toString
       val descriptorId = descriptor.id.toString
 
       (jwtReader
@@ -1132,9 +1135,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Archived" in {
-      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED)
-      val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
-      val eServiceId   = eService.id.toString
+      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED)
+      val eService   = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
+      val eServiceId = eService.id.toString
       val descriptorId = descriptor.id.toString
 
       (jwtReader
@@ -1159,6 +1162,32 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       response.status shouldBe StatusCodes.BadRequest
     }
+
+    "fail if requester is not the Producer" in {
+
+      val eServiceId: UUID = UUID.randomUUID()
+
+      val eservice = CatalogManagementDependency.EService(
+        id = eServiceId,
+        producerId = UUID.randomUUID(),
+        name = "name",
+        description = "description",
+        technology = CatalogManagementDependency.EServiceTechnology.REST,
+        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil),
+        descriptors = Nil
+      )
+
+      (catalogManagementService
+        .getEService(_: String)(_: Seq[(String, String)]))
+        .expects(eservice.id.toString, *)
+        .returning(Future.successful(eservice))
+        .once()
+
+      val response = request(s"eservices/$eServiceId/descriptors/${UUID.randomUUID()}/activate", HttpMethods.POST)
+
+      response.status shouldBe StatusCodes.Forbidden
+    }
+
   }
 
   "Descriptor deletion" must {
