@@ -211,9 +211,12 @@ object Converter {
     explicitAttributeVerification = value.explicitAttributeVerification
   )
 
-  def convertToClientEServiceSeed(eServiceSeed: EServiceSeed): CatalogManagementDependency.EServiceSeed =
+  def convertToClientEServiceSeed(
+    eServiceSeed: EServiceSeed,
+    producerId: UUID
+  ): CatalogManagementDependency.EServiceSeed =
     CatalogManagementDependency.EServiceSeed(
-      producerId = eServiceSeed.producerId,
+      producerId = producerId,
       name = eServiceSeed.name,
       description = eServiceSeed.description,
       technology = convertFromApiTechnology(eServiceSeed.technology),

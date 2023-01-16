@@ -17,15 +17,12 @@ import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.jwt.service.impl.{DefaultJWTReader, getClaimsVerifier}
 import it.pagopa.interop.commons.jwt.{KID, PublicKeysHolder, SerializedKey}
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import java.io.File
-import java.util.UUID
-import scala.concurrent.ExecutionContext
-import org.scalatest.BeforeAndAfterAll
-
 import java.util.concurrent.{ExecutorService, Executors}
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with AuthzScalatestRouteTest {
 
@@ -64,13 +61,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
     "accept authorized roles for createEService" in {
       val endpoint = AuthorizedRoutes.endpoints("createEService")
       val fakeSeed =
-        EServiceSeed(
-          producerId = UUID.randomUUID(),
-          "test",
-          "test",
-          EServiceTechnology.REST,
-          AttributesSeed(Seq.empty, Seq.empty, Seq.empty)
-        )
+        EServiceSeed("test", "test", EServiceTechnology.REST, AttributesSeed(Seq.empty, Seq.empty, Seq.empty))
       validateAuthorization(endpoint, { implicit c: Seq[(String, String)] => service.createEService(fakeSeed) })
     }
 

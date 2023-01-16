@@ -2,12 +2,12 @@ package it.pagopa.interop.catalogprocess
 
 import akka.http.scaladsl.model.{HttpMethods, StatusCodes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
+import cats.syntax.all._
 import com.nimbusds.jwt.JWTClaimsSet
 import it.pagopa.interop.attributeregistrymanagement.client.model.{
   Attribute => AttributeRegistryManagementApiAttribute,
   AttributeKind => AttributeRegistryManagementApiAttributeKind
 }
-import cats.syntax.all._
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
 import it.pagopa.interop.catalogmanagement.client.model.AgreementApprovalPolicy.AUTOMATIC
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
@@ -22,7 +22,8 @@ import it.pagopa.interop.commons.cqrs.model.ReadModelConfig
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt.service.JWTReader
-import it.pagopa.interop.commons.utils.SprayCommonFormats.uuidFormat
+import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
+import it.pagopa.interop.tenantmanagement.client.model.Tenant
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -33,8 +34,6 @@ import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.util.Success
-import it.pagopa.interop.tenantmanagement.client.model.Tenant
-import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
 
 class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndAfterAll with MockFactory {
 
@@ -244,8 +243,34 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val attributeId2: UUID = UUID.randomUUID()
       val attributeId3: UUID = UUID.randomUUID()
 
+      val apiSeed: EServiceSeed = EServiceSeed(
+        name = "MyService",
+        description = "My Service",
+        technology = EServiceTechnology.REST,
+        attributes = AttributesSeed(
+          certified = List(
+            AttributeSeed(
+              single = Some(AttributeValueSeed(attributeId1, explicitAttributeVerification = false)),
+              group = None
+            )
+          ),
+          declared = List(
+            AttributeSeed(
+              single = None,
+              group = Some(List(AttributeValueSeed(attributeId2, explicitAttributeVerification = false)))
+            )
+          ),
+          verified = List(
+            AttributeSeed(
+              single = Some(AttributeValueSeed(attributeId3, explicitAttributeVerification = true)),
+              group = None
+            )
+          )
+        )
+      )
+
       val seed = CatalogManagementDependency.EServiceSeed(
-        producerId = UUID.randomUUID(),
+        producerId = AdminMockAuthenticator.requesterId,
         name = "MyService",
         description = "My Service",
         technology = CatalogManagementDependency.EServiceTechnology.REST,
@@ -361,36 +386,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .returning(Future.successful(Seq(attribute1, attribute2, attribute3)))
         .once()
 
-      implicit val seedFormat: JsonFormat[CatalogManagementDependency.EServiceTechnology] =
-        new JsonFormat[CatalogManagementDependency.EServiceTechnology] {
-          override def write(obj: CatalogManagementDependency.EServiceTechnology): JsValue =
-            obj match {
-              case CatalogManagementDependency.EServiceTechnology.REST => JsString("REST")
-              case CatalogManagementDependency.EServiceTechnology.SOAP => JsString("SOAP")
-            }
-
-          override def read(json: JsValue): CatalogManagementDependency.EServiceTechnology =
-            json match {
-              case JsString("REST") => CatalogManagementDependency.EServiceTechnology.REST
-              case JsString("SOAP") => CatalogManagementDependency.EServiceTechnology.SOAP
-              case unrecognized     =>
-                deserializationError(s"EServiceTechnology serialization error ${unrecognized.toString}")
-            }
-        }
-
-      implicit val attributeValueFormat: RootJsonFormat[CatalogManagementDependency.AttributeValue] =
-        jsonFormat2(CatalogManagementDependency.AttributeValue)
-
-      implicit val attributeFormat: RootJsonFormat[CatalogManagementDependency.Attribute] =
-        jsonFormat2(CatalogManagementDependency.Attribute)
-
-      implicit val attributesFormat: RootJsonFormat[CatalogManagementDependency.Attributes] =
-        jsonFormat3(CatalogManagementDependency.Attributes)
-
-      implicit val eServiceSeedFormat: RootJsonFormat[CatalogManagementDependency.EServiceSeed] =
-        jsonFormat5(CatalogManagementDependency.EServiceSeed)
-
-      val requestData = seed.toJson.toString
+      val requestData = apiSeed.toJson.toString
 
       val response = request("eservices", HttpMethods.POST, Some(requestData))
 

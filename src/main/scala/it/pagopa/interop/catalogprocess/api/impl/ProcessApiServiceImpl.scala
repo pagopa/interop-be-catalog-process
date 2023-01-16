@@ -38,6 +38,7 @@ import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.{Problem => CommonProblem}
 import it.pagopa.interop.tenantmanagement.client.{model => TenantManagementDependency}
+import it.pagopa.interop.commons.utils.AkkaUtils.getOrganizationIdFutureUUID
 
 import java.io.{File, FileOutputStream}
 import java.nio.file.{Files, Path}
@@ -67,11 +68,12 @@ final case class ProcessApiServiceImpl(
     toEntityMarshallerEService: ToEntityMarshaller[OldEService],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
   ): Route = authorize(ADMIN_ROLE, API_ROLE) {
-    val operationLabel: String                               =
-      s"Creating E-Service for producer ${eServiceSeed.producerId} with service name ${eServiceSeed.name}"
+    val operationLabel: String = s"Creating EService with service name ${eServiceSeed.name}"
     logger.info(operationLabel)
-    val clientSeed: CatalogManagementDependency.EServiceSeed = Converter.convertToClientEServiceSeed(eServiceSeed)
-    val result: Future[OldEService]                          = for {
+
+    val result: Future[OldEService] = for {
+      organizationId <- getOrganizationIdFutureUUID(contexts)
+      clientSeed = Converter.convertToClientEServiceSeed(eServiceSeed, organizationId)
       createdEService <- catalogManagementService.createEService(clientSeed)
       apiEService     <- convertToApiEservice(createdEService)
     } yield apiEService
