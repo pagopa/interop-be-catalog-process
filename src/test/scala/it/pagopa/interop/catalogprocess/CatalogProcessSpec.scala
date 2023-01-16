@@ -453,6 +453,43 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
   }
 
+  "Descriptor creation" must {
+
+    "fail if requester is not the Producer" in {
+
+      val eServiceId: UUID = UUID.randomUUID()
+
+      val eservice = CatalogManagementDependency.EService(
+        id = eServiceId,
+        producerId = UUID.randomUUID(),
+        name = "name",
+        description = "description",
+        technology = CatalogManagementDependency.EServiceTechnology.REST,
+        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil),
+        descriptors = Nil
+      )
+
+      (catalogManagementService
+        .getEService(_: String)(_: Seq[(String, String)]))
+        .expects(eservice.id.toString, *)
+        .returning(Future.successful(eservice))
+        .once()
+
+      val seed = EServiceDescriptorSeed(
+        description = None,
+        audience = Seq("aud"),
+        voucherLifespan = 60,
+        dailyCallsPerConsumer = 0,
+        dailyCallsTotal = 0,
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC
+      )
+
+      val response = request(s"eservices/$eServiceId/descriptors", HttpMethods.POST, Some(seed.toJson.toString))
+
+      response.status shouldBe StatusCodes.Forbidden
+    }
+  }
+
   "Descriptor publication" must {
 
     "fail if requester is not the Producer" in {

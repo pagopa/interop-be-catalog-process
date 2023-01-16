@@ -356,7 +356,9 @@ final case class ProcessApiServiceImpl(
     logger.info(operationLabel)
 
     val result: Future[EServiceDescriptor] = for {
+      organizationId  <- getOrganizationIdFutureUUID(contexts)
       currentEService <- catalogManagementService.getEService(eServiceId)
+      _               <- assertRequesterAllowed(currentEService.producerId)(organizationId)
       _               <- catalogManagementService.hasNotDraftDescriptor(currentEService)
       clientSeed = Converter.convertToClientEServiceDescriptorSeed(eServiceDescriptorSeed)
       createdEServiceDescriptor <- catalogManagementService.createDescriptor(eServiceId, clientSeed)
