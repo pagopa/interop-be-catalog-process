@@ -143,10 +143,13 @@ final case class ProcessApiServiceImpl(
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
   ): Route = authorize(ADMIN_ROLE, API_ROLE) {
-    val operationLabel       = s"Publishing descriptor $descriptorId for EService $eServiceId"
+    val operationLabel = s"Publishing descriptor $descriptorId for EService $eServiceId"
     logger.info(operationLabel)
+
     val result: Future[Unit] = for {
+      organizationId  <- getOrganizationIdFutureUUID(contexts)
       currentEService <- catalogManagementService.getEService(eServiceId)
+      _               <- assertRequesterAllowed(currentEService.producerId)(organizationId)
       descriptor      <- currentEService.descriptors
         .find(_.id.toString == descriptorId)
         .toFuture(EServiceDescriptorNotFound(eServiceId, descriptorId))
