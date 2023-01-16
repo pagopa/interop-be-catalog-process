@@ -408,8 +408,10 @@ final case class ProcessApiServiceImpl(
     logger.info(operationLabel)
 
     val result = for {
-      eService <- catalogManagementService.getEService(eServiceId)
-      _        <- CatalogManagementService.eServiceCanBeUpdated(eService)
+      organizationId <- getOrganizationIdFutureUUID(contexts)
+      eService       <- catalogManagementService.getEService(eServiceId)
+      _              <- assertRequesterAllowed(eService.producerId)(organizationId)
+      _              <- CatalogManagementService.eServiceCanBeUpdated(eService)
       clientSeed = Converter.convertToClientUpdateEServiceSeed(updateEServiceSeed)
       updatedEService <- catalogManagementService.updateEServiceById(eServiceId, clientSeed)
       apiEService     <- convertToApiEservice(updatedEService)
