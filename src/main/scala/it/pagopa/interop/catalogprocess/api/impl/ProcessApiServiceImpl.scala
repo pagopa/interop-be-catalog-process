@@ -212,8 +212,11 @@ final case class ProcessApiServiceImpl(
     logger.info(operationLabel)
 
     val result: Future[OldEService] = for {
-      eService    <- catalogManagementService.createEServiceDocument(eServiceId, descriptorId, kind, prettyName, doc)
-      apiEService <- convertToApiEservice(eService)
+      organizationId <- getOrganizationIdFutureUUID(contexts)
+      eService       <- catalogManagementService.getEService(eServiceId)
+      _              <- assertRequesterAllowed(eService.producerId)(organizationId)
+      updated        <- catalogManagementService.createEServiceDocument(eServiceId, descriptorId, kind, prettyName, doc)
+      apiEService    <- convertToApiEservice(updated)
     } yield apiEService
 
     onComplete(result) {

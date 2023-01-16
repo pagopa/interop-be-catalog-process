@@ -1,6 +1,7 @@
 package it.pagopa.interop.catalogprocess
 
-import akka.http.scaladsl.model.{HttpMethods, StatusCodes}
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.{HttpMethods, HttpRequest, MediaTypes, Multipart, StatusCodes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import cats.syntax.all._
 import com.nimbusds.jwt.JWTClaimsSet
@@ -29,6 +30,7 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpecLike
 import spray.json._
 
+import java.io.File
 import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.duration._
@@ -1120,6 +1122,53 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .once()
 
       val response = request(s"eservices/${eservice.id}/descriptors/${UUID.randomUUID().toString}", HttpMethods.DELETE)
+
+      response.status shouldBe StatusCodes.Forbidden
+    }
+  }
+
+  "Document creation" must {
+
+    "fail if requester is not the Producer" in {
+
+      val eServiceId: UUID = UUID.randomUUID()
+
+      val eservice = CatalogManagementDependency.EService(
+        id = eServiceId,
+        producerId = UUID.randomUUID(),
+        name = "name",
+        description = "description",
+        technology = CatalogManagementDependency.EServiceTechnology.REST,
+        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil),
+        descriptors = Nil
+      )
+
+      (catalogManagementService
+        .getEService(_: String)(_: Seq[(String, String)]))
+        .expects(eservice.id.toString, *)
+        .returning(Future.successful(eservice))
+        .once()
+
+      val file = new File("src/test/resources/application-test.conf")
+
+      val formData =
+        Multipart.FormData(
+          Multipart.FormData.BodyPart.fromPath("doc", MediaTypes.`application/octet-stream`, file.toPath),
+          Multipart.FormData.BodyPart.Strict("kind", "DOCUMENT"),
+          Multipart.FormData.BodyPart.Strict("prettyName", file.getName)
+        )
+
+      val response =
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$serviceURL/eservices/$eServiceId/descriptors/${UUID.randomUUID()}/documents",
+              method = HttpMethods.POST,
+              entity = formData.toEntity,
+              headers = requestHeaders
+            )
+          )
+          .futureValue
 
       response.status shouldBe StatusCodes.Forbidden
     }
