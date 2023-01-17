@@ -96,7 +96,8 @@ object Converter {
       dailyCallsTotal = descriptor.dailyCallsTotal,
       agreementApprovalPolicy = convertToApiAgreementApprovalPolicy(
         descriptor.agreementApprovalPolicy.getOrElse(readmodel.PersistentAgreementApprovalPolicy.default)
-      )
+      ),
+      serverUrls = descriptor.serverUrls
     )
 
   def convertToApiEServiceDoc(document: readmodel.CatalogDocument): EServiceDoc = EServiceDoc(
@@ -143,7 +144,8 @@ object Converter {
       voucherLifespan = descriptor.voucherLifespan,
       dailyCallsPerConsumer = descriptor.dailyCallsPerConsumer,
       dailyCallsTotal = descriptor.dailyCallsTotal,
-      agreementApprovalPolicy = convertToApiAgreementApprovalPolicy(descriptor.agreementApprovalPolicy)
+      agreementApprovalPolicy = convertToApiAgreementApprovalPolicy(descriptor.agreementApprovalPolicy),
+      serverUrls = descriptor.serverUrls
     )
 
   def convertToApiEserviceDoc(document: CatalogManagementDependency.EServiceDoc): EServiceDoc = EServiceDoc(

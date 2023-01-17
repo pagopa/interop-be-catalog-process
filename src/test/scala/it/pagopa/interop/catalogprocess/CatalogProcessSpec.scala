@@ -297,7 +297,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
             voucherLifespan = 1000,
             dailyCallsPerConsumer = 1000,
             dailyCallsTotal = 0,
-            agreementApprovalPolicy = AUTOMATIC
+            agreementApprovalPolicy = AUTOMATIC,
+            serverUrls = Nil
           )
         )
       )
@@ -979,7 +980,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         voucherLifespan = 1000,
         dailyCallsPerConsumer = 1000,
         dailyCallsTotal = 0,
-        agreementApprovalPolicy = AUTOMATIC
+        agreementApprovalPolicy = AUTOMATIC,
+        serverUrls = Nil
       )
 
       val otherDescriptor = CatalogManagementDependency.EServiceDescriptor(
@@ -993,7 +995,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         voucherLifespan = 1000,
         dailyCallsPerConsumer = 1000,
         dailyCallsTotal = 0,
-        agreementApprovalPolicy = AUTOMATIC
+        agreementApprovalPolicy = AUTOMATIC,
+        serverUrls = Nil
       )
 
       val eservice = CatalogManagementDependency.EService(
@@ -1036,7 +1039,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         voucherLifespan = 1000,
         dailyCallsPerConsumer = 1000,
         dailyCallsTotal = 0,
-        agreementApprovalPolicy = AUTOMATIC
+        agreementApprovalPolicy = AUTOMATIC,
+        serverUrls = Nil
       )
 
       val eservice = CatalogManagementDependency.EService(

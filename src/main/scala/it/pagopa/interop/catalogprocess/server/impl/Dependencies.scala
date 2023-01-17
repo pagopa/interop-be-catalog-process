@@ -20,7 +20,7 @@ import it.pagopa.interop.catalogprocess.api.impl.{
 }
 import it.pagopa.interop.catalogprocess.api.{HealthApi, ProcessApi}
 import it.pagopa.interop.catalogprocess.common.system.ApplicationConfiguration
-import it.pagopa.interop.catalogprocess.errors.Handlers.serviceCode
+import it.pagopa.interop.catalogprocess.api.impl.ResponseHandlers.serviceCode
 import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.catalogprocess.service.impl._
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
@@ -33,8 +33,13 @@ import it.pagopa.interop.commons.utils.errors.{Problem => CommonProblem}
 import it.pagopa.interop.commons.utils.{AkkaUtils, OpenapiUtils}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
+import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 
 trait Dependencies {
+
+  implicit val loggerTI: LoggerTakingImplicit[ContextFieldsToLog] =
+    Logger.takingImplicit[ContextFieldsToLog]("OAuth2JWTValidatorAsContexts")
 
   def getFileManager(blockingEc: ExecutionContextExecutor): FileManager =
     FileManager.get(ApplicationConfiguration.storageKind match {
@@ -126,7 +131,7 @@ trait Dependencies {
 
   val validationExceptionToRoute: ValidationReport => Route = report => {
     val error =
-      CommonProblem(StatusCodes.BadRequest, OpenapiUtils.errorFromRequestValidationReport(report), serviceCode)
+      CommonProblem(StatusCodes.BadRequest, OpenapiUtils.errorFromRequestValidationReport(report), serviceCode, None)
     complete(error.status, error)
   }
 
