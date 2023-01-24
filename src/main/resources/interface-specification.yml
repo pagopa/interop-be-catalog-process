@@ -612,6 +612,7 @@ paths:
                     - DOCUMENT
                 prettyName:
                   type: string
+                  minLength: 5
                   maxLength: 60
                 doc:
                   type: string
@@ -826,9 +827,11 @@ components:
           format: uuid
         name:
           type: string
+          minLength: 5
           maxLength: 60
         description:
           type: string
+          minLength: 10
           maxLength: 250
         technology:
           $ref: '#/components/schemas/EServiceTechnology'
@@ -844,9 +847,11 @@ components:
       properties:
         name:
           type: string
+          minLength: 5
           maxLength: 60
         description:
           type: string
+          minLength: 10
           maxLength: 250
         technology:
           $ref: '#/components/schemas/EServiceTechnology'
@@ -863,11 +868,13 @@ components:
       properties:
         description:
           type: string
+          minLength: 10
           maxLength: 250
         audience:
           type: array
           items:
             type: string
+            minLength: 1
             maxLength: 250
         voucherLifespan:
           type: integer
@@ -897,11 +904,13 @@ components:
       properties:
         description:
           type: string
+          minLength: 10
           maxLength: 250
         audience:
           type: array
           items:
             type: string
+            minLength: 1
             maxLength: 250
         voucherLifespan:
           type: integer
@@ -927,6 +936,7 @@ components:
       properties:
         prettyName:
           type: string
+          minLength: 5
           maxLength: 60
     AttributesSeed:
       properties:
@@ -1004,10 +1014,8 @@ components:
           $ref: '#/components/schemas/Organization'
         name:
           type: string
-          maxLength: 60
         description:
           type: string
-          maxLength: 250
         technology:
           $ref: '#/components/schemas/EServiceTechnology'
         attributes:
@@ -1075,7 +1083,6 @@ components:
           type: string
         prettyName:
           type: string
-          maxLength: 60
     EServiceDescriptor:
       type: object
       required:
@@ -1098,12 +1105,10 @@ components:
           type: string
         description:
           type: string
-          maxLength: 250
         audience:
           type: array
           items:
             type: string
-            maxLength: 250
         voucherLifespan:
           type: integer
           format: int32
