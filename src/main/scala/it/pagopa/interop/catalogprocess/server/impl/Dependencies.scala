@@ -23,7 +23,7 @@ import it.pagopa.interop.catalogprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.catalogprocess.api.impl.ResponseHandlers.serviceCode
 import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.catalogprocess.service.impl._
-import it.pagopa.interop.commons.cqrs.service.ReadModelService
+import it.pagopa.interop.commons.cqrs.service.{MongoDbReadModelService, ReadModelService}
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.jwt.service.impl.{DefaultJWTReader, getClaimsVerifier}
@@ -59,7 +59,7 @@ trait Dependencies {
     )
     .toFuture
 
-  val readModelService: ReadModelService = new ReadModelService(ApplicationConfiguration.readModelConfig)
+  val readModelService: ReadModelService = new MongoDbReadModelService(ApplicationConfiguration.readModelConfig)
 
   def processApi(jwtReader: JWTReader, fileManager: FileManager, blockingEc: ExecutionContextExecutor)(implicit
     ec: ExecutionContext,
