@@ -1,6 +1,7 @@
 package it.pagopa.interop.catalogprocess
 
-import akka.http.scaladsl.model.{HttpMethods, StatusCodes}
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.{HttpMethods, HttpRequest, HttpResponse, MediaTypes, Multipart, StatusCodes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import cats.syntax.all._
 import com.nimbusds.jwt.JWTClaimsSet
@@ -21,14 +22,14 @@ import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt.service.JWTReader
-import it.pagopa.interop.commons.utils.SprayCommonFormats.uuidFormat
 import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
 import it.pagopa.interop.tenantmanagement.client.model.Tenant
 import org.scalamock.scalatest.MockFactory
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.{Assertion, BeforeAndAfterAll}
 import org.scalatest.wordspec.AnyWordSpecLike
 import spray.json._
 
+import java.io.File
 import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.duration._
@@ -243,8 +244,34 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val attributeId2: UUID = UUID.randomUUID()
       val attributeId3: UUID = UUID.randomUUID()
 
+      val apiSeed: EServiceSeed = EServiceSeed(
+        name = "MyService",
+        description = "My Service",
+        technology = EServiceTechnology.REST,
+        attributes = AttributesSeed(
+          certified = List(
+            AttributeSeed(
+              single = Some(AttributeValueSeed(attributeId1, explicitAttributeVerification = false)),
+              group = None
+            )
+          ),
+          declared = List(
+            AttributeSeed(
+              single = None,
+              group = Some(List(AttributeValueSeed(attributeId2, explicitAttributeVerification = false)))
+            )
+          ),
+          verified = List(
+            AttributeSeed(
+              single = Some(AttributeValueSeed(attributeId3, explicitAttributeVerification = true)),
+              group = None
+            )
+          )
+        )
+      )
+
       val seed = CatalogManagementDependency.EServiceSeed(
-        producerId = UUID.randomUUID(),
+        producerId = AdminMockAuthenticator.requesterId,
         name = "MyService",
         description = "My Service",
         technology = CatalogManagementDependency.EServiceTechnology.REST,
@@ -360,36 +387,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         .returning(Future.successful(Seq(attribute1, attribute2, attribute3)))
         .once()
 
-      implicit val seedFormat: JsonFormat[CatalogManagementDependency.EServiceTechnology] =
-        new JsonFormat[CatalogManagementDependency.EServiceTechnology] {
-          override def write(obj: CatalogManagementDependency.EServiceTechnology): JsValue =
-            obj match {
-              case CatalogManagementDependency.EServiceTechnology.REST => JsString("REST")
-              case CatalogManagementDependency.EServiceTechnology.SOAP => JsString("SOAP")
-            }
-
-          override def read(json: JsValue): CatalogManagementDependency.EServiceTechnology =
-            json match {
-              case JsString("REST") => CatalogManagementDependency.EServiceTechnology.REST
-              case JsString("SOAP") => CatalogManagementDependency.EServiceTechnology.SOAP
-              case unrecognized     =>
-                deserializationError(s"EServiceTechnology serialization error ${unrecognized.toString}")
-            }
-        }
-
-      implicit val attributeValueFormat: RootJsonFormat[CatalogManagementDependency.AttributeValue] =
-        jsonFormat2(CatalogManagementDependency.AttributeValue)
-
-      implicit val attributeFormat: RootJsonFormat[CatalogManagementDependency.Attribute] =
-        jsonFormat2(CatalogManagementDependency.Attribute)
-
-      implicit val attributesFormat: RootJsonFormat[CatalogManagementDependency.Attributes] =
-        jsonFormat3(CatalogManagementDependency.Attributes)
-
-      implicit val eServiceSeedFormat: RootJsonFormat[CatalogManagementDependency.EServiceSeed] =
-        jsonFormat5(CatalogManagementDependency.EServiceSeed)
-
-      val requestData = seed.toJson.toString
+      val requestData = apiSeed.toJson.toString
 
       val response = request("eservices", HttpMethods.POST, Some(requestData))
 
@@ -454,10 +452,86 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
   }
 
+  "EService update" must {
+
+    "fail if requester is not the Producer" in {
+      val seed = UpdateEServiceSeed(
+        name = "newName",
+        description = "newDescription",
+        technology = EServiceTechnology.REST,
+        attributes = AttributesSeed(Nil, Nil, Nil)
+      )
+
+      failOnRequesterNotProducer(id => request(s"eservices/$id", HttpMethods.PUT, Some(seed.toJson.toString)))
+    }
+  }
+
+  "EService clone" must {
+
+    "fail if requester is not the Producer" in {
+      failOnRequesterNotProducer(id =>
+        request(s"eservices/$id/descriptors/${UUID.randomUUID()}/clone", HttpMethods.POST)
+      )
+    }
+  }
+
+  "EService deletion" must {
+
+    "fail if requester is not the Producer" in {
+      failOnRequesterNotProducer(id => request(s"eservices/$id", HttpMethods.DELETE))
+    }
+  }
+
+  "Descriptor creation" must {
+
+    "fail if requester is not the Producer" in {
+      val seed = EServiceDescriptorSeed(
+        description = None,
+        audience = Seq("aud"),
+        voucherLifespan = 60,
+        dailyCallsPerConsumer = 0,
+        dailyCallsTotal = 0,
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC
+      )
+
+      failOnRequesterNotProducer(id =>
+        request(s"eservices/$id/descriptors", HttpMethods.POST, Some(seed.toJson.toString))
+      )
+    }
+  }
+
+  "Descriptor draft update" must {
+
+    "fail if requester is not the Producer" in {
+
+      val seed = UpdateEServiceDescriptorSeed(
+        description = None,
+        audience = Seq("aud"),
+        voucherLifespan = 60,
+        dailyCallsPerConsumer = 0,
+        dailyCallsTotal = 0,
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC
+      )
+
+      failOnRequesterNotProducer(id =>
+        request(s"eservices/$id/descriptors/${UUID.randomUUID()}", HttpMethods.PUT, Some(seed.toJson.toString))
+      )
+    }
+  }
+
+  "Descriptor publication" must {
+
+    "fail if requester is not the Producer" in {
+      failOnRequesterNotProducer(id =>
+        request(s"eservices/$id/descriptors/${UUID.randomUUID()}/publish", HttpMethods.POST)
+      )
+    }
+  }
+
   "Descriptor suspension" must {
     "succeed if descriptor is Published" in {
-      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED)
-      val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
+      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED)
+      val eService   = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
       val eServiceUuid = eService.id
       val eServiceId   = eServiceUuid.toString
       val descriptorId = descriptor.id.toString
@@ -507,8 +581,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "succeed if descriptor is Deprecated" in {
-      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED)
-      val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
+      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED)
+      val eService   = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
       val eServiceUuid = eService.id
       val eServiceId   = eServiceUuid.toString
       val descriptorId = descriptor.id.toString
@@ -558,9 +632,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Draft" in {
-      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
-      val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
-      val eServiceId   = eService.id.toString
+      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
+      val eService   = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
+      val eServiceId = eService.id.toString
       val descriptorId = descriptor.id.toString
 
       (jwtReader
@@ -587,9 +661,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Archived" in {
-      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED)
-      val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
-      val eServiceId   = eService.id.toString
+      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED)
+      val eService   = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
+      val eServiceId = eService.id.toString
       val descriptorId = descriptor.id.toString
 
       (jwtReader
@@ -614,33 +688,43 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       response.status shouldBe StatusCodes.BadRequest
     }
+
+    "fail if requester is not the Producer" in {
+      failOnRequesterNotProducer(id =>
+        request(s"eservices/$id/descriptors/${UUID.randomUUID()}/suspend", HttpMethods.POST)
+      )
+    }
+
   }
 
   "Descriptor activation" must {
-    val eService1 = eServiceStub.copy(descriptors =
-      Seq(
+    val eService1 = eServiceStub.copy(
+      descriptors = Seq(
         descriptorStub.copy(version = "1", state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED),
         descriptorStub.copy(version = "2", state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED),
         descriptorStub.copy(version = "3", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED),
         descriptorStub.copy(version = "4", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED),
         descriptorStub.copy(version = "5", state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
-      )
+      ),
+      producerId = AdminMockAuthenticator.requesterId
     )
-    val eService2 = eServiceStub.copy(descriptors =
-      Seq(
+    val eService2 = eServiceStub.copy(
+      descriptors = Seq(
         descriptorStub.copy(version = "1", state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED),
         descriptorStub.copy(version = "2", state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED),
         descriptorStub.copy(version = "3", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED),
         descriptorStub.copy(version = "4", state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED),
         descriptorStub.copy(version = "5", state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
-      )
+      ),
+      producerId = AdminMockAuthenticator.requesterId
     )
-    val eService3 = eServiceStub.copy(descriptors =
-      Seq(
+    val eService3 = eServiceStub.copy(
+      descriptors = Seq(
         descriptorStub.copy(version = "1", state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED),
         descriptorStub.copy(version = "2", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED),
         descriptorStub.copy(version = "3", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED)
-      )
+      ),
+      producerId = AdminMockAuthenticator.requesterId
     )
 
     "activate Deprecated descriptor - case 1" in {
@@ -848,9 +932,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Draft" in {
-      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
-      val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
-      val eServiceId   = eService.id.toString
+      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
+      val eService   = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
+      val eServiceId = eService.id.toString
       val descriptorId = descriptor.id.toString
 
       (jwtReader
@@ -877,9 +961,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Deprecated" in {
-      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED)
-      val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
-      val eServiceId   = eService.id.toString
+      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED)
+      val eService   = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
+      val eServiceId = eService.id.toString
       val descriptorId = descriptor.id.toString
 
       (jwtReader
@@ -906,9 +990,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Published" in {
-      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED)
-      val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
-      val eServiceId   = eService.id.toString
+      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED)
+      val eService   = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
+      val eServiceId = eService.id.toString
       val descriptorId = descriptor.id.toString
 
       (jwtReader
@@ -935,9 +1019,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if descriptor is Archived" in {
-      val descriptor   = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED)
-      val eService     = eServiceStub.copy(descriptors = Seq(descriptor))
-      val eServiceId   = eService.id.toString
+      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED)
+      val eService   = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
+      val eServiceId = eService.id.toString
       val descriptorId = descriptor.id.toString
 
       (jwtReader
@@ -962,6 +1046,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       response.status shouldBe StatusCodes.BadRequest
     }
+
+    "fail if requester is not the Producer" in {
+      failOnRequesterNotProducer(id =>
+        request(s"eservices/$id/descriptors/${UUID.randomUUID()}/activate", HttpMethods.POST)
+      )
+    }
+
   }
 
   "Descriptor deletion" must {
@@ -1000,7 +1091,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       val eservice = CatalogManagementDependency.EService(
         id = UUID.randomUUID(),
-        producerId = UUID.randomUUID(),
+        producerId = AdminMockAuthenticator.requesterId,
         name = "Name",
         description = "Description",
         technology = CatalogManagementDependency.EServiceTechnology.REST,
@@ -1044,7 +1135,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       val eservice = CatalogManagementDependency.EService(
         id = UUID.randomUUID(),
-        producerId = UUID.randomUUID(),
+        producerId = AdminMockAuthenticator.requesterId,
         name = "Name",
         description = "Description",
         technology = CatalogManagementDependency.EServiceTechnology.REST,
@@ -1074,8 +1165,86 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       response.status shouldBe StatusCodes.NoContent
     }
+
+    "fail if requester is not the Producer" in {
+      failOnRequesterNotProducer(id => request(s"eservices/$id/descriptors/${UUID.randomUUID()}", HttpMethods.DELETE))
+    }
   }
 
+  "Document creation" must {
+
+    "fail if requester is not the Producer" in {
+      val file = new File("src/test/resources/application-test.conf")
+
+      val formData =
+        Multipart.FormData(
+          Multipart.FormData.BodyPart.fromPath("doc", MediaTypes.`application/octet-stream`, file.toPath),
+          Multipart.FormData.BodyPart.Strict("kind", "DOCUMENT"),
+          Multipart.FormData.BodyPart.Strict("prettyName", file.getName)
+        )
+
+      failOnRequesterNotProducer(id =>
+        Http()
+          .singleRequest(
+            HttpRequest(
+              uri = s"$serviceURL/eservices/$id/descriptors/${UUID.randomUUID()}/documents",
+              method = HttpMethods.POST,
+              entity = formData.toEntity,
+              headers = requestHeaders
+            )
+          )
+          .futureValue
+      )
+    }
+  }
+
+  "Document update" must {
+
+    "fail if requester is not the Producer" in {
+      val seed = UpdateEServiceDescriptorDocumentSeed(prettyName = "newPrettyName")
+
+      failOnRequesterNotProducer(id =>
+        request(
+          s"eservices/$id/descriptors/${UUID.randomUUID()}/documents/${UUID.randomUUID()}/update",
+          HttpMethods.POST,
+          Some(seed.toJson.toString)
+        )
+      )
+    }
+  }
+
+  "Document deletion" must {
+
+    "fail if requester is not the Producer" in {
+      failOnRequesterNotProducer(id =>
+        request(s"eservices/$id/descriptors/${UUID.randomUUID()}/documents/${UUID.randomUUID()}", HttpMethods.DELETE)
+      )
+    }
+  }
+
+  def failOnRequesterNotProducer(response: UUID => HttpResponse): Assertion = {
+
+    val eServiceId: UUID = UUID.randomUUID()
+
+    val eservice = CatalogManagementDependency.EService(
+      id = eServiceId,
+      producerId = UUID.randomUUID(),
+      name = "name",
+      description = "description",
+      technology = CatalogManagementDependency.EServiceTechnology.REST,
+      attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil),
+      descriptors = Nil
+    )
+
+    (catalogManagementService
+      .getEService(_: String)(_: Seq[(String, String)]))
+      .expects(eservice.id.toString, *)
+      .returning(Future.successful(eservice))
+      .once()
+
+    response(eServiceId).status shouldBe StatusCodes.Forbidden
+
+  }
 }
 
 object CatalogProcessSpec extends MockFactory {
