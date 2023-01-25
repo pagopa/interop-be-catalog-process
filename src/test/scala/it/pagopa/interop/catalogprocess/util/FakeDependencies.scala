@@ -26,13 +26,16 @@ import it.pagopa.interop.catalogprocess.service.{
   CatalogManagementService,
   TenantManagementService
 }
+import it.pagopa.interop.commons.cqrs.service.ReadModelService
 
 import java.io.File
 import java.time.OffsetDateTime
 import java.util.UUID
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import it.pagopa.interop.tenantmanagement.client.model.Tenant
 import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
+import org.mongodb.scala.bson.conversions.Bson
+import spray.json.JsonReader
 
 /**
  * Holds fake implementation of dependencies for tests not requiring neither mocks or stubs
@@ -256,6 +259,25 @@ object FakeDependencies {
           name = "test_name"
         )
       )
+  }
+
+  class FakeReadModelService extends ReadModelService {
+    override def findOne[T](collectionName: String, filter: Bson)(implicit
+      evidence$1: JsonReader[T],
+      ec: ExecutionContext
+    ): Future[Option[T]] = Future.successful(None)
+    override def find[T](collectionName: String, filter: Bson, offset: Int, limit: Int)(implicit
+      evidence$2: JsonReader[T],
+      ec: ExecutionContext
+    ): Future[Seq[T]] = Future.successful(Nil)
+    override def find[T](collectionName: String, filter: Bson, projection: Bson, offset: Int, limit: Int)(implicit
+      evidence$3: JsonReader[T],
+      ec: ExecutionContext
+    ): Future[Seq[T]] = Future.successful(Nil)
+    override def aggregate[T](collectionName: String, pipeline: Seq[Bson], offset: Int, limit: Int)(implicit
+      evidence$4: JsonReader[T],
+      ec: ExecutionContext
+    ): Future[Seq[T]] = Future.successful(Nil)
   }
 
 }
