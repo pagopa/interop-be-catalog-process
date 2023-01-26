@@ -278,6 +278,7 @@ object FakeDependencies {
       evidence$4: JsonReader[T],
       ec: ExecutionContext
     ): Future[Seq[T]] = Future.successful(Nil)
+    override def close(): Unit = ()
   }
 
 }
