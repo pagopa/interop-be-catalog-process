@@ -11,21 +11,17 @@ import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.catalogprocess.util.FakeDependencies._
 import it.pagopa.interop.catalogprocess.util.{AuthorizedRoutes, AuthzScalatestRouteTest}
-import it.pagopa.interop.commons.cqrs.model.ReadModelConfig
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.jwt.service.impl.{DefaultJWTReader, getClaimsVerifier}
 import it.pagopa.interop.commons.jwt.{KID, PublicKeysHolder, SerializedKey}
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import java.io.File
-import java.util.UUID
-import scala.concurrent.ExecutionContext
-import org.scalatest.BeforeAndAfterAll
-
 import java.util.concurrent.{ExecutorService, Executors}
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with AuthzScalatestRouteTest {
 
@@ -38,7 +34,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
   private val threadPool: ExecutorService                                = Executors.newSingleThreadExecutor()
   private val blockingEc: ExecutionContextExecutor = ExecutionContext.fromExecutorService(threadPool)
   val fakeFileManager: FileManager                 = FileManager.get(FileManager.File)(blockingEc)
-  val fakeReadModel: ReadModelService              = new ReadModelService(ReadModelConfig("mongodb://localhost", "db"))
+  val fakeReadModel: ReadModelService              = new FakeReadModelService
   val fakeJwtReader: JWTReader                     = new DefaultJWTReader with PublicKeysHolder {
     var publicKeyset: Map[KID, SerializedKey]                                        = Map.empty
     override protected val claimsVerifier: DefaultJWTClaimsVerifier[SecurityContext] =
@@ -64,13 +60,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
     "accept authorized roles for createEService" in {
       val endpoint = AuthorizedRoutes.endpoints("createEService")
       val fakeSeed =
-        EServiceSeed(
-          producerId = UUID.randomUUID(),
-          "test",
-          "test",
-          EServiceTechnology.REST,
-          AttributesSeed(Seq.empty, Seq.empty, Seq.empty)
-        )
+        EServiceSeed("test", "test", EServiceTechnology.REST, AttributesSeed(Seq.empty, Seq.empty, Seq.empty))
       validateAuthorization(endpoint, { implicit c: Seq[(String, String)] => service.createEService(fakeSeed) })
     }
 
