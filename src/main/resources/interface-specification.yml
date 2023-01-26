@@ -612,6 +612,8 @@ paths:
                     - DOCUMENT
                 prettyName:
                   type: string
+                  minLength: 5
+                  maxLength: 60
                 doc:
                   type: string
                   format: binary
@@ -821,8 +823,12 @@ components:
       properties:
         name:
           type: string
+          minLength: 5
+          maxLength: 60
         description:
           type: string
+          minLength: 10
+          maxLength: 250
         technology:
           $ref: '#/components/schemas/EServiceTechnology'
         attributes:
@@ -837,8 +843,12 @@ components:
       properties:
         name:
           type: string
+          minLength: 5
+          maxLength: 60
         description:
           type: string
+          minLength: 10
+          maxLength: 250
         technology:
           $ref: '#/components/schemas/EServiceTechnology'
         attributes:
@@ -854,10 +864,14 @@ components:
       properties:
         description:
           type: string
+          minLength: 10
+          maxLength: 250
         audience:
           type: array
           items:
             type: string
+            minLength: 1
+            maxLength: 250
         voucherLifespan:
           type: integer
           format: int32
@@ -886,10 +900,14 @@ components:
       properties:
         description:
           type: string
+          minLength: 10
+          maxLength: 250
         audience:
           type: array
           items:
             type: string
+            minLength: 1
+            maxLength: 250
         voucherLifespan:
           type: integer
           format: int32
@@ -914,6 +932,8 @@ components:
       properties:
         prettyName:
           type: string
+          minLength: 5
+          maxLength: 60
     AttributesSeed:
       properties:
         certified:
