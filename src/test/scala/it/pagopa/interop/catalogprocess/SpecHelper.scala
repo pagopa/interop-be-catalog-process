@@ -12,7 +12,7 @@ import akka.http.scaladsl.server.directives.Credentials.{Missing, Provided}
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, Credentials, SecurityDirectives}
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.catalogprocess.server.Controller
-import it.pagopa.interop.commons.utils.{BEARER, USER_ROLES}
+import it.pagopa.interop.commons.utils.{BEARER, ORGANIZATION_ID_CLAIM, USER_ROLES}
 
 import java.net.InetAddress
 import java.util.UUID
@@ -95,9 +95,12 @@ abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.co
 
 //mocks admin user role rights for every call
 object AdminMockAuthenticator extends Authenticator[Seq[(String, String)]] {
+  val requesterId: UUID = UUID.randomUUID()
+
   override def apply(credentials: Credentials): Option[Seq[(String, String)]] = {
     credentials match {
-      case Provided(identifier) => Some(Seq(BEARER -> identifier, USER_ROLES -> "admin"))
+      case Provided(identifier) =>
+        Some(Seq(BEARER -> identifier, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString))
       case Missing              => None
     }
   }

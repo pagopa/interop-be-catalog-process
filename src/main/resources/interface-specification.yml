@@ -816,15 +816,11 @@ components:
     EServiceSeed:
       type: object
       required:
-        - producerId
         - name
         - description
         - technology
         - attributes
       properties:
-        producerId:
-          type: string
-          format: uuid
         name:
           type: string
           minLength: 5
