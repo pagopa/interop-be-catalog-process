@@ -3,12 +3,7 @@ package it.pagopa.interop.catalogprocess
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, HttpResponse, MediaTypes, Multipart, StatusCodes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import cats.syntax.all._
 import com.nimbusds.jwt.JWTClaimsSet
-import it.pagopa.interop.attributeregistrymanagement.client.model.{
-  Attribute => AttributeRegistryManagementApiAttribute,
-  AttributeKind => AttributeRegistryManagementApiAttributeKind
-}
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
 import it.pagopa.interop.catalogmanagement.client.model.AgreementApprovalPolicy.AUTOMATIC
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
@@ -22,15 +17,12 @@ import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt.service.JWTReader
-import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
-import it.pagopa.interop.tenantmanagement.client.model.Tenant
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{Assertion, BeforeAndAfterAll}
 import org.scalatest.wordspec.AnyWordSpecLike
 import spray.json._
 
 import java.io.File
-import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -329,113 +321,38 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         )
       )
 
-      val tenant = Tenant(
-        id = seed.producerId,
-        selfcareId = UUID.randomUUID.toString.some,
-        externalId = null,
-        features = Nil,
-        attributes = Nil,
-        createdAt = OffsetDateTimeSupplier.get(),
-        updatedAt = None,
-        mails = Nil,
-        name = "test_name"
-      )
-
-      val attribute1 = AttributeRegistryManagementApiAttribute(
-        id = attributeId1,
-        code = None,
-        kind = AttributeRegistryManagementApiAttributeKind.CERTIFIED,
-        description = s"$attributeId1-description",
-        origin = None,
-        name = s"$attributeId1-name",
-        creationTime = OffsetDateTime.now()
-      )
-      val attribute2 = AttributeRegistryManagementApiAttribute(
-        id = attributeId2,
-        code = None,
-        kind = AttributeRegistryManagementApiAttributeKind.CERTIFIED,
-        description = s"$attributeId2-description",
-        origin = None,
-        name = s"$attributeId2-name",
-        creationTime = OffsetDateTime.now()
-      )
-      val attribute3 = AttributeRegistryManagementApiAttribute(
-        id = attributeId3,
-        code = None,
-        kind = AttributeRegistryManagementApiAttributeKind.CERTIFIED,
-        description = s"$attributeId3-description",
-        origin = None,
-        name = s"$attributeId3-name",
-        creationTime = OffsetDateTime.now()
-      )
-
       (catalogManagementService
         .createEService(_: CatalogManagementDependency.EServiceSeed)(_: Seq[(String, String)]))
         .expects(seed, *)
         .returning(Future.successful(eservice))
         .once()
 
-      (tenantManagementService
-        .getTenant(_: UUID)(_: Seq[(String, String)]))
-        .expects(seed.producerId, *)
-        .once()
-        .returning(Future.successful(tenant))
-
-      (attributeRegistryManagementService
-        .getAttributesBulk(_: Seq[UUID])(_: Seq[(String, String)]))
-        .expects(Seq(attributeId1, attributeId2, attributeId3), *)
-        .returning(Future.successful(Seq(attribute1, attribute2, attribute3)))
-        .once()
-
       val requestData = apiSeed.toJson.toString
 
       val response = request("eservices", HttpMethods.POST, Some(requestData))
 
-      val expected = OldEService(
+      val expected = EService(
         id = eservice.id,
-        producer = Organization(id = eservice.producerId, name = tenant.name),
+        producerId = eservice.producerId,
         name = seed.name,
         description = seed.description,
         technology = convertToApiTechnology(seed.technology),
-        attributes = OldAttributes(
+        attributes = Attributes(
           certified = Seq(
-            OldAttribute(
-              single = Some(
-                OldAttributeValue(
-                  id = attributeId1,
-                  name = s"$attributeId1-name",
-                  description = s"$attributeId1-description",
-                  explicitAttributeVerification = false
-                )
-              ),
+            Attribute(
+              single = Some(AttributeValue(id = attributeId1, explicitAttributeVerification = false)),
               group = None
             )
           ),
           declared = Seq(
-            OldAttribute(
+            Attribute(
               single = None,
-              group = Some(
-                Seq(
-                  OldAttributeValue(
-                    id = attributeId2,
-                    name = s"$attributeId2-name",
-                    description = s"$attributeId2-description",
-                    explicitAttributeVerification = false
-                  )
-                )
-              )
+              group = Some(Seq(AttributeValue(id = attributeId2, explicitAttributeVerification = false)))
             )
           ),
           verified = Seq(
-            OldAttribute(
-              single = Some(
-                OldAttributeValue(
-                  id = attributeId3,
-                  name = s"$attributeId3-name",
-                  description = s"$attributeId3-description",
-                  explicitAttributeVerification = true
-                )
-              ),
+            Attribute(
+              single = Some(AttributeValue(id = attributeId3, explicitAttributeVerification = true)),
               group = None
             )
           )
@@ -445,7 +362,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       response.status shouldBe StatusCodes.OK
 
-      val body = Await.result(Unmarshal(response.entity).to[OldEService], Duration.Inf)
+      val body = Await.result(Unmarshal(response.entity).to[EService], Duration.Inf)
 
       body shouldBe expected
 

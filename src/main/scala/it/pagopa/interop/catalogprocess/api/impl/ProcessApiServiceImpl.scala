@@ -65,21 +65,21 @@ final case class ProcessApiServiceImpl(
 
   override def createEService(eServiceSeed: EServiceSeed)(implicit
     contexts: Seq[(String, String)],
-    toEntityMarshallerEService: ToEntityMarshaller[OldEService],
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerEService: ToEntityMarshaller[EService]
   ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     val operationLabel: String = s"Creating EService with service name ${eServiceSeed.name}"
     logger.info(operationLabel)
 
-    val result: Future[OldEService] = for {
+    val result: Future[EService] = for {
       organizationId <- getOrganizationIdFutureUUID(contexts)
       clientSeed = Converter.convertToClientEServiceSeed(eServiceSeed, organizationId)
       createdEService <- catalogManagementService.createEService(clientSeed)
-      apiEService     <- convertToApiEservice(createdEService)
+      apiEService = Converter.convertToApiEService(createdEService)
     } yield apiEService
 
     onComplete(result) {
-      createEServiceResponse[OldEService](operationLabel) { res =>
+      createEServiceResponse[EService](operationLabel) { res =>
         logger.info(s"E-Service created with id ${res.id}")
         createEService200(res)
       }
