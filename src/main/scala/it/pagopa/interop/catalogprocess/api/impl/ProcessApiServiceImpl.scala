@@ -399,6 +399,29 @@ final case class ProcessApiServiceImpl(
     }
   }
 
+  override def updateEServiceById(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed)(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerEService: ToEntityMarshaller[EService]
+  ): Route = authorize(ADMIN_ROLE, API_ROLE) {
+    val operationLabel = s"Updating EService by id $eServiceId"
+    logger.info(operationLabel)
+
+    val result = for {
+      organizationId <- getOrganizationIdFutureUUID(contexts)
+      eService       <- catalogManagementService.getEService(eServiceId)
+      _              <- assertRequesterAllowed(eService.producerId)(organizationId)
+      _              <- CatalogManagementService.eServiceCanBeUpdated(eService)
+      clientSeed = Converter.convertToClientUpdateEServiceSeed(updateEServiceSeed)
+      updatedEService <- catalogManagementService.updateEServiceById(eServiceId, clientSeed)
+      apiEService = Converter.convertToApiEService(updatedEService)
+    } yield apiEService
+
+    onComplete(result) {
+      updateEServiceByIdResponse(operationLabel)(updateEServiceById200)
+    }
+  }
+
   private def convertToApiEservice(
     eservice: CatalogManagementDependency.EService
   )(implicit contexts: Seq[(String, String)]): Future[OldEService] = for {
@@ -592,29 +615,6 @@ final case class ProcessApiServiceImpl(
         logger.info(s"EService cloned with id ${res.id}")
         cloneEServiceByDescriptor200(res)
       }
-    }
-  }
-
-  override def updateEServiceById(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed)(implicit
-    contexts: Seq[(String, String)],
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
-    toEntityMarshallerEService: ToEntityMarshaller[EService]
-  ): Route = authorize(ADMIN_ROLE, API_ROLE) {
-    val operationLabel = s"Updating EService by id $eServiceId"
-    logger.info(operationLabel)
-
-    val result = for {
-      organizationId <- getOrganizationIdFutureUUID(contexts)
-      eService       <- catalogManagementService.getEService(eServiceId)
-      _              <- assertRequesterAllowed(eService.producerId)(organizationId)
-      _              <- CatalogManagementService.eServiceCanBeUpdated(eService)
-      clientSeed = Converter.convertToClientUpdateEServiceSeed(updateEServiceSeed)
-      updatedEService <- catalogManagementService.updateEServiceById(eServiceId, clientSeed)
-      apiEService = Converter.convertToApiEService(updatedEService)
-    } yield apiEService
-
-    onComplete(result) {
-      updateEServiceByIdResponse(operationLabel)(updateEServiceById200)
     }
   }
 

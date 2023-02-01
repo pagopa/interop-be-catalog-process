@@ -423,7 +423,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       response.status shouldBe StatusCodes.OK
     }
 
-    "succeed if no descriptors are present" in {
+    "succeed if no descriptor is present" in {
 
       val eService     = eServiceStub.copy(descriptors = Seq.empty, producerId = AdminMockAuthenticator.requesterId)
       val eServiceUuid = eService.id
