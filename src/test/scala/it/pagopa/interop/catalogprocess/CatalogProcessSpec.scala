@@ -370,6 +370,163 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
   }
 
   "EService update" must {
+    "succeed" in {
+      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
+
+      val eService = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
+      val eServiceUuid = eService.id
+      val eServiceId   = eServiceUuid.toString
+
+      val eServiceSeed = UpdateEServiceSeed(
+        name = "newName",
+        description = "newDescription",
+        technology = EServiceTechnology.REST,
+        attributes = AttributesSeed(Nil, Nil, Nil)
+      )
+
+      val updatedEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
+        name = "newName",
+        description = "newDescription",
+        technology = eService.technology,
+        attributes = eService.attributes
+      )
+
+      val updatedEService = CatalogManagementDependency.EService(
+        id = eServiceUuid,
+        producerId = AdminMockAuthenticator.requesterId,
+        name = "newName",
+        description = "newDescription",
+        technology = eService.technology,
+        attributes = eService.attributes,
+        descriptors = Seq(descriptor)
+      )
+
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
+
+      (catalogManagementService
+        .getEService(_: String)(_: Seq[(String, String)]))
+        .expects(eServiceId, *)
+        .returning(Future.successful(eService))
+        .once()
+
+      (catalogManagementService
+        .updateEServiceById(_: String, _: CatalogManagementDependency.UpdateEServiceSeed)(_: Seq[(String, String)]))
+        .expects(eServiceId, updatedEServiceSeed, *)
+        .returning(Future.successful(updatedEService))
+        .once()
+
+      val response = request(s"eservices/$eServiceUuid", HttpMethods.PUT, Some(eServiceSeed.toJson.toString))
+      response.status shouldBe StatusCodes.OK
+    }
+
+    "succeed if no descriptor is present" in {
+
+      val eService     = eServiceStub.copy(descriptors = Seq.empty, producerId = AdminMockAuthenticator.requesterId)
+      val eServiceUuid = eService.id
+      val eServiceId   = eServiceUuid.toString
+
+      val eServiceSeed = UpdateEServiceSeed(
+        name = "newName",
+        description = "newDescription",
+        technology = EServiceTechnology.REST,
+        attributes = AttributesSeed(Nil, Nil, Nil)
+      )
+
+      val updatedEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
+        name = "newName",
+        description = "newDescription",
+        technology = eService.technology,
+        attributes = eService.attributes
+      )
+
+      val updatedEService = CatalogManagementDependency.EService(
+        id = eServiceUuid,
+        producerId = AdminMockAuthenticator.requesterId,
+        name = "newName",
+        description = "newDescription",
+        technology = eService.technology,
+        attributes = eService.attributes,
+        descriptors = Seq.empty
+      )
+
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
+
+      (catalogManagementService
+        .getEService(_: String)(_: Seq[(String, String)]))
+        .expects(eServiceId, *)
+        .returning(Future.successful(eService))
+        .once()
+
+      (catalogManagementService
+        .updateEServiceById(_: String, _: CatalogManagementDependency.UpdateEServiceSeed)(_: Seq[(String, String)]))
+        .expects(eServiceId, updatedEServiceSeed, *)
+        .returning(Future.successful(updatedEService))
+        .once()
+
+      val response = request(s"eservices/$eServiceUuid", HttpMethods.PUT, Some(eServiceSeed.toJson.toString))
+      response.status shouldBe StatusCodes.OK
+    }
+
+    "fail if descriptor state is not draft" in {
+      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED)
+
+      val eService = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
+      val eServiceUuid = eService.id
+      val eServiceId   = eServiceUuid.toString
+
+      val eServiceSeed = UpdateEServiceSeed(
+        name = "newName",
+        description = "newDescription",
+        technology = EServiceTechnology.REST,
+        attributes = AttributesSeed(Nil, Nil, Nil)
+      )
+
+      val updatedEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
+        name = "newName",
+        description = "newDescription",
+        technology = eService.technology,
+        attributes = eService.attributes
+      )
+
+      val updatedEService = CatalogManagementDependency.EService(
+        id = eServiceUuid,
+        producerId = AdminMockAuthenticator.requesterId,
+        name = "newName",
+        description = "newDescription",
+        technology = eService.technology,
+        attributes = eService.attributes,
+        descriptors = Seq(descriptor)
+      )
+
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
+
+      (catalogManagementService
+        .getEService(_: String)(_: Seq[(String, String)]))
+        .expects(eServiceId, *)
+        .returning(Future.successful(eService))
+        .once()
+
+      (catalogManagementService
+        .updateEServiceById(_: String, _: CatalogManagementDependency.UpdateEServiceSeed)(_: Seq[(String, String)]))
+        .expects(eServiceId, updatedEServiceSeed, *)
+        .returning(Future.successful(updatedEService))
+        .once()
+
+      val response = request(s"eservices/$eServiceUuid", HttpMethods.PUT, Some(eServiceSeed.toJson.toString))
+      response.status shouldBe StatusCodes.BadRequest
+    }
 
     "fail if requester is not the Producer" in {
       val seed = UpdateEServiceSeed(

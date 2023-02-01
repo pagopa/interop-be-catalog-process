@@ -401,8 +401,8 @@ final case class ProcessApiServiceImpl(
 
   override def updateEServiceById(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed)(implicit
     contexts: Seq[(String, String)],
-    toEntityMarshallerEService: ToEntityMarshaller[OldEService],
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerEService: ToEntityMarshaller[EService]
   ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     val operationLabel = s"Updating EService by id $eServiceId"
     logger.info(operationLabel)
@@ -414,7 +414,7 @@ final case class ProcessApiServiceImpl(
       _              <- CatalogManagementService.eServiceCanBeUpdated(eService)
       clientSeed = Converter.convertToClientUpdateEServiceSeed(updateEServiceSeed)
       updatedEService <- catalogManagementService.updateEServiceById(eServiceId, clientSeed)
-      apiEService     <- convertToApiEservice(updatedEService)
+      apiEService = Converter.convertToApiEService(updatedEService)
     } yield apiEService
 
     onComplete(result) {
