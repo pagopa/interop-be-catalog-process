@@ -594,24 +594,24 @@ final case class ProcessApiServiceImpl(
 
   override def cloneEServiceByDescriptor(eServiceId: String, descriptorId: String)(implicit
     contexts: Seq[(String, String)],
-    toEntityMarshallerEService: ToEntityMarshaller[OldEService],
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerEService: ToEntityMarshaller[EService]
   ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     val operationLabel = s"Cloning descriptor $descriptorId of EService $eServiceId"
     logger.info(operationLabel)
 
-    val result: Future[OldEService] = for {
+    val result: Future[EService] = for {
       organizationId <- getOrganizationIdFutureUUID(contexts)
       eService       <- catalogManagementService.getEService(eServiceId)
       _              <- assertRequesterAllowed(eService.producerId)(organizationId)
       eServiceUUID   <- eServiceId.toFutureUUID
       descriptorUUID <- descriptorId.toFutureUUID
       clonedEService <- catalogManagementService.cloneEService(eServiceUUID, descriptorUUID)
-      apiEService    <- convertToApiEservice(clonedEService)
+      apiEService = Converter.convertToApiEService(clonedEService)
     } yield apiEService
 
     onComplete(result) {
-      cloneEServiceByDescriptorResponse[OldEService](operationLabel) { res =>
+      cloneEServiceByDescriptorResponse[EService](operationLabel) { res =>
         logger.info(s"EService cloned with id ${res.id}")
         cloneEServiceByDescriptor200(res)
       }
