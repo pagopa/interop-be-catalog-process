@@ -556,7 +556,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OldEService'
+                $ref: '#/components/schemas/EService'
         '400':
           description: Invalid input
           content:
