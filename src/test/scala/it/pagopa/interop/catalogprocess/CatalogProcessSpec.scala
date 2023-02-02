@@ -542,6 +542,40 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
   "EService clone" must {
 
+    "succeed" in {
+
+      val descriptor     = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED)
+      val descriptorUuid = descriptor.id
+      val descriptorId   = descriptorUuid.toString
+
+      val eService = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
+      val eServiceUuid = eService.id
+      val eServiceId   = eServiceUuid.toString
+
+      val clonedEService = eService.copy()
+
+      (jwtReader
+        .getClaims(_: String))
+        .expects(bearerToken)
+        .returning(mockSubject(UUID.randomUUID().toString))
+        .once()
+
+      (catalogManagementService
+        .getEService(_: String)(_: Seq[(String, String)]))
+        .expects(eServiceId, *)
+        .returning(Future.successful(eService))
+        .once()
+
+      (catalogManagementService
+        .cloneEService(_: UUID, _: UUID)(_: Seq[(String, String)]))
+        .expects(eServiceUuid, descriptorUuid, *)
+        .returning(Future.successful(clonedEService))
+        .once()
+
+      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/clone", HttpMethods.POST)
+      response.status shouldBe StatusCodes.OK
+    }
+
     "fail if requester is not the Producer" in {
       failOnRequesterNotProducer(id =>
         request(s"eservices/$id/descriptors/${UUID.randomUUID()}/clone", HttpMethods.POST)
