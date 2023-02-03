@@ -195,7 +195,6 @@ final case class ProcessApiServiceImpl(
       getEServiceByIdResponse[EService](operationLabel)(getEServiceById200)
     }
   }
-
   override def createEServiceDocument(
     kind: String,
     prettyName: String,
@@ -204,26 +203,24 @@ final case class ProcessApiServiceImpl(
     descriptorId: String
   )(implicit
     contexts: Seq[(String, String)],
-    toEntityMarshallerEService: ToEntityMarshaller[OldEService],
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerEService: ToEntityMarshaller[EService]
   ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     val operationLabel =
-      s"Creating EService document of kind $kind for EService $eServiceId and descriptor $descriptorId"
+      s"Creating EService document of kind $kind and name $prettyName for EService $eServiceId and descriptor $descriptorId"
     logger.info(operationLabel)
 
-    val result: Future[OldEService] = for {
+    val result: Future[EService] = for {
       organizationId <- getOrganizationIdFutureUUID(contexts)
       eService       <- catalogManagementService.getEService(eServiceId)
       _              <- assertRequesterAllowed(eService.producerId)(organizationId)
       updated        <- catalogManagementService.createEServiceDocument(eServiceId, descriptorId, kind, prettyName, doc)
-      apiEService    <- convertToApiEservice(updated)
-    } yield apiEService
+    } yield Converter.convertToApiEService(updated)
 
     onComplete(result) {
-      createEServiceDocumentResponse[OldEService](operationLabel)(createEServiceDocument200)
+      createEServiceDocumentResponse[EService](operationLabel)(createEServiceDocument200)
     }
   }
-
   override def getEServiceDocumentById(eServiceId: String, descriptorId: String, documentId: String)(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
