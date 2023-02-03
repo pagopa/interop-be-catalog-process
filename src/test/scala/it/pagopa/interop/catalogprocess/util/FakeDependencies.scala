@@ -1,7 +1,6 @@
 package it.pagopa.interop.catalogprocess.util
 
 import cats.syntax.all._
-import akka.http.scaladsl.server.directives.FileInfo
 import it.pagopa.interop.agreementmanagement.client.model.{Agreement, AgreementState}
 import it.pagopa.interop.attributeregistrymanagement.client.model.Attribute
 import it.pagopa.interop.authorizationmanagement.client.model._
@@ -17,7 +16,8 @@ import it.pagopa.interop.catalogmanagement.client.model.{
   EServiceTechnology,
   UpdateEServiceDescriptorDocumentSeed,
   UpdateEServiceDescriptorSeed,
-  UpdateEServiceSeed
+  UpdateEServiceSeed,
+  CreateEServiceDescriptorDocumentSeed
 }
 import it.pagopa.interop.catalogprocess.service.{
   AgreementManagementService,
@@ -28,7 +28,6 @@ import it.pagopa.interop.catalogprocess.service.{
 }
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
 
-import java.io.File
 import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
@@ -182,9 +181,8 @@ object FakeDependencies {
     override def createEServiceDocument(
       eServiceId: String,
       descriptorId: String,
-      kind: String,
-      prettyName: String,
-      doc: (FileInfo, File)
+      documentId: String,
+      documentSeed: CreateEServiceDescriptorDocumentSeed
     )(implicit contexts: Seq[(String, String)]): Future[EService] = Future.successful(
       EService(
         id = UUID.randomUUID(),

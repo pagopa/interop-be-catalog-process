@@ -1,7 +1,6 @@
 package it.pagopa.interop.catalogprocess
 
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{HttpMethods, HttpRequest, HttpResponse, MediaTypes, Multipart, StatusCodes}
+import akka.http.scaladsl.model.{HttpMethods, HttpResponse, StatusCodes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import com.nimbusds.jwt.JWTClaimsSet
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
@@ -22,7 +21,6 @@ import org.scalatest.{Assertion, BeforeAndAfterAll}
 import org.scalatest.wordspec.AnyWordSpecLike
 import spray.json._
 
-import java.io.File
 import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -1282,27 +1280,23 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
   "Document creation" must {
 
     "fail if requester is not the Producer" in {
-      val file = new File("src/test/resources/application-test.conf")
-
-      val formData =
-        Multipart.FormData(
-          Multipart.FormData.BodyPart.fromPath("doc", MediaTypes.`application/octet-stream`, file.toPath),
-          Multipart.FormData.BodyPart.Strict("kind", "DOCUMENT"),
-          Multipart.FormData.BodyPart.Strict("prettyName", file.getName)
-        )
-
-      failOnRequesterNotProducer(id =>
-        Http()
-          .singleRequest(
-            HttpRequest(
-              uri = s"$serviceURL/eservices/$id/descriptors/${UUID.randomUUID()}/documents",
-              method = HttpMethods.POST,
-              entity = formData.toEntity,
-              headers = requestHeaders
-            )
-          )
-          .futureValue
+      val seed = CreateEServiceDescriptorDocumentSeed(
+        kind = EServiceDocumentKind.INTERFACE,
+        prettyName = "newPrettyName",
+        filePath = "fake",
+        fileName = "fake",
+        contentType = "fake",
+        checksum = "fake",
+        serverUrls = None
       )
+      failOnRequesterNotProducer(id =>
+        request(
+          s"eservices/$id/descriptors/${UUID.randomUUID()}/documents/${UUID.randomUUID()}/create",
+          HttpMethods.POST,
+          Some(seed.toJson.toString)
+        )
+      )
+
     }
   }
 

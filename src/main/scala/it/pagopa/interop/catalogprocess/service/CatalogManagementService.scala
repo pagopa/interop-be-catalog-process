@@ -1,12 +1,10 @@
 package it.pagopa.interop.catalogprocess.service
 
-import akka.http.scaladsl.server.directives.FileInfo
 import it.pagopa.interop.catalogmanagement.client.model.EServiceDescriptorState.DRAFT
 import it.pagopa.interop.catalogmanagement.client.model._
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors.EServiceCannotBeUpdated
 import it.pagopa.interop.commons.utils.TypeConversions._
 
-import java.io.File
 import java.util.UUID
 import scala.concurrent.Future
 
@@ -47,9 +45,8 @@ trait CatalogManagementService {
   def createEServiceDocument(
     eServiceId: String,
     descriptorId: String,
-    kind: String,
-    prettyName: String,
-    doc: (FileInfo, File)
+    documentId: String,
+    documentSeed: CreateEServiceDescriptorDocumentSeed
   )(implicit contexts: Seq[(String, String)]): Future[EService]
 
   def getEServiceDocument(eServiceId: String, descriptorId: String, documentId: String)(implicit

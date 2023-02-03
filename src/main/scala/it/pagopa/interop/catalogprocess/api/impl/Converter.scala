@@ -244,6 +244,27 @@ object Converter {
     attributes = convertToCatalogClientAttributes(eServiceSeed.attributes)
   )
 
+  def convertToManagementEServiceDescriptorDocumentSeed(
+    seed: CreateEServiceDescriptorDocumentSeed
+  ): CatalogManagementDependency.CreateEServiceDescriptorDocumentSeed =
+    CatalogManagementDependency.CreateEServiceDescriptorDocumentSeed(
+      kind = convertFromApiEServiceDocumentKind(seed.kind),
+      prettyName = seed.prettyName,
+      filePath = seed.filePath,
+      fileName = seed.fileName,
+      contentType = seed.contentType,
+      checksum = seed.checksum,
+      serverUrls = seed.serverUrls
+    )
+
+  def convertFromApiEServiceDocumentKind(
+    policy: EServiceDocumentKind
+  ): CatalogManagementDependency.EServiceDocumentKind =
+    policy match {
+      case EServiceDocumentKind.INTERFACE => CatalogManagementDependency.EServiceDocumentKind.INTERFACE
+      case EServiceDocumentKind.DOCUMENT  => CatalogManagementDependency.EServiceDocumentKind.DOCUMENT
+    }
+
   def convertToClientEServiceDescriptorDocumentSeed(
     seed: UpdateEServiceDescriptorDocumentSeed
   ): CatalogManagementDependency.UpdateEServiceDescriptorDocumentSeed =
