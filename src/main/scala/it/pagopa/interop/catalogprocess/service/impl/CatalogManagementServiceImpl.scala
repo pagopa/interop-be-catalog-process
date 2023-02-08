@@ -195,26 +195,25 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   }
 
   override def createEServiceDocument(
-    eServiceId: String,
-    descriptorId: String,
-    documentId: String,
+    eServiceId: UUID,
+    descriptorId: UUID,
     documentSeed: CreateEServiceDescriptorDocumentSeed
   )(implicit contexts: Seq[(String, String)]): Future[EService] = withHeaders { (bearerToken, correlationId, ip) =>
     val request = api.createEServiceDocument(
       xCorrelationId = correlationId,
       eServiceId = eServiceId,
       descriptorId = descriptorId,
-      documentId = documentId,
       createEServiceDescriptorDocumentSeed = documentSeed,
       xForwardedFor = ip
     )(BearerToken(bearerToken))
     invoker
       .invoke(
         request,
-        s"Creating Document ${documentId} of kind ${documentSeed.kind} ,name ${documentSeed.fileName}, path ${documentSeed.filePath} for EService $eServiceId and Descriptor $descriptorId"
+        s"Creating Document ${documentSeed.documentId.toString} of kind ${documentSeed.kind} ,name ${documentSeed.fileName}, path ${documentSeed.filePath} for EService $eServiceId and Descriptor $descriptorId"
       )
       .recoverWith {
-        case err: ApiError[_] if err.code == 404 => Future.failed(EServiceDescriptorNotFound(eServiceId, descriptorId))
+        case err: ApiError[_] if err.code == 404 =>
+          Future.failed(EServiceDescriptorNotFound(eServiceId.toString, descriptorId.toString))
       }
   }
 

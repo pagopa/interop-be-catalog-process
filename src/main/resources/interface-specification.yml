@@ -569,7 +569,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  /eservices/{eServiceId}/descriptors/{descriptorId}/documents/{documentId}/:
+  /eservices/{eServiceId}/descriptors/{descriptorId}/documents:
     parameters:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/IpAddress'
@@ -592,13 +592,7 @@ paths:
           description: the descriptor Id
           required: true
           schema:
-            type: string
-        - name: documentId
-          in: path
-          description: the document Id
-          required: true
-          schema:
-            type: string         
+            type: string  
       requestBody:
         description: E-Service document
         required: true
@@ -915,6 +909,7 @@ components:
           $ref: '#/components/schemas/AgreementApprovalPolicy'
     CreateEServiceDescriptorDocumentSeed:
       required:
+        - documentId
         - kind 
         - prettyName
         - filePath
@@ -924,6 +919,9 @@ components:
         - serverUrls
       type: object
       properties:
+        documentId:
+          type: string
+          format: uuid   
         kind:
           $ref: '#/components/schemas/EServiceDocumentKind'
         prettyName:

@@ -197,7 +197,6 @@ final case class ProcessApiServiceImpl(
   override def createEServiceDocument(
     eServiceId: String,
     descriptorId: String,
-    documentId: String,
     documentSeed: CreateEServiceDescriptorDocumentSeed
   )(implicit
     contexts: Seq[(String, String)],
@@ -205,7 +204,7 @@ final case class ProcessApiServiceImpl(
     toEntityMarshallerEService: ToEntityMarshaller[EService]
   ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     val operationLabel =
-      s"Creating EService document ${documentId} of kind ${documentSeed.kind}, name ${documentSeed.fileName}, path ${documentSeed.filePath} for EService $eServiceId and descriptor $descriptorId"
+      s"Creating EService document ${documentSeed.documentId.toString} of kind ${documentSeed.kind}, name ${documentSeed.fileName}, path ${documentSeed.filePath} for EService $eServiceId and descriptor $descriptorId"
     logger.info(operationLabel)
 
     val managementSeed: CatalogManagementDependency.CreateEServiceDescriptorDocumentSeed =
@@ -215,10 +214,10 @@ final case class ProcessApiServiceImpl(
       organizationId <- getOrganizationIdFutureUUID(contexts)
       eService       <- catalogManagementService.getEService(eServiceId)
       _              <- assertRequesterAllowed(eService.producerId)(organizationId)
-      _              <- eService.descriptors
+      descriptor     <- eService.descriptors
         .find(_.id.toString == descriptorId)
         .toFuture(EServiceDescriptorNotFound(eServiceId, descriptorId))
-      updated <- catalogManagementService.createEServiceDocument(eServiceId, descriptorId, documentId, managementSeed)
+      updated        <- catalogManagementService.createEServiceDocument(eService.id, descriptor.id, managementSeed)
     } yield Converter.convertToApiEService(updated)
 
     onComplete(result) {

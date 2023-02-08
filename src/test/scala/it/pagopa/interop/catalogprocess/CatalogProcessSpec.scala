@@ -1281,6 +1281,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
     "fail if requester is not the Producer" in {
       val seed = CreateEServiceDescriptorDocumentSeed(
+        documentId = UUID.randomUUID(),
         kind = EServiceDocumentKind.INTERFACE,
         prettyName = "newPrettyName",
         filePath = "fake",
@@ -1291,7 +1292,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       )
       failOnRequesterNotProducer(id =>
         request(
-          s"eservices/$id/descriptors/${UUID.randomUUID()}/documents/${UUID.randomUUID()}",
+          s"eservices/$id/descriptors/${UUID.randomUUID()}/documents",
           HttpMethods.POST,
           Some(seed.toJson.toString)
         )

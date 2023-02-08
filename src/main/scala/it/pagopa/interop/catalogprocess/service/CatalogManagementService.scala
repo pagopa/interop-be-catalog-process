@@ -42,12 +42,9 @@ trait CatalogManagementService {
     contexts: Seq[(String, String)]
   ): Future[EService]
 
-  def createEServiceDocument(
-    eServiceId: String,
-    descriptorId: String,
-    documentId: String,
-    documentSeed: CreateEServiceDescriptorDocumentSeed
-  )(implicit contexts: Seq[(String, String)]): Future[EService]
+  def createEServiceDocument(eServiceId: UUID, descriptorId: UUID, documentSeed: CreateEServiceDescriptorDocumentSeed)(
+    implicit contexts: Seq[(String, String)]
+  ): Future[EService]
 
   def getEServiceDocument(eServiceId: String, descriptorId: String, documentId: String)(implicit
     contexts: Seq[(String, String)]

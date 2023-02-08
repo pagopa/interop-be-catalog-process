@@ -19,6 +19,7 @@ import org.scalatest.wordspec.AnyWordSpecLike
 
 import java.util.concurrent.{ExecutorService, Executors}
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+import java.util.UUID
 
 class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with AuthzScalatestRouteTest {
 
@@ -67,10 +68,10 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
         endpoint,
         { implicit c: Seq[(String, String)] =>
           service.createEServiceDocument(
-            eServiceId = "fake",
-            descriptorId = "fake",
-            documentId = "fake",
+            eServiceId = UUID.randomUUID().toString,
+            descriptorId = UUID.randomUUID().toString,
             CreateEServiceDescriptorDocumentSeed(
+              documentId = UUID.randomUUID(),
               kind = EServiceDocumentKind.INTERFACE,
               prettyName = "fake",
               filePath = "fake",

@@ -248,6 +248,7 @@ object Converter {
     seed: CreateEServiceDescriptorDocumentSeed
   ): CatalogManagementDependency.CreateEServiceDescriptorDocumentSeed =
     CatalogManagementDependency.CreateEServiceDescriptorDocumentSeed(
+      documentId = seed.documentId,
       kind = convertFromApiEServiceDocumentKind(seed.kind),
       prettyName = seed.prettyName,
       filePath = seed.filePath,

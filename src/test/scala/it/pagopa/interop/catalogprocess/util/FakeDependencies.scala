@@ -179,19 +179,33 @@ object FakeDependencies {
     )
 
     override def createEServiceDocument(
-      eServiceId: String,
-      descriptorId: String,
-      documentId: String,
+      eServiceId: UUID,
+      descriptorId: UUID,
       documentSeed: CreateEServiceDescriptorDocumentSeed
     )(implicit contexts: Seq[(String, String)]): Future[EService] = Future.successful(
       EService(
-        id = UUID.randomUUID(),
+        id = eServiceId,
         producerId = UUID.randomUUID(),
         name = "fake",
         description = "fake",
         technology = EServiceTechnology.REST,
         attributes = Attributes(Seq.empty, Seq.empty, Seq.empty),
-        descriptors = Seq.empty
+        descriptors = Seq(
+          EServiceDescriptor(
+            id = descriptorId,
+            version = "???",
+            description = None,
+            audience = Seq.empty,
+            voucherLifespan = 0,
+            dailyCallsPerConsumer = 0,
+            dailyCallsTotal = 0,
+            interface = None,
+            docs = Seq.empty,
+            state = EServiceDescriptorState.PUBLISHED,
+            agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+            serverUrls = Nil
+          )
+        )
       )
     )
 
