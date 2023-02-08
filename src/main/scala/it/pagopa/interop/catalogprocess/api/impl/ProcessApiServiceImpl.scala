@@ -421,27 +421,6 @@ final case class ProcessApiServiceImpl(
     }
   }
 
-  private def convertToApiEservice(
-    eservice: CatalogManagementDependency.EService
-  )(implicit contexts: Seq[(String, String)]): Future[OldEService] = for {
-    tenant     <- tenantManagementService.getTenant(eservice.producerId)
-    attributes <- attributeRegistryManagementService.getAttributesBulk(extractIdsFromAttributes(eservice.attributes))(
-      contexts
-    )
-  } yield Converter.convertToApiOldEservice(eservice, tenant, attributes)
-
-  private def extractIdsFromAttributes(attributes: CatalogManagementDependency.Attributes): Seq[UUID] =
-    attributes.certified.flatMap(extractIdsFromAttribute) ++
-      attributes.declared.flatMap(extractIdsFromAttribute) ++
-      attributes.verified.flatMap(extractIdsFromAttribute)
-
-  private def extractIdsFromAttribute(attribute: CatalogManagementDependency.Attribute): Seq[UUID] = {
-    val fromSingle: Seq[UUID] = attribute.single.toSeq.map(_.id)
-    val fromGroup: Seq[UUID]  = attribute.group.toSeq.flatMap(_.map(_.id))
-
-    fromSingle ++ fromGroup
-  }
-
   private def retrieveEservices(
     producerId: Option[String],
     consumerId: Option[String],

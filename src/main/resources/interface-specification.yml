@@ -1005,34 +1005,6 @@ components:
           format: uuid
         name:
           type: string
-    OldEService:
-      type: object
-      required:
-        - id
-        - producer
-        - name
-        - description
-        - technology
-        - attributes
-        - descriptors
-      properties:
-        id:
-          type: string
-          format: uuid
-        producer:
-          $ref: '#/components/schemas/Organization'
-        name:
-          type: string
-        description:
-          type: string
-        technology:
-          $ref: '#/components/schemas/EServiceTechnology'
-        attributes:
-          $ref: '#/components/schemas/OldAttributes'
-        descriptors:
-          type: array
-          items:
-            $ref: '#/components/schemas/EServiceDescriptor'
     EService:
       type: object
       required:
@@ -1145,50 +1117,6 @@ components:
           type: array
           items:
             type: string
-    OldAttributeValue:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        description:
-          type: string
-        explicitAttributeVerification:
-          type: boolean
-      required:
-        - id
-        - name
-        - description
-        - explicitAttributeVerification
-    OldAttribute:
-      type: object
-      properties:
-        single:
-          $ref: '#/components/schemas/OldAttributeValue'
-        group:
-          type: array
-          items:
-            $ref: '#/components/schemas/OldAttributeValue'
-    OldAttributes:
-      properties:
-        certified:
-          type: array
-          items:
-            $ref: '#/components/schemas/OldAttribute'
-        declared:
-          type: array
-          items:
-            $ref: '#/components/schemas/OldAttribute'
-        verified:
-          type: array
-          items:
-            $ref: '#/components/schemas/OldAttribute'
-      required:
-        - certified
-        - declared
-        - verified
     AttributeValue:
       type: object
       properties:
