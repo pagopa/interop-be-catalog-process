@@ -375,13 +375,13 @@ final case class ProcessApiServiceImpl(
     updateEServiceDescriptorSeed: UpdateEServiceDescriptorSeed
   )(implicit
     contexts: Seq[(String, String)],
-    toEntityMarshallerEService: ToEntityMarshaller[OldEService],
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerEService: ToEntityMarshaller[EService]
   ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     val operationLabel = s"Updating draft descriptor $descriptorId of EService $eServiceId"
     logger.info(operationLabel)
 
-    val result: Future[OldEService] = for {
+    val result: Future[EService] = for {
       organizationId  <- getOrganizationIdFutureUUID(contexts)
       currentEService <- catalogManagementService.getEService(eServiceId)
       _               <- assertRequesterAllowed(currentEService.producerId)(organizationId)
@@ -391,11 +391,10 @@ final case class ProcessApiServiceImpl(
       _               <- isDraftDescriptor(descriptor)
       clientSeed = Converter.convertToClientUpdateEServiceDescriptorSeed(updateEServiceDescriptorSeed)
       updatedEService <- catalogManagementService.updateDraftDescriptor(eServiceId, descriptorId, clientSeed)
-      apiEService     <- convertToApiEservice(updatedEService)
-    } yield apiEService
+    } yield Converter.convertToApiEService(updatedEService)
 
     onComplete(result) {
-      updateDraftDescriptorResponse[OldEService](operationLabel)(updateDraftDescriptor200)
+      updateDraftDescriptorResponse[EService](operationLabel)(updateDraftDescriptor200)
     }
   }
 
