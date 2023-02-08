@@ -77,7 +77,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
               fileName = "fake",
               contentType = "fake",
               checksum = "fake",
-              serverUrls = None
+              serverUrls = List()
             )
           )
         }

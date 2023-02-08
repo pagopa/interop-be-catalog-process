@@ -1287,11 +1287,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         fileName = "fake",
         contentType = "fake",
         checksum = "fake",
-        serverUrls = None
+        serverUrls = List()
       )
       failOnRequesterNotProducer(id =>
         request(
-          s"eservices/$id/descriptors/${UUID.randomUUID()}/documents/${UUID.randomUUID()}/create",
+          s"eservices/$id/descriptors/${UUID.randomUUID()}/documents/${UUID.randomUUID()}",
           HttpMethods.POST,
           Some(seed.toJson.toString)
         )

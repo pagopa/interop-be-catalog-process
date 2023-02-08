@@ -203,8 +203,6 @@ final case class ProcessApiServiceImpl(
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerEService: ToEntityMarshaller[EService]
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
-    toEntityMarshallerEService: ToEntityMarshaller[EService]
   ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     val operationLabel =
       s"Creating EService document ${documentId} of kind ${documentSeed.kind}, name ${documentSeed.fileName}, path ${documentSeed.filePath} for EService $eServiceId and descriptor $descriptorId"
@@ -224,7 +222,6 @@ final case class ProcessApiServiceImpl(
     } yield Converter.convertToApiEService(updated)
 
     onComplete(result) {
-      createEServiceDocumentResponse[EService](operationLabel)(createEServiceDocument200)
       createEServiceDocumentResponse[EService](operationLabel)(createEServiceDocument200)
     }
   }
