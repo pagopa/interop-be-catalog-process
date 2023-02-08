@@ -4,7 +4,6 @@ import akka.http.scaladsl.marshalling.ToEntityMarshaller
 import akka.http.scaladsl.model.{ContentType, HttpEntity, MessageEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.server.directives.FileInfo
 import cats.implicits.toTraverseOps
 import cats.syntax.all._
 import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
@@ -195,35 +194,36 @@ final case class ProcessApiServiceImpl(
       getEServiceByIdResponse[EService](operationLabel)(getEServiceById200)
     }
   }
-
   override def createEServiceDocument(
-    kind: String,
-    prettyName: String,
-    doc: (FileInfo, File),
     eServiceId: String,
-    descriptorId: String
+    descriptorId: String,
+    documentSeed: CreateEServiceDescriptorDocumentSeed
   )(implicit
     contexts: Seq[(String, String)],
-    toEntityMarshallerEService: ToEntityMarshaller[OldEService],
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerEService: ToEntityMarshaller[EService]
   ): Route = authorize(ADMIN_ROLE, API_ROLE) {
     val operationLabel =
-      s"Creating EService document of kind $kind for EService $eServiceId and descriptor $descriptorId"
+      s"Creating EService document ${documentSeed.documentId.toString} of kind ${documentSeed.kind}, name ${documentSeed.fileName}, path ${documentSeed.filePath} for EService $eServiceId and descriptor $descriptorId"
     logger.info(operationLabel)
 
-    val result: Future[OldEService] = for {
+    val managementSeed: CatalogManagementDependency.CreateEServiceDescriptorDocumentSeed =
+      Converter.convertToManagementEServiceDescriptorDocumentSeed(documentSeed)
+
+    val result: Future[EService] = for {
       organizationId <- getOrganizationIdFutureUUID(contexts)
       eService       <- catalogManagementService.getEService(eServiceId)
       _              <- assertRequesterAllowed(eService.producerId)(organizationId)
-      updated        <- catalogManagementService.createEServiceDocument(eServiceId, descriptorId, kind, prettyName, doc)
-      apiEService    <- convertToApiEservice(updated)
-    } yield apiEService
+      descriptor     <- eService.descriptors
+        .find(_.id.toString == descriptorId)
+        .toFuture(EServiceDescriptorNotFound(eServiceId, descriptorId))
+      updated        <- catalogManagementService.createEServiceDocument(eService.id, descriptor.id, managementSeed)
+    } yield Converter.convertToApiEService(updated)
 
     onComplete(result) {
-      createEServiceDocumentResponse[OldEService](operationLabel)(createEServiceDocument200)
+      createEServiceDocumentResponse[EService](operationLabel)(createEServiceDocument200)
     }
   }
-
   override def getEServiceDocumentById(eServiceId: String, descriptorId: String, documentId: String)(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
@@ -419,27 +419,6 @@ final case class ProcessApiServiceImpl(
     onComplete(result) {
       updateEServiceByIdResponse(operationLabel)(updateEServiceById200)
     }
-  }
-
-  private def convertToApiEservice(
-    eservice: CatalogManagementDependency.EService
-  )(implicit contexts: Seq[(String, String)]): Future[OldEService] = for {
-    tenant     <- tenantManagementService.getTenant(eservice.producerId)
-    attributes <- attributeRegistryManagementService.getAttributesBulk(extractIdsFromAttributes(eservice.attributes))(
-      contexts
-    )
-  } yield Converter.convertToApiOldEservice(eservice, tenant, attributes)
-
-  private def extractIdsFromAttributes(attributes: CatalogManagementDependency.Attributes): Seq[UUID] =
-    attributes.certified.flatMap(extractIdsFromAttribute) ++
-      attributes.declared.flatMap(extractIdsFromAttribute) ++
-      attributes.verified.flatMap(extractIdsFromAttribute)
-
-  private def extractIdsFromAttribute(attribute: CatalogManagementDependency.Attribute): Seq[UUID] = {
-    val fromSingle: Seq[UUID] = attribute.single.toSeq.map(_.id)
-    val fromGroup: Seq[UUID]  = attribute.group.toSeq.flatMap(_.map(_.id))
-
-    fromSingle ++ fromGroup
   }
 
   private def retrieveEservices(

@@ -2,31 +2,15 @@ package it.pagopa.interop.catalogprocess.api.impl
 
 import cats.implicits.catsSyntaxOptionId
 import it.pagopa.interop.agreementmanagement.client.{model => AgreementManagementDependency}
-import it.pagopa.interop.attributeregistrymanagement.client.{model => AttributeManagementDependency}
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.catalogmanagement.{model => readmodel}
 import it.pagopa.interop.catalogprocess.model._
-import it.pagopa.interop.tenantmanagement.client.{model => TenantManagementDependency}
 
 import java.util.UUID
 
 object Converter {
 
   private final case class AttributeDetails(name: String, description: String)
-
-  def convertToApiOldEservice(
-    eservice: CatalogManagementDependency.EService,
-    tenant: TenantManagementDependency.Tenant,
-    attributes: Seq[AttributeManagementDependency.Attribute]
-  ): OldEService = OldEService(
-    id = eservice.id,
-    producer = Organization(id = eservice.producerId, name = tenant.name),
-    name = eservice.name,
-    description = eservice.description,
-    technology = convertToApiTechnology(eservice.technology),
-    attributes = convertToApiOldAttributes(eservice.attributes, attributes),
-    descriptors = eservice.descriptors.map(convertToApiDescriptor)
-  )
 
   def convertToApiEService(eService: CatalogManagementDependency.EService): EService = EService(
     id = eService.id,
@@ -178,39 +162,6 @@ object Converter {
 
   }
 
-  private def convertToApiOldAttributes(
-    currentAttributes: CatalogManagementDependency.Attributes,
-    attributes: Seq[AttributeManagementDependency.Attribute]
-  ): OldAttributes = {
-    val attributeNames: Map[UUID, AttributeDetails] =
-      attributes.map(attr => attr.id -> AttributeDetails(attr.name, attr.description)).toMap
-
-    OldAttributes(
-      certified = currentAttributes.certified.map(convertToApiOldAttribute(attributeNames)),
-      declared = currentAttributes.declared.map(convertToApiOldAttribute(attributeNames)),
-      verified = currentAttributes.verified.map(convertToApiOldAttribute(attributeNames))
-    )
-  }
-
-  private def convertToApiOldAttribute(
-    attributeNames: Map[UUID, AttributeDetails]
-  )(attribute: CatalogManagementDependency.Attribute): OldAttribute = OldAttribute(
-    single = attribute.single.map(convertToApiOldAttributeValue(attributeNames)),
-    group = attribute.group.map(values => values.map(convertToApiOldAttributeValue(attributeNames)))
-  )
-
-  private def convertToApiOldAttributeValue(
-    attributeNames: Map[UUID, AttributeDetails]
-  )(value: CatalogManagementDependency.AttributeValue) = OldAttributeValue(
-    id = value.id,
-    // TODO how to manage this case? Raise an error/Default/Flat option values
-    // TODO for now default value "Unknown"
-    name = attributeNames.get(value.id).map(_.name).getOrElse("Unknown"),
-    // TODO same here
-    description = attributeNames.get(value.id).map(_.description).getOrElse("Unknown"),
-    explicitAttributeVerification = value.explicitAttributeVerification
-  )
-
   def convertToClientEServiceSeed(
     eServiceSeed: EServiceSeed,
     producerId: UUID
@@ -243,6 +194,28 @@ object Converter {
     technology = convertFromApiTechnology(eServiceSeed.technology),
     attributes = convertToCatalogClientAttributes(eServiceSeed.attributes)
   )
+
+  def convertToManagementEServiceDescriptorDocumentSeed(
+    seed: CreateEServiceDescriptorDocumentSeed
+  ): CatalogManagementDependency.CreateEServiceDescriptorDocumentSeed =
+    CatalogManagementDependency.CreateEServiceDescriptorDocumentSeed(
+      documentId = seed.documentId,
+      kind = convertFromApiEServiceDocumentKind(seed.kind),
+      prettyName = seed.prettyName,
+      filePath = seed.filePath,
+      fileName = seed.fileName,
+      contentType = seed.contentType,
+      checksum = seed.checksum,
+      serverUrls = seed.serverUrls
+    )
+
+  def convertFromApiEServiceDocumentKind(
+    policy: EServiceDocumentKind
+  ): CatalogManagementDependency.EServiceDocumentKind =
+    policy match {
+      case EServiceDocumentKind.INTERFACE => CatalogManagementDependency.EServiceDocumentKind.INTERFACE
+      case EServiceDocumentKind.DOCUMENT  => CatalogManagementDependency.EServiceDocumentKind.DOCUMENT
+    }
 
   def convertToClientEServiceDescriptorDocumentSeed(
     seed: UpdateEServiceDescriptorDocumentSeed

@@ -1,7 +1,5 @@
 package it.pagopa.interop.catalogprocess.authz
 
-import akka.http.scaladsl.model.ContentTypes
-import akka.http.scaladsl.server.directives.FileInfo
 import com.nimbusds.jose.proc.SecurityContext
 import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier
 import it.pagopa.interop.catalogprocess.api.impl.ProcessApiMarshallerImpl._
@@ -19,9 +17,9 @@ import it.pagopa.interop.commons.jwt.{KID, PublicKeysHolder, SerializedKey}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpecLike
 
-import java.io.File
 import java.util.concurrent.{ExecutorService, Executors}
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+import java.util.UUID
 
 class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with AuthzScalatestRouteTest {
 
@@ -70,11 +68,18 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
         endpoint,
         { implicit c: Seq[(String, String)] =>
           service.createEServiceDocument(
-            kind = "fake",
-            prettyName = "fake",
-            doc = (FileInfo("test", "test", ContentTypes.NoContentType), File.createTempFile("fake", "fake")),
-            eServiceId = "fake",
-            descriptorId = "fake"
+            eServiceId = UUID.randomUUID().toString,
+            descriptorId = UUID.randomUUID().toString,
+            CreateEServiceDescriptorDocumentSeed(
+              documentId = UUID.randomUUID(),
+              kind = EServiceDocumentKind.INTERFACE,
+              prettyName = "fake",
+              filePath = "fake",
+              fileName = "fake",
+              contentType = "fake",
+              checksum = "fake",
+              serverUrls = List()
+            )
           )
         }
       )

@@ -21,9 +21,6 @@ object ProcessApiMarshallerImpl extends ProcessApiMarshaller with SprayJsonSuppo
 
   override implicit def toEntityMarshallerEService: ToEntityMarshaller[EService] = sprayJsonMarshaller[EService]
 
-  override implicit def toEntityMarshallerOldEService: ToEntityMarshaller[OldEService] =
-    sprayJsonMarshaller[OldEService]
-
   override implicit def toEntityMarshallerEServices: ToEntityMarshaller[EServices] = sprayJsonMarshaller[EServices]
 
   override implicit def toEntityMarshallerFlatEServicearray: ToEntityMarshaller[Seq[FlatEService]] =
@@ -55,4 +52,8 @@ object ProcessApiMarshallerImpl extends ProcessApiMarshaller with SprayJsonSuppo
 
   override implicit def toEntityMarshallerEServiceDoc: ToEntityMarshaller[EServiceDoc] =
     sprayJsonMarshaller[EServiceDoc]
+
+  override def fromEntityUnmarshallerCreateEServiceDescriptorDocumentSeed
+    : FromEntityUnmarshaller[CreateEServiceDescriptorDocumentSeed] =
+    sprayJsonUnmarshaller[CreateEServiceDescriptorDocumentSeed]
 }

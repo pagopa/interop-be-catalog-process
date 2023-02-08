@@ -1,6 +1,5 @@
 package it.pagopa.interop.catalogprocess.service.impl
 
-import akka.http.scaladsl.server.directives.FileInfo
 import it.pagopa.interop.catalogmanagement.client
 import it.pagopa.interop.catalogmanagement.client.api.EServiceApi
 import it.pagopa.interop.catalogmanagement.client.invoker.{ApiError, BearerToken}
@@ -17,7 +16,6 @@ import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors.{
 }
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 
-import java.io.File
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -197,28 +195,25 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   }
 
   override def createEServiceDocument(
-    eServiceId: String,
-    descriptorId: String,
-    kind: String,
-    prettyName: String,
-    doc: (FileInfo, File)
+    eServiceId: UUID,
+    descriptorId: UUID,
+    documentSeed: CreateEServiceDescriptorDocumentSeed
   )(implicit contexts: Seq[(String, String)]): Future[EService] = withHeaders { (bearerToken, correlationId, ip) =>
     val request = api.createEServiceDocument(
       xCorrelationId = correlationId,
       eServiceId = eServiceId,
       descriptorId = descriptorId,
-      kind = kind,
-      prettyName = prettyName,
-      doc = doc._2,
+      createEServiceDescriptorDocumentSeed = documentSeed,
       xForwardedFor = ip
     )(BearerToken(bearerToken))
     invoker
       .invoke(
         request,
-        s"Document with pretty name $prettyName created on Descriptor $descriptorId for E-Services $eServiceId"
+        s"Creating Document ${documentSeed.documentId.toString} of kind ${documentSeed.kind} ,name ${documentSeed.fileName}, path ${documentSeed.filePath} for EService $eServiceId and Descriptor $descriptorId"
       )
       .recoverWith {
-        case err: ApiError[_] if err.code == 404 => Future.failed(EServiceDescriptorNotFound(eServiceId, descriptorId))
+        case err: ApiError[_] if err.code == 404 =>
+          Future.failed(EServiceDescriptorNotFound(eServiceId.toString, descriptorId.toString))
       }
   }
 

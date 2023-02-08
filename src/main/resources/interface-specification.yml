@@ -592,39 +592,21 @@ paths:
           description: the descriptor Id
           required: true
           schema:
-            type: string
+            type: string  
       requestBody:
         description: E-Service document
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required:
-                - kind
-                - prettyName
-                - doc
-              properties:
-                kind:
-                  type: string
-                  description: Document Type
-                  enum:
-                    - INTERFACE
-                    - DOCUMENT
-                prettyName:
-                  type: string
-                  minLength: 5
-                  maxLength: 60
-                doc:
-                  type: string
-                  format: binary
         required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEServiceDescriptorDocumentSeed'
       responses:
         '200':
           description: EService Document created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OldEService'
+                $ref: '#/components/schemas/EService'
         '400':
           description: Invalid input
           content:
@@ -925,6 +907,37 @@ components:
           minimum: 0
         agreementApprovalPolicy:
           $ref: '#/components/schemas/AgreementApprovalPolicy'
+    CreateEServiceDescriptorDocumentSeed:
+      required:
+        - documentId
+        - kind 
+        - prettyName
+        - filePath
+        - fileName
+        - contentType
+        - checksum
+        - serverUrls
+      type: object
+      properties:
+        documentId:
+          type: string
+          format: uuid   
+        kind:
+          $ref: '#/components/schemas/EServiceDocumentKind'
+        prettyName:
+          type: string   
+        filePath:
+          type: string
+        fileName:
+          type: string
+        contentType:
+          type: string
+        checksum:
+          type: string  
+        serverUrls:
+          type: array
+          items:
+            type: string           
     UpdateEServiceDescriptorDocumentSeed:
       required:
         - prettyName
@@ -992,34 +1005,6 @@ components:
           format: uuid
         name:
           type: string
-    OldEService:
-      type: object
-      required:
-        - id
-        - producer
-        - name
-        - description
-        - technology
-        - attributes
-        - descriptors
-      properties:
-        id:
-          type: string
-          format: uuid
-        producer:
-          $ref: '#/components/schemas/Organization'
-        name:
-          type: string
-        description:
-          type: string
-        technology:
-          $ref: '#/components/schemas/EServiceTechnology'
-        attributes:
-          $ref: '#/components/schemas/OldAttributes'
-        descriptors:
-          type: array
-          items:
-            $ref: '#/components/schemas/EServiceDescriptor'
     EService:
       type: object
       required:
@@ -1132,50 +1117,6 @@ components:
           type: array
           items:
             type: string
-    OldAttributeValue:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        description:
-          type: string
-        explicitAttributeVerification:
-          type: boolean
-      required:
-        - id
-        - name
-        - description
-        - explicitAttributeVerification
-    OldAttribute:
-      type: object
-      properties:
-        single:
-          $ref: '#/components/schemas/OldAttributeValue'
-        group:
-          type: array
-          items:
-            $ref: '#/components/schemas/OldAttributeValue'
-    OldAttributes:
-      properties:
-        certified:
-          type: array
-          items:
-            $ref: '#/components/schemas/OldAttribute'
-        declared:
-          type: array
-          items:
-            $ref: '#/components/schemas/OldAttribute'
-        verified:
-          type: array
-          items:
-            $ref: '#/components/schemas/OldAttribute'
-      required:
-        - certified
-        - declared
-        - verified
     AttributeValue:
       type: object
       properties:
@@ -1264,6 +1205,12 @@ components:
         - DEPRECATED
         - SUSPENDED
         - ARCHIVED
+    EServiceDocumentKind:
+      type: string
+      description: EService Document Kind
+      enum:
+        - INTERFACE
+        - DOCUMENT    
     FlatEServices:
       type: array
       items:
