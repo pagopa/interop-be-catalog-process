@@ -1,7 +1,7 @@
 package it.pagopa.interop.catalogprocess.api.impl
 
 import akka.http.scaladsl.marshalling.ToEntityMarshaller
-import akka.http.scaladsl.model.{ContentType, HttpEntity, MessageEntity, StatusCodes}
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives.{complete, onComplete}
 import akka.http.scaladsl.server.Route
 import cats.implicits.toTraverseOps
@@ -24,7 +24,6 @@ import it.pagopa.interop.catalogprocess.api.impl.Converter.{
 }
 import it.pagopa.interop.catalogprocess.api.impl.ResponseHandlers._
 import it.pagopa.interop.catalogprocess.common.readmodel.ReadModelQueries
-import it.pagopa.interop.catalogprocess.common.system.ApplicationConfiguration
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors._
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.service._
@@ -33,14 +32,12 @@ import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt._
 import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
+import it.pagopa.interop.commons.utils.AkkaUtils.getOrganizationIdFutureUUID
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.{GenericComponentErrors, Problem => CommonProblem}
 import it.pagopa.interop.tenantmanagement.client.{model => TenantManagementDependency}
-import it.pagopa.interop.commons.utils.AkkaUtils.getOrganizationIdFutureUUID
 
-import java.io.{File, FileOutputStream}
-import java.nio.file.{Files, Path}
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
@@ -224,45 +221,6 @@ final case class ProcessApiServiceImpl(
       createEServiceDocumentResponse[EService](operationLabel)(createEServiceDocument200)
     }
   }
-  override def getEServiceDocumentById(eServiceId: String, descriptorId: String, documentId: String)(implicit
-    contexts: Seq[(String, String)],
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
-    toEntityMarshallerFile: ToEntityMarshaller[File]
-  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
-    val operationLabel =
-      s"Retrieving EService document $documentId for EService $eServiceId and descriptor $descriptorId"
-    logger.info(operationLabel)
-
-    val result: Future[DocumentDetails] = for {
-      document    <- catalogManagementService.getEServiceDocument(eServiceId, descriptorId, documentId)
-      contentType <- getDocumentContentType(document)
-      response    <- fileManager.get(ApplicationConfiguration.storageContainer)(document.path)
-    } yield DocumentDetails(document.name, contentType, response)
-
-    onComplete(result) {
-      getEServiceDocumentByIdResponse[DocumentDetails](operationLabel) { documentDetails =>
-        val output: MessageEntity = convertToMessageEntity(documentDetails)
-        complete(output)
-      }
-    }
-  }
-
-  private def convertToMessageEntity(documentDetails: DocumentDetails): MessageEntity = {
-    val randomPath: Path               = Files.createTempDirectory(s"document")
-    val temporaryFilePath: String      = s"${randomPath.toString}/${documentDetails.name}"
-    val file: File                     = new File(temporaryFilePath)
-    val outputStream: FileOutputStream = new FileOutputStream(file)
-    documentDetails.data.writeTo(outputStream)
-    HttpEntity.fromFile(documentDetails.contentType, file)
-  }
-
-  private def getDocumentContentType(document: CatalogManagementDependency.EServiceDoc): Future[ContentType] =
-    ContentType
-      .parse(document.contentType)
-      .fold(
-        ex => Future.failed(ContentTypeParsingError(document.contentType, document.path, ex.map(_.formatPretty))),
-        Future.successful
-      )
 
   // TODO To be deleted
   override def getFlatEServices(
@@ -692,6 +650,27 @@ final case class ProcessApiServiceImpl(
 
     onComplete(result) {
       suspendDescriptorResponse[Unit](operationLabel)(_ => suspendDescriptor204)
+    }
+  }
+
+  override def getEServiceDocumentById(eServiceId: String, descriptorId: String, documentId: String)(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerEServiceDoc: ToEntityMarshaller[EServiceDoc],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
+    val operationLabel =
+      s"Retrieving EService document $documentId for EService $eServiceId and descriptor $descriptorId"
+    logger.info(operationLabel)
+
+    val result: Future[EServiceDoc] = catalogManagementService
+      .getEServiceDocument(eServiceId, descriptorId, documentId)
+      .map(Converter.convertToApiEserviceDoc)
+
+    onComplete(result) {
+      getEServiceByIdResponse[EServiceDoc](operationLabel) { documentMetadata =>
+        logger.info(s"E-Service document metadata with id ${documentMetadata.id}")
+        getEServiceDocumentById200(documentMetadata)
+      }
     }
   }
 }
