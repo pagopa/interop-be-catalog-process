@@ -222,6 +222,27 @@ final case class ProcessApiServiceImpl(
     }
   }
 
+  override def getEServiceDocumentById(eServiceId: String, descriptorId: String, documentId: String)(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerEServiceDoc: ToEntityMarshaller[EServiceDoc],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
+    val operationLabel =
+      s"Retrieving EService document $documentId for EService $eServiceId and descriptor $descriptorId"
+    logger.info(operationLabel)
+
+    val result: Future[EServiceDoc] = catalogManagementService
+      .getEServiceDocument(eServiceId, descriptorId, documentId)
+      .map(Converter.convertToApiEserviceDoc)
+
+    onComplete(result) {
+      getEServiceByIdResponse[EServiceDoc](operationLabel) { documentMetadata =>
+        logger.info(s"E-Service document metadata with id ${documentMetadata.id}")
+        getEServiceDocumentById200(documentMetadata)
+      }
+    }
+  }
+
   // TODO To be deleted
   override def getFlatEServices(
     callerId: String,
@@ -650,27 +671,6 @@ final case class ProcessApiServiceImpl(
 
     onComplete(result) {
       suspendDescriptorResponse[Unit](operationLabel)(_ => suspendDescriptor204)
-    }
-  }
-
-  override def getEServiceDocumentById(eServiceId: String, descriptorId: String, documentId: String)(implicit
-    contexts: Seq[(String, String)],
-    toEntityMarshallerEServiceDoc: ToEntityMarshaller[EServiceDoc],
-    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
-  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
-    val operationLabel =
-      s"Retrieving EService document $documentId for EService $eServiceId and descriptor $descriptorId"
-    logger.info(operationLabel)
-
-    val result: Future[EServiceDoc] = catalogManagementService
-      .getEServiceDocument(eServiceId, descriptorId, documentId)
-      .map(Converter.convertToApiEserviceDoc)
-
-    onComplete(result) {
-      getEServiceByIdResponse[EServiceDoc](operationLabel) { documentMetadata =>
-        logger.info(s"E-Service document metadata with id ${documentMetadata.id}")
-        getEServiceDocumentById200(documentMetadata)
-      }
     }
   }
 }
