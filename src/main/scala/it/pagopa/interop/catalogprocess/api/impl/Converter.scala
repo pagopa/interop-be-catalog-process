@@ -88,7 +88,8 @@ object Converter {
     id = document.id,
     name = document.name,
     contentType = document.contentType,
-    prettyName = document.prettyName
+    prettyName = document.prettyName,
+    path = document.path
   )
 
   def convertToApiDescriptorState(clientStatus: readmodel.CatalogDescriptorState): EServiceDescriptorState =
@@ -136,7 +137,8 @@ object Converter {
     id = document.id,
     name = document.name,
     contentType = document.contentType,
-    prettyName = document.prettyName
+    prettyName = document.prettyName,
+    path = document.path
   )
 
   def convertToApiAgreementState(state: AgreementState): AgreementManagementDependency.AgreementState = state match {

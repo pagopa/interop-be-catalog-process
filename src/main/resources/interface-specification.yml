@@ -1053,6 +1053,7 @@ components:
         - name
         - contentType
         - prettyName
+        - path
       properties:
         id:
           type: string
@@ -1062,6 +1063,8 @@ components:
         contentType:
           type: string
         prettyName:
+          type: string
+        path:
           type: string
     EServiceDescriptor:
       type: object
