@@ -98,14 +98,6 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
       )
     }
 
-    "accept authorized roles for getEServiceDocumentById" in {
-      val endpoint = AuthorizedRoutes.endpoints("getEServiceDocumentById")
-      validateAuthorization(
-        endpoint,
-        { implicit c: Seq[(String, String)] => service.getEServiceDocumentById("fake", "fake", "fake") }
-      )
-    }
-
     "accept authorized roles for deleteDraft" in {
       val endpoint = AuthorizedRoutes.endpoints("deleteDraft")
       validateAuthorization(endpoint, { implicit c: Seq[(String, String)] => service.deleteDraft("fake", "fake") })
