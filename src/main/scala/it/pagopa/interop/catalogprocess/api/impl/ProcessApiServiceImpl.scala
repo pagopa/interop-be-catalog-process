@@ -236,10 +236,7 @@ final case class ProcessApiServiceImpl(
       .map(Converter.convertToApiEserviceDoc)
 
     onComplete(result) {
-      getEServiceByIdResponse[EServiceDoc](operationLabel) { documentMetadata =>
-        logger.info(s"E-Service document metadata with id ${documentMetadata.id}")
-        getEServiceDocumentById200(documentMetadata)
-      }
+      getEServiceByIdResponse[EServiceDoc](operationLabel)(getEServiceDocumentById200)
     }
   }
 
