@@ -5,6 +5,7 @@ import it.pagopa.interop.agreementmanagement.client.{model => AgreementManagemen
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.catalogmanagement.{model => readmodel}
 import it.pagopa.interop.catalogprocess.model._
+import io.scalaland.chimney.dsl._
 
 import java.util.UUID
 
@@ -12,47 +13,36 @@ object Converter {
 
   private final case class AttributeDetails(name: String, description: String)
 
-  def convertToApiEService(eService: CatalogManagementDependency.EService): EService = EService(
-    id = eService.id,
-    producerId = eService.producerId,
-    name = eService.name,
-    description = eService.description,
-    technology = convertToApiTechnology(eService.technology),
-    attributes = convertToApiAttributes(eService.attributes),
-    descriptors = eService.descriptors.map(convertToApiDescriptor)
+  def convertToApiEService(eService: CatalogManagementDependency.EService): EService = eService
+    .into[EService]
+    .withFieldComputed(_.technology, e => convertToApiTechnology(e.technology))
+    .withFieldComputed(_.attributes, e => convertToApiAttributes(e.attributes))
+    .withFieldComputed(_.descriptors, _.descriptors.map(convertToApiDescriptor))
+    .transform
+
+  def convertToApiEService(eService: readmodel.CatalogItem): EService = eService
+    .into[EService]
+    .withFieldComputed(_.technology, e => convertToApiTechnology(e.technology))
+    .withFieldComputed(_.attributes, e => convertToApiAttributes(e.attributes))
+    .withFieldComputed(_.descriptors, _.descriptors.map(convertToApiDescriptor))
+    .transform
+
+  private def convertToApiAttributes(attributes: CatalogManagementDependency.Attributes): Attributes = Attributes(
+    certified = attributes.certified.map(convertToApiAttribute),
+    declared = attributes.declared.map(convertToApiAttribute),
+    verified = attributes.verified.map(convertToApiAttribute)
   )
-  def convertToApiEService(eService: readmodel.CatalogItem): EService                = EService(
-    id = eService.id,
-    producerId = eService.producerId,
-    name = eService.name,
-    description = eService.description,
-    technology = convertToApiTechnology(eService.technology),
-    attributes = convertToApiAttributes(eService.attributes),
-    descriptors = eService.descriptors.map(convertToApiDescriptor)
+
+  private def convertToApiAttributes(attributes: readmodel.CatalogAttributes): Attributes = Attributes(
+    certified = attributes.certified.map(convertToApiAttribute),
+    declared = attributes.declared.map(convertToApiAttribute),
+    verified = attributes.verified.map(convertToApiAttribute)
   )
 
-  private def convertToApiAttributes(attributes: CatalogManagementDependency.Attributes): Attributes =
-    Attributes(
-      certified = attributes.certified.map(convertToApiAttribute),
-      declared = attributes.declared.map(convertToApiAttribute),
-      verified = attributes.verified.map(convertToApiAttribute)
-    )
-
-  private def convertToApiAttributes(attributes: readmodel.CatalogAttributes): Attributes =
-    Attributes(
-      certified = attributes.certified.map(convertToApiAttribute),
-      declared = attributes.declared.map(convertToApiAttribute),
-      verified = attributes.verified.map(convertToApiAttribute)
-    )
-
-  private def convertToApiAttribute(attribute: CatalogManagementDependency.Attribute): Attribute = {
-    Attribute(
-      single = attribute.single.map(attr => AttributeValue(attr.id, attr.explicitAttributeVerification)),
-      group =
-        attribute.group.map(attrs => attrs.map(attr => AttributeValue(attr.id, attr.explicitAttributeVerification)))
-    )
-
-  }
+  private def convertToApiAttribute(attribute: CatalogManagementDependency.Attribute): Attribute = Attribute(
+    single = attribute.single.map(attr => AttributeValue(attr.id, attr.explicitAttributeVerification)),
+    group = attribute.group.map(attrs => attrs.map(attr => AttributeValue(attr.id, attr.explicitAttributeVerification)))
+  )
 
   private def convertToApiAttribute(attribute: readmodel.CatalogAttribute): Attribute = attribute match {
     case a: readmodel.SingleAttribute =>
@@ -67,30 +57,21 @@ object Converter {
   }
 
   def convertToApiDescriptor(descriptor: readmodel.CatalogDescriptor): EServiceDescriptor =
-    EServiceDescriptor(
-      id = descriptor.id,
-      version = descriptor.version,
-      description = descriptor.description,
-      interface = descriptor.interface.map(convertToApiEServiceDoc),
-      docs = descriptor.docs.map(convertToApiEServiceDoc),
-      state = convertToApiDescriptorState(descriptor.state),
-      audience = descriptor.audience,
-      voucherLifespan = descriptor.voucherLifespan,
-      dailyCallsPerConsumer = descriptor.dailyCallsPerConsumer,
-      dailyCallsTotal = descriptor.dailyCallsTotal,
-      agreementApprovalPolicy = convertToApiAgreementApprovalPolicy(
-        descriptor.agreementApprovalPolicy.getOrElse(readmodel.PersistentAgreementApprovalPolicy.default)
-      ),
-      serverUrls = descriptor.serverUrls
-    )
+    descriptor
+      .into[EServiceDescriptor]
+      .withFieldComputed(_.interface, _.interface.map(convertToApiEServiceDoc))
+      .withFieldComputed(_.docs, _.docs.map(convertToApiEServiceDoc))
+      .withFieldComputed(_.state, d => convertToApiDescriptorState(d.state))
+      .withFieldComputed(
+        _.agreementApprovalPolicy,
+        d =>
+          convertToApiAgreementApprovalPolicy(
+            d.agreementApprovalPolicy.getOrElse(readmodel.PersistentAgreementApprovalPolicy.default)
+          )
+      )
+      .transform
 
-  def convertToApiEServiceDoc(document: readmodel.CatalogDocument): EServiceDoc = EServiceDoc(
-    id = document.id,
-    name = document.name,
-    contentType = document.contentType,
-    prettyName = document.prettyName,
-    path = document.path
-  )
+  def convertToApiEServiceDoc(document: readmodel.CatalogDocument): EServiceDoc = document.transformInto[EServiceDoc]
 
   def convertToApiDescriptorState(clientStatus: readmodel.CatalogDescriptorState): EServiceDescriptorState =
     clientStatus match {
@@ -101,14 +82,13 @@ object Converter {
       case readmodel.Archived   => EServiceDescriptorState.ARCHIVED
     }
 
-  def convertFromApiDescriptorState(state: EServiceDescriptorState): readmodel.CatalogDescriptorState =
-    state match {
-      case EServiceDescriptorState.DRAFT      => readmodel.Draft
-      case EServiceDescriptorState.PUBLISHED  => readmodel.Published
-      case EServiceDescriptorState.DEPRECATED => readmodel.Deprecated
-      case EServiceDescriptorState.SUSPENDED  => readmodel.Suspended
-      case EServiceDescriptorState.ARCHIVED   => readmodel.Archived
-    }
+  def convertFromApiDescriptorState(state: EServiceDescriptorState): readmodel.CatalogDescriptorState = state match {
+    case EServiceDescriptorState.DRAFT      => readmodel.Draft
+    case EServiceDescriptorState.PUBLISHED  => readmodel.Published
+    case EServiceDescriptorState.DEPRECATED => readmodel.Deprecated
+    case EServiceDescriptorState.SUSPENDED  => readmodel.Suspended
+    case EServiceDescriptorState.ARCHIVED   => readmodel.Archived
+  }
 
   def convertToApiAgreementApprovalPolicy(
     policy: readmodel.PersistentAgreementApprovalPolicy
@@ -118,179 +98,106 @@ object Converter {
   }
 
   def convertToApiDescriptor(descriptor: CatalogManagementDependency.EServiceDescriptor): EServiceDescriptor =
-    EServiceDescriptor(
-      id = descriptor.id,
-      version = descriptor.version,
-      description = descriptor.description,
-      interface = descriptor.interface.map(convertToApiEserviceDoc),
-      docs = descriptor.docs.map(convertToApiEserviceDoc),
-      state = convertToApiDescriptorState(descriptor.state),
-      audience = descriptor.audience,
-      voucherLifespan = descriptor.voucherLifespan,
-      dailyCallsPerConsumer = descriptor.dailyCallsPerConsumer,
-      dailyCallsTotal = descriptor.dailyCallsTotal,
-      agreementApprovalPolicy = convertToApiAgreementApprovalPolicy(descriptor.agreementApprovalPolicy),
-      serverUrls = descriptor.serverUrls
-    )
+    descriptor
+      .into[EServiceDescriptor]
+      .withFieldComputed(_.interface, _.interface.map(convertToApiEserviceDoc))
+      .withFieldComputed(_.docs, _.docs.map(convertToApiEserviceDoc))
+      .withFieldComputed(_.state, d => convertToApiDescriptorState(d.state))
+      .withFieldComputed(_.agreementApprovalPolicy, d => convertToApiAgreementApprovalPolicy(d.agreementApprovalPolicy))
+      .transform
 
-  def convertToApiEserviceDoc(document: CatalogManagementDependency.EServiceDoc): EServiceDoc = EServiceDoc(
-    id = document.id,
-    name = document.name,
-    contentType = document.contentType,
-    prettyName = document.prettyName,
-    path = document.path
-  )
+  def convertToApiEserviceDoc(document: CatalogManagementDependency.EServiceDoc): EServiceDoc =
+    document.transformInto[EServiceDoc]
 
-  def convertToApiAgreementState(state: AgreementState): AgreementManagementDependency.AgreementState = state match {
-    case AgreementState.DRAFT                        => AgreementManagementDependency.AgreementState.DRAFT
-    case AgreementState.PENDING                      => AgreementManagementDependency.AgreementState.PENDING
-    case AgreementState.ACTIVE                       => AgreementManagementDependency.AgreementState.ACTIVE
-    case AgreementState.SUSPENDED                    => AgreementManagementDependency.AgreementState.SUSPENDED
-    case AgreementState.ARCHIVED                     => AgreementManagementDependency.AgreementState.ARCHIVED
-    case AgreementState.MISSING_CERTIFIED_ATTRIBUTES =>
-      AgreementManagementDependency.AgreementState.MISSING_CERTIFIED_ATTRIBUTES
-    case AgreementState.REJECTED                     => AgreementManagementDependency.AgreementState.REJECTED
-  }
+  def convertToApiAgreementState(state: AgreementState): AgreementManagementDependency.AgreementState =
+    state.transformInto[AgreementManagementDependency.AgreementState]
 
-  def convertFromApiAgreementState(state: AgreementManagementDependency.AgreementState): AgreementState = state match {
-    case AgreementManagementDependency.AgreementState.DRAFT                        => AgreementState.DRAFT
-    case AgreementManagementDependency.AgreementState.PENDING                      => AgreementState.PENDING
-    case AgreementManagementDependency.AgreementState.ACTIVE                       => AgreementState.ACTIVE
-    case AgreementManagementDependency.AgreementState.SUSPENDED                    => AgreementState.SUSPENDED
-    case AgreementManagementDependency.AgreementState.ARCHIVED                     => AgreementState.ARCHIVED
-    case AgreementManagementDependency.AgreementState.MISSING_CERTIFIED_ATTRIBUTES =>
-      AgreementState.MISSING_CERTIFIED_ATTRIBUTES
-    case AgreementManagementDependency.AgreementState.REJECTED                     => AgreementState.REJECTED
-
-  }
+  def convertFromApiAgreementState(state: AgreementManagementDependency.AgreementState): AgreementState =
+    state.transformInto[AgreementState]
 
   def convertToClientEServiceSeed(
     eServiceSeed: EServiceSeed,
     producerId: UUID
-  ): CatalogManagementDependency.EServiceSeed =
-    CatalogManagementDependency.EServiceSeed(
-      producerId = producerId,
-      name = eServiceSeed.name,
-      description = eServiceSeed.description,
-      technology = convertFromApiTechnology(eServiceSeed.technology),
-      attributes = convertToCatalogClientAttributes(eServiceSeed.attributes)
-    )
+  ): CatalogManagementDependency.EServiceSeed = eServiceSeed
+    .into[CatalogManagementDependency.EServiceSeed]
+    .withFieldConst(_.producerId, producerId)
+    .withFieldComputed(_.technology, e => convertFromApiTechnology(e.technology))
+    .withFieldComputed(_.attributes, e => convertToCatalogClientAttributes(e.attributes))
+    .transform
 
   def convertToClientEServiceDescriptorSeed(
     descriptor: EServiceDescriptorSeed
-  ): CatalogManagementDependency.EServiceDescriptorSeed =
-    CatalogManagementDependency.EServiceDescriptorSeed(
-      description = descriptor.description,
-      audience = descriptor.audience,
-      voucherLifespan = descriptor.voucherLifespan,
-      dailyCallsPerConsumer = descriptor.dailyCallsPerConsumer,
-      dailyCallsTotal = descriptor.dailyCallsTotal,
-      agreementApprovalPolicy = convertFromApiAgreementApprovalPolicy(descriptor.agreementApprovalPolicy)
-    )
+  ): CatalogManagementDependency.EServiceDescriptorSeed = descriptor
+    .into[CatalogManagementDependency.EServiceDescriptorSeed]
+    .withFieldComputed(_.agreementApprovalPolicy, d => convertFromApiAgreementApprovalPolicy(d.agreementApprovalPolicy))
+    .transform
 
   def convertToClientUpdateEServiceSeed(
     eServiceSeed: UpdateEServiceSeed
-  ): CatalogManagementDependency.UpdateEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
-    name = eServiceSeed.name,
-    description = eServiceSeed.description,
-    technology = convertFromApiTechnology(eServiceSeed.technology),
-    attributes = convertToCatalogClientAttributes(eServiceSeed.attributes)
-  )
+  ): CatalogManagementDependency.UpdateEServiceSeed = eServiceSeed
+    .into[CatalogManagementDependency.UpdateEServiceSeed]
+    .withFieldComputed(_.technology, s => convertFromApiTechnology(s.technology))
+    .withFieldComputed(_.attributes, s => convertToCatalogClientAttributes(s.attributes))
+    .transform
 
   def convertToManagementEServiceDescriptorDocumentSeed(
     seed: CreateEServiceDescriptorDocumentSeed
-  ): CatalogManagementDependency.CreateEServiceDescriptorDocumentSeed =
-    CatalogManagementDependency.CreateEServiceDescriptorDocumentSeed(
-      documentId = seed.documentId,
-      kind = convertFromApiEServiceDocumentKind(seed.kind),
-      prettyName = seed.prettyName,
-      filePath = seed.filePath,
-      fileName = seed.fileName,
-      contentType = seed.contentType,
-      checksum = seed.checksum,
-      serverUrls = seed.serverUrls
-    )
+  ): CatalogManagementDependency.CreateEServiceDescriptorDocumentSeed = seed
+    .into[CatalogManagementDependency.CreateEServiceDescriptorDocumentSeed]
+    .withFieldComputed(_.kind, s => convertFromApiEServiceDocumentKind(s.kind))
+    .transform
 
   def convertFromApiEServiceDocumentKind(
     policy: EServiceDocumentKind
   ): CatalogManagementDependency.EServiceDocumentKind =
-    policy match {
-      case EServiceDocumentKind.INTERFACE => CatalogManagementDependency.EServiceDocumentKind.INTERFACE
-      case EServiceDocumentKind.DOCUMENT  => CatalogManagementDependency.EServiceDocumentKind.DOCUMENT
-    }
+    policy.transformInto[CatalogManagementDependency.EServiceDocumentKind]
 
   def convertToClientEServiceDescriptorDocumentSeed(
     seed: UpdateEServiceDescriptorDocumentSeed
   ): CatalogManagementDependency.UpdateEServiceDescriptorDocumentSeed =
-    CatalogManagementDependency.UpdateEServiceDescriptorDocumentSeed(prettyName = seed.prettyName)
+    seed.transformInto[CatalogManagementDependency.UpdateEServiceDescriptorDocumentSeed]
 
   def convertToClientUpdateEServiceDescriptorSeed(
     seed: UpdateEServiceDescriptorSeed
-  ): CatalogManagementDependency.UpdateEServiceDescriptorSeed =
-    CatalogManagementDependency.UpdateEServiceDescriptorSeed(
-      description = seed.description,
-      audience = seed.audience,
-      voucherLifespan = seed.voucherLifespan,
-      dailyCallsPerConsumer = seed.dailyCallsPerConsumer,
-      dailyCallsTotal = seed.dailyCallsTotal,
-      state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
-      agreementApprovalPolicy = convertFromApiAgreementApprovalPolicy(seed.agreementApprovalPolicy)
-    )
+  ): CatalogManagementDependency.UpdateEServiceDescriptorSeed = seed
+    .into[CatalogManagementDependency.UpdateEServiceDescriptorSeed]
+    .withFieldConst(_.state, CatalogManagementDependency.EServiceDescriptorState.DRAFT)
+    .withFieldComputed(_.agreementApprovalPolicy, s => convertFromApiAgreementApprovalPolicy(s.agreementApprovalPolicy))
+    .transform
 
   def convertToApiDescriptorState(
     clientStatus: CatalogManagementDependency.EServiceDescriptorState
-  ): EServiceDescriptorState = clientStatus match {
-    case CatalogManagementDependency.EServiceDescriptorState.DRAFT      => EServiceDescriptorState.DRAFT
-    case CatalogManagementDependency.EServiceDescriptorState.PUBLISHED  => EServiceDescriptorState.PUBLISHED
-    case CatalogManagementDependency.EServiceDescriptorState.DEPRECATED => EServiceDescriptorState.DEPRECATED
-    case CatalogManagementDependency.EServiceDescriptorState.SUSPENDED  => EServiceDescriptorState.SUSPENDED
-    case CatalogManagementDependency.EServiceDescriptorState.ARCHIVED   => EServiceDescriptorState.ARCHIVED
-  }
+  ): EServiceDescriptorState = clientStatus.transformInto[EServiceDescriptorState]
 
   def convertToApiAgreementApprovalPolicy(
     policy: CatalogManagementDependency.AgreementApprovalPolicy
-  ): AgreementApprovalPolicy = policy match {
-    case CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC => AgreementApprovalPolicy.AUTOMATIC
-    case CatalogManagementDependency.AgreementApprovalPolicy.MANUAL    => AgreementApprovalPolicy.MANUAL
-  }
+  ): AgreementApprovalPolicy = policy.transformInto[AgreementApprovalPolicy]
 
   def convertFromApiAgreementApprovalPolicy(
     policy: AgreementApprovalPolicy
   ): CatalogManagementDependency.AgreementApprovalPolicy =
-    policy match {
-      case AgreementApprovalPolicy.AUTOMATIC => CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC
-      case AgreementApprovalPolicy.MANUAL    => CatalogManagementDependency.AgreementApprovalPolicy.MANUAL
-    }
+    policy.transformInto[CatalogManagementDependency.AgreementApprovalPolicy]
 
   def convertToApiTechnology(technology: CatalogManagementDependency.EServiceTechnology): EServiceTechnology =
-    technology match {
-      case CatalogManagementDependency.EServiceTechnology.REST => EServiceTechnology.REST
-      case CatalogManagementDependency.EServiceTechnology.SOAP => EServiceTechnology.SOAP
-    }
+    technology.transformInto[EServiceTechnology]
 
   def convertFromApiTechnology(technology: EServiceTechnology): CatalogManagementDependency.EServiceTechnology =
-    technology match {
-      case EServiceTechnology.REST => CatalogManagementDependency.EServiceTechnology.REST
-      case EServiceTechnology.SOAP => CatalogManagementDependency.EServiceTechnology.SOAP
-    }
+    technology.transformInto[CatalogManagementDependency.EServiceTechnology]
 
-  private def convertToCatalogClientAttributes(seed: AttributesSeed): CatalogManagementDependency.Attributes =
-    CatalogManagementDependency.Attributes(
-      certified = seed.certified.map(convertToCatalogClientAttribute),
-      declared = seed.declared.map(convertToCatalogClientAttribute),
-      verified = seed.verified.map(convertToCatalogClientAttribute)
-    )
+  private def convertToCatalogClientAttributes(seed: AttributesSeed): CatalogManagementDependency.Attributes = seed
+    .into[CatalogManagementDependency.Attributes]
+    .withFieldComputed(_.certified, _.certified.map(convertToCatalogClientAttribute))
+    .withFieldComputed(_.declared, _.declared.map(convertToCatalogClientAttribute))
+    .withFieldComputed(_.verified, _.verified.map(convertToCatalogClientAttribute))
+    .transform
 
-  private def convertToCatalogClientAttribute(seed: AttributeSeed): CatalogManagementDependency.Attribute =
-    CatalogManagementDependency.Attribute(
-      single = seed.single.map(convertToCatalogClientAttributeValue),
-      group = seed.group.map(_.map(convertToCatalogClientAttributeValue))
-    )
+  private def convertToCatalogClientAttribute(seed: AttributeSeed): CatalogManagementDependency.Attribute = seed
+    .into[CatalogManagementDependency.Attribute]
+    .withFieldComputed(_.single, _.single.map(convertToCatalogClientAttributeValue))
+    .withFieldComputed(_.group, _.group.map(_.map(convertToCatalogClientAttributeValue)))
+    .transform
 
   private def convertToCatalogClientAttributeValue(
     seed: AttributeValueSeed
-  ): CatalogManagementDependency.AttributeValue = CatalogManagementDependency.AttributeValue(
-    id = seed.id,
-    explicitAttributeVerification = seed.explicitAttributeVerification
-  )
+  ): CatalogManagementDependency.AttributeValue = seed.transformInto[CatalogManagementDependency.AttributeValue]
 }

@@ -99,6 +99,7 @@ object Dependencies {
       // For making Java 12 happy
       "javax.annotation"                       % "javax.annotation-api" % "1.3.2" % "compile",
       //
+      "io.scalaland" %% "chimney" % "0.6.2" % Compile,
       akka.actorTyped                          % Compile,
       akka.management                          % Compile,
       akka.managementLogLevels                 % Compile,
