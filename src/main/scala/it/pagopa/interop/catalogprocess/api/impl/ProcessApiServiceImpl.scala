@@ -89,18 +89,11 @@ final case class ProcessApiServiceImpl(
     val operationLabel: String = s"Deleting draft descriptor $descriptorId for E-Service $eServiceId"
     logger.info(operationLabel)
 
-    def deleteEServiceIfEmpty(eService: CatalogManagementDependency.EService): Future[Unit] =
-      if (eService.descriptors.exists(_.id.toString != descriptorId))
-        Future.unit
-      else
-        catalogManagementService.deleteEService(eServiceId)
-
     val result: Future[Unit] = for {
       organizationId <- getOrganizationIdFutureUUID(contexts)
       eService       <- catalogManagementService.getEService(eServiceId)
       _              <- assertRequesterAllowed(eService.producerId)(organizationId)
       result         <- catalogManagementService.deleteDraft(eServiceId, descriptorId)
-      _              <- deleteEServiceIfEmpty(eService)
     } yield result
 
     onComplete(result) {
