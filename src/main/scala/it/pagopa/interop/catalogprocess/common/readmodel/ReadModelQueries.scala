@@ -3,7 +3,7 @@ package it.pagopa.interop.catalogprocess.common.readmodel
 import it.pagopa.interop.catalogmanagement.model.CatalogItem
 import it.pagopa.interop.catalogmanagement.model.persistence.JsonFormats._
 import it.pagopa.interop.catalogprocess.api.impl.Converter.convertFromApiDescriptorState
-import it.pagopa.interop.catalogprocess.model.EServiceDescriptorState
+import it.pagopa.interop.catalogprocess.model.{EServiceDescriptorState, AgreementState}
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import org.mongodb.scala.Document
 import org.mongodb.scala.bson.conversions.Bson
@@ -21,10 +21,12 @@ object ReadModelQueries {
     eServicesIds: List[String],
     producersIds: List[String],
     states: List[EServiceDescriptorState],
+    agreementStates: List[AgreementState],
     offset: Int,
     limit: Int
   )(readModel: ReadModelService)(implicit ec: ExecutionContext): Future[PaginatedResult[CatalogItem]] = {
-    val query = listEServicesFilters(name, eServicesIds, producersIds, states)
+
+    val query = listEServicesFilters(name, eServicesIds, producersIds, states, agreementStates)
 
     for {
       // Using aggregate to perform case insensitive sorting

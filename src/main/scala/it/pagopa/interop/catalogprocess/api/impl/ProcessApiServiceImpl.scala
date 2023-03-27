@@ -105,6 +105,7 @@ final case class ProcessApiServiceImpl(
     name: Option[String],
     eServicesIds: String,
     producersIds: String,
+    agreementStates: String,
     states: String,
     offset: Int,
     limit: Int
@@ -118,9 +119,16 @@ final case class ProcessApiServiceImpl(
         apiStates <- parseArrayParameters(states).traverse(EServiceDescriptorState.fromValue).toFuture
         apiProducersIds = parseArrayParameters(producersIds)
         apiEServicesIds = parseArrayParameters(eServicesIds)
-        result <- ReadModelQueries.listEServices(name, apiEServicesIds, apiProducersIds, apiStates, offset, limit)(
-          readModel
-        )
+        apiAgreementStates <- parseArrayParameters(agreementStates).traverse(AgreementState.fromValue).toFuture
+        result             <- ReadModelQueries.listEServices(
+          name,
+          apiEServicesIds,
+          apiProducersIds,
+          apiStates,
+          apiAgreementStates,
+          offset,
+          limit
+        )(readModel)
       } yield EServices(results = result.results.map(convertToApiEService), totalCount = result.totalCount)
 
       onComplete(result) {
