@@ -1,9 +1,11 @@
 package it.pagopa.interop.catalogprocess.common.readmodel
 
+import it.pagopa.interop.agreementmanagement.model.agreement.PersistentAgreement
+import it.pagopa.interop.agreementmanagement.model.persistence.JsonFormats._
+import it.pagopa.interop.catalogprocess.api.impl.Converter._
+import it.pagopa.interop.catalogprocess.model.{EServiceDescriptorState, AgreementState}
 import it.pagopa.interop.catalogmanagement.model.CatalogItem
 import it.pagopa.interop.catalogmanagement.model.persistence.JsonFormats._
-import it.pagopa.interop.catalogprocess.api.impl.Converter.convertFromApiDescriptorState
-import it.pagopa.interop.catalogprocess.model.{EServiceDescriptorState, AgreementState}
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import org.mongodb.scala.Document
 import org.mongodb.scala.bson.conversions.Bson
@@ -16,17 +18,63 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object ReadModelQueries {
 
+  def listAgreements(
+    eServicesIds: Seq[String],
+    consumersIds: Seq[String],
+    producersIds: Seq[String],
+    states: Seq[AgreementState]
+  )(readModel: ReadModelService)(implicit ec: ExecutionContext): Future[Seq[PersistentAgreement]] = {
+
+    val query: Bson =
+      listAgreementsFilters(eServicesIds, consumersIds, producersIds, states)
+
+    for {
+      agreements <- readModel.aggregate[PersistentAgreement](
+        "agreements",
+        Seq(`match`(query), project(fields(include("data"))), sort(ascending("data.id"))),
+        offset = 0,
+        limit = Int.MaxValue
+      )
+    } yield agreements
+
+  }
+
+  private def listAgreementsFilters(
+    eServicesIds: Seq[String],
+    consumersIds: Seq[String],
+    producersIds: Seq[String],
+    states: Seq[AgreementState]
+  ): Bson = {
+
+    val statesFilter = listStatesFilter(states)
+
+    val eServicesIdsFilter = mapToVarArgs(eServicesIds.map(Filters.eq("data.eserviceId", _)))(Filters.or)
+    val consumersIdsFilter = mapToVarArgs(consumersIds.map(Filters.eq("data.consumerId", _)))(Filters.or)
+    val producersIdsFilter = mapToVarArgs(producersIds.map(Filters.eq("data.producerId", _)))(Filters.or)
+
+    mapToVarArgs(
+      eServicesIdsFilter.toList ++ consumersIdsFilter.toList ++ producersIdsFilter.toList ++ statesFilter.toList
+    )(Filters.and).getOrElse(Filters.empty())
+  }
+
+  private def listStatesFilter(states: Seq[AgreementState]): Option[Bson] =
+    mapToVarArgs(
+      states
+        .map(_.toPersistence)
+        .map(_.toString)
+        .map(Filters.eq("data.state", _))
+    )(Filters.or)
+
   def listEServices(
     name: Option[String],
-    eServicesIds: List[String],
-    producersIds: List[String],
-    states: List[EServiceDescriptorState],
-    agreementStates: List[AgreementState],
+    eServicesIds: Seq[String],
+    producersIds: Seq[String],
+    states: Seq[EServiceDescriptorState],
     offset: Int,
     limit: Int
   )(readModel: ReadModelService)(implicit ec: ExecutionContext): Future[PaginatedResult[CatalogItem]] = {
 
-    val query = listEServicesFilters(name, eServicesIds, producersIds, states, agreementStates)
+    val query = listEServicesFilters(name, eServicesIds, producersIds, states)
 
     for {
       // Using aggregate to perform case insensitive sorting
@@ -56,11 +104,11 @@ object ReadModelQueries {
     } yield PaginatedResult(results = eServices, totalCount = count.headOption.map(_.totalCount).getOrElse(0))
   }
 
-  def listEServicesFilters(
+  private def listEServicesFilters(
     name: Option[String],
-    eServicesIds: List[String],
-    producersIds: List[String],
-    states: List[EServiceDescriptorState]
+    eServicesIds: Seq[String],
+    producersIds: Seq[String],
+    states: Seq[EServiceDescriptorState]
   ): Bson = {
     val statesPartialFilter = states
       .map(convertFromApiDescriptorState)
@@ -78,5 +126,5 @@ object ReadModelQueries {
       .getOrElse(Filters.empty())
   }
 
-  def mapToVarArgs[A, B](l: Seq[A])(f: Seq[A] => B): Option[B] = Option.when(l.nonEmpty)(f(l))
+  private def mapToVarArgs[A, B](l: Seq[A])(f: Seq[A] => B): Option[B] = Option.when(l.nonEmpty)(f(l))
 }
