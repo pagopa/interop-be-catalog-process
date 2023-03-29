@@ -102,14 +102,14 @@ final case class ProcessApiServiceImpl(
     name: Option[String],
     eServicesIds: String,
     producersIds: String,
-    agreementStates: String,
     states: String,
+    agreementStates: String,
     offset: Int,
     limit: Int
   )(implicit contexts: Seq[(String, String)], toEntityMarshallerEServices: ToEntityMarshaller[EServices]): Route =
     authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
       val operationLabel =
-        s"Getting e-service with name = $name, ids = $eServicesIds, producers = $producersIds, states = $states, limit = $limit, offset = $offset"
+        s"Getting e-service with name = $name, ids = $eServicesIds, producers = $producersIds, states = $states, agreementStates = $agreementStates, limit = $limit, offset = $offset"
       logger.info(operationLabel)
 
       def getEservicesInner(

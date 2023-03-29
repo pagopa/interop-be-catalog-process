@@ -459,6 +459,16 @@ object Converter {
     )
   }
 
+  implicit class ManagementEServiceDescriptorState(private val state: EServiceDescriptorState) extends AnyVal {
+    def toPersistent: readmodel.CatalogDescriptorState = state match {
+      case EServiceDescriptorState.DRAFT      => readmodel.Draft
+      case EServiceDescriptorState.PUBLISHED  => readmodel.Published
+      case EServiceDescriptorState.DEPRECATED => readmodel.Deprecated
+      case EServiceDescriptorState.SUSPENDED  => readmodel.Suspended
+      case EServiceDescriptorState.ARCHIVED   => readmodel.Archived
+    }
+  }
+
   implicit class ReadModelDescriptorStateWrapper(private val clientStatus: readmodel.CatalogDescriptorState)
       extends AnyVal {
     def toApi: EServiceDescriptorState =

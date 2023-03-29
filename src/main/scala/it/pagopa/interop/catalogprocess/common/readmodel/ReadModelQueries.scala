@@ -111,7 +111,7 @@ object ReadModelQueries {
     states: Seq[EServiceDescriptorState]
   ): Bson = {
     val statesPartialFilter = states
-      .map(convertFromApiDescriptorState)
+      .map(_.toPersistent)
       .map(_.toString)
       .map(Filters.eq("data.descriptors.state", _))
 
