@@ -1,6 +1,7 @@
 package it.pagopa.interop.catalogprocess.api.impl
 
 import cats.implicits.catsSyntaxOptionId
+import it.pagopa.interop.agreementmanagement.model.{agreement => AgreementPersistenceModel}
 import it.pagopa.interop.agreementmanagement.client.{model => AgreementManagementDependency}
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.catalogmanagement.{model => readmodel}
@@ -21,7 +22,8 @@ object Converter {
     attributes = convertToApiAttributes(eService.attributes),
     descriptors = eService.descriptors.map(convertToApiDescriptor)
   )
-  def convertToApiEService(eService: readmodel.CatalogItem): EService                = EService(
+
+  def convertToApiEService(eService: readmodel.CatalogItem): EService = EService(
     id = eService.id,
     producerId = eService.producerId,
     name = eService.name,
@@ -293,4 +295,199 @@ object Converter {
     id = seed.id,
     explicitAttributeVerification = seed.explicitAttributeVerification
   )
+
+  implicit class AgreementStateWrapper(private val as: AgreementState) extends AnyVal {
+    def toPersistence: AgreementPersistenceModel.PersistentAgreementState = as match {
+      case AgreementState.DRAFT                        => AgreementPersistenceModel.Draft
+      case AgreementState.PENDING                      => AgreementPersistenceModel.Pending
+      case AgreementState.ACTIVE                       => AgreementPersistenceModel.Active
+      case AgreementState.SUSPENDED                    => AgreementPersistenceModel.Suspended
+      case AgreementState.ARCHIVED                     => AgreementPersistenceModel.Archived
+      case AgreementState.MISSING_CERTIFIED_ATTRIBUTES => AgreementPersistenceModel.MissingCertifiedAttributes
+      case AgreementState.REJECTED                     => AgreementPersistenceModel.Rejected
+    }
+  }
+
+  implicit class ManagementEServiceWrapper(private val eService: CatalogManagementDependency.EService) extends AnyVal {
+    def toApi: EService = EService(
+      id = eService.id,
+      producerId = eService.producerId,
+      name = eService.name,
+      description = eService.description,
+      technology = eService.technology.toApi,
+      attributes = eService.attributes.toApi,
+      descriptors = eService.descriptors.map(_.toApi)
+    )
+  }
+
+  implicit class ManagementTechnologyWrapper(private val technology: CatalogManagementDependency.EServiceTechnology)
+      extends AnyVal {
+    def toApi: EServiceTechnology = technology match {
+      case CatalogManagementDependency.EServiceTechnology.REST => EServiceTechnology.REST
+      case CatalogManagementDependency.EServiceTechnology.SOAP => EServiceTechnology.SOAP
+    }
+  }
+
+  implicit class ManagementAttributesWrapper(private val attributes: CatalogManagementDependency.Attributes)
+      extends AnyVal {
+    def toApi: Attributes = Attributes(
+      certified = attributes.certified.map(_.toApi),
+      declared = attributes.declared.map(_.toApi),
+      verified = attributes.verified.map(_.toApi)
+    )
+  }
+
+  implicit class ManagementDescriptorStateWrapper(
+    private val clientStatus: CatalogManagementDependency.EServiceDescriptorState
+  ) extends AnyVal {
+    def toApi: EServiceDescriptorState = clientStatus match {
+      case CatalogManagementDependency.EServiceDescriptorState.DRAFT      => EServiceDescriptorState.DRAFT
+      case CatalogManagementDependency.EServiceDescriptorState.PUBLISHED  => EServiceDescriptorState.PUBLISHED
+      case CatalogManagementDependency.EServiceDescriptorState.DEPRECATED => EServiceDescriptorState.DEPRECATED
+      case CatalogManagementDependency.EServiceDescriptorState.SUSPENDED  => EServiceDescriptorState.SUSPENDED
+      case CatalogManagementDependency.EServiceDescriptorState.ARCHIVED   => EServiceDescriptorState.ARCHIVED
+    }
+  }
+
+  implicit class ManagementAttributeWrapper(private val attribute: CatalogManagementDependency.Attribute)
+      extends AnyVal {
+    def toApi: Attribute = Attribute(
+      single = attribute.single.map(attr => AttributeValue(attr.id, attr.explicitAttributeVerification)),
+      group =
+        attribute.group.map(attrs => attrs.map(attr => AttributeValue(attr.id, attr.explicitAttributeVerification)))
+    )
+  }
+
+  implicit class ManagementAgreementApprovalPolicyWrapper(
+    private val policy: CatalogManagementDependency.AgreementApprovalPolicy
+  ) extends AnyVal {
+    def toApi: AgreementApprovalPolicy = policy match {
+      case CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC => AgreementApprovalPolicy.AUTOMATIC
+      case CatalogManagementDependency.AgreementApprovalPolicy.MANUAL    => AgreementApprovalPolicy.MANUAL
+    }
+  }
+
+  implicit class ManagementEserviceDoc(private val document: CatalogManagementDependency.EServiceDoc) extends AnyVal {
+    def toApi: EServiceDoc = EServiceDoc(
+      id = document.id,
+      name = document.name,
+      contentType = document.contentType,
+      prettyName = document.prettyName,
+      path = document.path
+    )
+  }
+
+  implicit class ManagementDescriptorWrapper(private val descriptor: CatalogManagementDependency.EServiceDescriptor)
+      extends AnyVal {
+    def toApi: EServiceDescriptor = EServiceDescriptor(
+      id = descriptor.id,
+      version = descriptor.version,
+      description = descriptor.description,
+      interface = descriptor.interface.map(_.toApi),
+      docs = descriptor.docs.map(_.toApi),
+      state = descriptor.state.toApi,
+      audience = descriptor.audience,
+      voucherLifespan = descriptor.voucherLifespan,
+      dailyCallsPerConsumer = descriptor.dailyCallsPerConsumer,
+      dailyCallsTotal = descriptor.dailyCallsTotal,
+      agreementApprovalPolicy = descriptor.agreementApprovalPolicy.toApi,
+      serverUrls = descriptor.serverUrls
+    )
+  }
+
+  implicit class ReadModelAgreementApprovalPolicyWrapper(
+    private val policy: readmodel.PersistentAgreementApprovalPolicy
+  ) extends AnyVal {
+    def toApi: AgreementApprovalPolicy = policy match {
+      case readmodel.Automatic => AgreementApprovalPolicy.AUTOMATIC
+      case readmodel.Manual    => AgreementApprovalPolicy.MANUAL
+    }
+  }
+
+  implicit class ReadModelCatalogItemWrapper(private val item: readmodel.CatalogItem) extends AnyVal {
+    def toApi: EService = EService(
+      id = item.id,
+      producerId = item.producerId,
+      name = item.name,
+      description = item.description,
+      technology = item.technology.toApi,
+      attributes = item.attributes.toApi,
+      descriptors = item.descriptors.map(_.toApi)
+    )
+  }
+
+  implicit class ReadModelAttributesWrapper(private val attributes: readmodel.CatalogAttributes) extends AnyVal {
+    def toApi: Attributes =
+      Attributes(
+        certified = attributes.certified.map(convertToApiAttribute),
+        declared = attributes.declared.map(convertToApiAttribute),
+        verified = attributes.verified.map(convertToApiAttribute)
+      )
+  }
+
+  implicit class ReadModelAttributeWrapper(private val attribute: readmodel.CatalogAttribute) extends AnyVal {
+    def toApi: Attribute = attribute match {
+      case a: readmodel.SingleAttribute =>
+        Attribute(single = AttributeValue(a.id.id, a.id.explicitAttributeVerification).some)
+      case a: readmodel.GroupAttribute  =>
+        Attribute(group = a.ids.map(attr => AttributeValue(attr.id, attr.explicitAttributeVerification)).some)
+    }
+  }
+
+  implicit class ReadModelTechnologyWrapper(private val technology: readmodel.CatalogItemTechnology) extends AnyVal {
+    def toApi: EServiceTechnology = technology match {
+      case readmodel.Rest => EServiceTechnology.REST
+      case readmodel.Soap => EServiceTechnology.SOAP
+    }
+  }
+
+  implicit class ReadModelDescriptorWrapper(private val descriptor: readmodel.CatalogDescriptor) extends AnyVal {
+    def toApi: EServiceDescriptor = EServiceDescriptor(
+      id = descriptor.id,
+      version = descriptor.version,
+      description = descriptor.description,
+      interface = descriptor.interface.map(_.toApi),
+      docs = descriptor.docs.map(_.toApi),
+      state = descriptor.state.toApi,
+      audience = descriptor.audience,
+      voucherLifespan = descriptor.voucherLifespan,
+      dailyCallsPerConsumer = descriptor.dailyCallsPerConsumer,
+      dailyCallsTotal = descriptor.dailyCallsTotal,
+      agreementApprovalPolicy =
+        descriptor.agreementApprovalPolicy.getOrElse(readmodel.PersistentAgreementApprovalPolicy.default).toApi,
+      serverUrls = descriptor.serverUrls
+    )
+  }
+
+  implicit class ManagementEServiceDescriptorState(private val state: EServiceDescriptorState) extends AnyVal {
+    def toPersistent: readmodel.CatalogDescriptorState = state match {
+      case EServiceDescriptorState.DRAFT      => readmodel.Draft
+      case EServiceDescriptorState.PUBLISHED  => readmodel.Published
+      case EServiceDescriptorState.DEPRECATED => readmodel.Deprecated
+      case EServiceDescriptorState.SUSPENDED  => readmodel.Suspended
+      case EServiceDescriptorState.ARCHIVED   => readmodel.Archived
+    }
+  }
+
+  implicit class ReadModelDescriptorStateWrapper(private val clientStatus: readmodel.CatalogDescriptorState)
+      extends AnyVal {
+    def toApi: EServiceDescriptorState =
+      clientStatus match {
+        case readmodel.Draft      => EServiceDescriptorState.DRAFT
+        case readmodel.Published  => EServiceDescriptorState.PUBLISHED
+        case readmodel.Deprecated => EServiceDescriptorState.DEPRECATED
+        case readmodel.Suspended  => EServiceDescriptorState.SUSPENDED
+        case readmodel.Archived   => EServiceDescriptorState.ARCHIVED
+      }
+  }
+
+  implicit class ReadModelEServiceDocWrapper(private val document: readmodel.CatalogDocument) extends AnyVal {
+    def toApi: EServiceDoc = EServiceDoc(
+      id = document.id,
+      name = document.name,
+      contentType = document.contentType,
+      prettyName = document.prettyName,
+      path = document.path
+    )
+  }
 }

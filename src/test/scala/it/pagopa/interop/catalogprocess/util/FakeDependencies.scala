@@ -290,6 +290,10 @@ object FakeDependencies {
       evidence$4: JsonReader[T],
       ec: ExecutionContext
     ): Future[Seq[T]] = Future.successful(Nil)
+    override def aggregateRaw[T](collectionName: String, pipeline: Seq[Bson], offset: Int, limit: Int)(implicit
+      evidence$5: JsonReader[T],
+      ec: ExecutionContext
+    ): Future[Seq[T]] = Future.successful(Nil)
     override def close(): Unit = ()
   }
 

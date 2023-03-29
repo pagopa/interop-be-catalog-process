@@ -16,12 +16,7 @@ import it.pagopa.interop.catalogmanagement.client.model.{
 }
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.catalogprocess.api.ProcessApiService
-import it.pagopa.interop.catalogprocess.api.impl.Converter.{
-  convertFromApiAgreementState,
-  convertToApiAgreementState,
-  convertToApiDescriptorState,
-  convertToApiEService
-}
+import it.pagopa.interop.catalogprocess.api.impl.Converter._
 import it.pagopa.interop.catalogprocess.api.impl.ResponseHandlers._
 import it.pagopa.interop.catalogprocess.common.readmodel.ReadModelQueries
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors._
@@ -37,6 +32,8 @@ import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.{GenericComponentErrors, Problem => CommonProblem}
 import it.pagopa.interop.tenantmanagement.client.{model => TenantManagementDependency}
+import it.pagopa.interop.catalogprocess.common.readmodel.PaginatedResult
+import it.pagopa.interop.catalogmanagement.model.CatalogItem
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
@@ -106,22 +103,70 @@ final case class ProcessApiServiceImpl(
     eServicesIds: String,
     producersIds: String,
     states: String,
+    agreementStates: String,
     offset: Int,
     limit: Int
   )(implicit contexts: Seq[(String, String)], toEntityMarshallerEServices: ToEntityMarshaller[EServices]): Route =
     authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
       val operationLabel =
-        s"Getting e-service with name = $name, ids = $eServicesIds, producers = $producersIds, states = $states, limit = $limit, offset = $offset"
+        s"Getting e-service with name = $name, ids = $eServicesIds, producers = $producersIds, states = $states, agreementStates = $agreementStates, limit = $limit, offset = $offset"
       logger.info(operationLabel)
 
+      def getEservicesInner(
+        organizationId: UUID,
+        name: Option[String],
+        apiEServicesIds: List[String],
+        apiProducersIds: List[String],
+        apiStates: List[EServiceDescriptorState],
+        apiAgreementStates: List[AgreementState],
+        offset: Int,
+        limit: Int
+      ): Future[PaginatedResult[CatalogItem]] = {
+
+        if (apiAgreementStates.isEmpty)
+          ReadModelQueries.listEServices(name, apiEServicesIds, apiProducersIds, apiStates, offset, limit)(readModel)
+        else
+          for {
+            agreementEservicesIds <- ReadModelQueries
+              .listAgreements(
+                eServicesIds = apiEServicesIds,
+                producersIds = Nil,
+                consumersIds = Seq(organizationId.toString),
+                states = apiAgreementStates
+              )(readModel)
+              .map(_.map(_.eserviceId.toString))
+            result                <- ReadModelQueries.listEServices(
+              name,
+              agreementEservicesIds,
+              apiProducersIds,
+              apiStates,
+              offset,
+              limit
+            )(readModel)
+
+          } yield result
+      }
+
       val result: Future[EServices] = for {
-        apiStates <- parseArrayParameters(states).traverse(EServiceDescriptorState.fromValue).toFuture
+        organizationId <- getOrganizationIdFutureUUID(contexts)
+        apiStates      <- parseArrayParameters(states).traverse(EServiceDescriptorState.fromValue).toFuture
         apiProducersIds = parseArrayParameters(producersIds)
         apiEServicesIds = parseArrayParameters(eServicesIds)
-        result <- ReadModelQueries.listEServices(name, apiEServicesIds, apiProducersIds, apiStates, offset, limit)(
-          readModel
-        )
-      } yield EServices(results = result.results.map(convertToApiEService), totalCount = result.totalCount)
+        apiAgreementStates <- parseArrayParameters(agreementStates)
+          .traverse(AgreementState.fromValue)
+          .toFuture
+        eServices          <-
+          getEservicesInner(
+            organizationId,
+            name,
+            apiEServicesIds,
+            apiProducersIds,
+            apiStates,
+            apiAgreementStates,
+            offset,
+            limit
+          )
+      } yield EServices(results = eServices.results.map(_.toApi), totalCount = eServices.totalCount)
 
       onComplete(result) {
         getEServicesResponse(operationLabel)(getEServices200)
