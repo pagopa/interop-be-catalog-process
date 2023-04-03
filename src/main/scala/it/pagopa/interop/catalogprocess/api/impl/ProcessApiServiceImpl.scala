@@ -135,14 +135,13 @@ final case class ProcessApiServiceImpl(
                 states = apiAgreementStates
               )(readModel)
               .map(_.map(_.eserviceId.toString))
-            result                <- ReadModelQueries.listEServices(
-              name,
-              agreementEservicesIds,
-              apiProducersIds,
-              apiStates,
-              offset,
-              limit
-            )(readModel)
+            result                <-
+              if (agreementEservicesIds.isEmpty)
+                Future.successful(ReadModelQueries.emptyResults[CatalogItem])
+              else
+                ReadModelQueries.listEServices(name, agreementEservicesIds, apiProducersIds, apiStates, offset, limit)(
+                  readModel
+                )
 
           } yield result
       }

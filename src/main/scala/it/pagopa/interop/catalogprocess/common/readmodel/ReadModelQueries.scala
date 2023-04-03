@@ -18,6 +18,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object ReadModelQueries {
 
+  def emptyResults[T] = PaginatedResult[T](results = Nil, totalCount = 0)
+
   def listAgreements(
     eServicesIds: Seq[String],
     consumersIds: Seq[String],
