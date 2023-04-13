@@ -14,7 +14,7 @@ object Versions {
   lazy val mustacheVersion             = "0.9.10"
   lazy val openapi4jVersion            = "1.0.7"
   lazy val projectionVersion           = "1.2.1"
-  lazy val resilience4jVersion         = "1.7.1"
+  lazy val resilience4jVersion         = "2.0.2"
   lazy val s3Persistence               = "1.2.157"
   lazy val scalaMockVersion            = "5.2.0"
   lazy val scalapbVersion              = "0.11.1"
