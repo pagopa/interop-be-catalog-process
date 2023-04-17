@@ -1128,6 +1128,18 @@ components:
           type: array
           items:
             type: string
+        publishedAt:
+          type: string
+          format: date-time
+        suspendedAt:
+          type: string
+          format: date-time
+        deprecatedAt:
+          type: string
+          format: date-time
+        archivedAt:
+          type: string
+          format: date-time
     AttributeValue:
       type: object
       properties:
