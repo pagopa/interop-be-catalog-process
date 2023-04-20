@@ -3,7 +3,7 @@ package it.pagopa.interop.catalogprocess.api
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.marshalling.ToEntityMarshaller
 import it.pagopa.interop.catalogprocess.model._
-import it.pagopa.interop.commons.utils.SprayCommonFormats.{offsetDateTimeFormat, uuidFormat}
+import it.pagopa.interop.commons.utils.SprayCommonFormats.uuidFormat
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
 package object impl extends SprayJsonSupport with DefaultJsonProtocol {
@@ -13,7 +13,7 @@ package object impl extends SprayJsonSupport with DefaultJsonProtocol {
   implicit val eServiceAttributes2Format: RootJsonFormat[Attributes]                = jsonFormat3(Attributes)
   implicit val organizationFormat: RootJsonFormat[Organization]                     = jsonFormat2(Organization)
   implicit val eServiceDocFormat: RootJsonFormat[EServiceDoc]                       = jsonFormat5(EServiceDoc)
-  implicit val eServiceDescriptorFormat: RootJsonFormat[EServiceDescriptor]         = jsonFormat16(EServiceDescriptor)
+  implicit val eServiceDescriptorFormat: RootJsonFormat[EServiceDescriptor]         = jsonFormat12(EServiceDescriptor)
   implicit val eServiceDescriptorSeedFormat: RootJsonFormat[EServiceDescriptorSeed] =
     jsonFormat6(EServiceDescriptorSeed)
   implicit val eServiceFormat: RootJsonFormat[EService]                             = jsonFormat7(EService)
