@@ -83,7 +83,11 @@ object Converter {
       agreementApprovalPolicy = convertToApiAgreementApprovalPolicy(
         descriptor.agreementApprovalPolicy.getOrElse(readmodel.PersistentAgreementApprovalPolicy.default)
       ),
-      serverUrls = descriptor.serverUrls
+      serverUrls = descriptor.serverUrls,
+      publishedAt = descriptor.publishedAt,
+      suspendedAt = descriptor.suspendedAt,
+      deprecatedAt = descriptor.deprecatedAt,
+      archivedAt = descriptor.archivedAt
     )
 
   def convertToApiEServiceDoc(document: readmodel.CatalogDocument): EServiceDoc = EServiceDoc(
@@ -132,7 +136,11 @@ object Converter {
       dailyCallsPerConsumer = descriptor.dailyCallsPerConsumer,
       dailyCallsTotal = descriptor.dailyCallsTotal,
       agreementApprovalPolicy = convertToApiAgreementApprovalPolicy(descriptor.agreementApprovalPolicy),
-      serverUrls = descriptor.serverUrls
+      serverUrls = descriptor.serverUrls,
+      publishedAt = descriptor.publishedAt,
+      suspendedAt = descriptor.suspendedAt,
+      deprecatedAt = descriptor.deprecatedAt,
+      archivedAt = descriptor.archivedAt
     )
 
   def convertToApiEserviceDoc(document: CatalogManagementDependency.EServiceDoc): EServiceDoc = EServiceDoc(
@@ -391,7 +399,11 @@ object Converter {
       dailyCallsPerConsumer = descriptor.dailyCallsPerConsumer,
       dailyCallsTotal = descriptor.dailyCallsTotal,
       agreementApprovalPolicy = descriptor.agreementApprovalPolicy.toApi,
-      serverUrls = descriptor.serverUrls
+      serverUrls = descriptor.serverUrls,
+      publishedAt = descriptor.publishedAt,
+      suspendedAt = descriptor.suspendedAt,
+      deprecatedAt = descriptor.deprecatedAt,
+      archivedAt = descriptor.archivedAt
     )
   }
 
@@ -455,7 +467,11 @@ object Converter {
       dailyCallsTotal = descriptor.dailyCallsTotal,
       agreementApprovalPolicy =
         descriptor.agreementApprovalPolicy.getOrElse(readmodel.PersistentAgreementApprovalPolicy.default).toApi,
-      serverUrls = descriptor.serverUrls
+      serverUrls = descriptor.serverUrls,
+      publishedAt = descriptor.publishedAt,
+      suspendedAt = descriptor.suspendedAt,
+      deprecatedAt = descriptor.deprecatedAt,
+      archivedAt = descriptor.archivedAt
     )
   }
 
