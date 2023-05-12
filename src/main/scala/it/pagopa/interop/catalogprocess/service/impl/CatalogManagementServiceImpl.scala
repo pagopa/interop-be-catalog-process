@@ -27,13 +27,12 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
 
   override def createEService(
     eServiceSeed: EServiceSeed
-  )(implicit contexts: Seq[(String, String)]): Future[EService] = {
+  )(implicit contexts: Seq[(String, String)]): Future[EService] =
     withHeaders { (bearerToken, correlationId, ip) =>
       val request =
         api.createEService(xCorrelationId = correlationId, eServiceSeed, xForwardedFor = ip)(BearerToken(bearerToken))
       invoker.invoke(request, s"E-Service created")
     }
-  }
 
   override def cloneEService(eServiceId: UUID, descriptorId: UUID)(implicit
     contexts: Seq[(String, String)]

@@ -73,10 +73,13 @@ object ReadModelQueries {
     producersIds: Seq[String],
     states: Seq[EServiceDescriptorState],
     offset: Int,
-    limit: Int
+    limit: Int,
+    exactMatchOnName: Boolean = false
   )(readModel: ReadModelService)(implicit ec: ExecutionContext): Future[PaginatedResult[CatalogItem]] = {
 
-    val query = listEServicesFilters(name, eServicesIds, producersIds, states)
+    val query =
+      if (exactMatchOnName) listEServicesFilters(name, eServicesIds, producersIds, states, exactMatchOnName = true)
+      else listEServicesFilters(name, eServicesIds, producersIds, states)
 
     for {
       // Using aggregate to perform case insensitive sorting
@@ -111,7 +114,8 @@ object ReadModelQueries {
     name: Option[String],
     eServicesIds: Seq[String],
     producersIds: Seq[String],
-    states: Seq[EServiceDescriptorState]
+    states: Seq[EServiceDescriptorState],
+    exactMatchOnName: Boolean = false
   ): Bson = {
     val statesPartialFilter = states
       .map(_.toPersistent)
@@ -121,7 +125,8 @@ object ReadModelQueries {
     val statesFilter       = mapToVarArgs(statesPartialFilter)(Filters.or)
     val eServicesIdsFilter = mapToVarArgs(eServicesIds.map(Filters.eq("data.id", _)))(Filters.or)
     val producersIdsFilter = mapToVarArgs(producersIds.map(Filters.eq("data.producerId", _)))(Filters.or)
-    val nameFilter         = name.map(Filters.regex("data.name", _, "i"))
+    val nameFilter         =
+      if (exactMatchOnName) name.map(Filters.eq("data.name", _)) else name.map(Filters.regex("data.name", _, "i"))
 
     mapToVarArgs(eServicesIdsFilter.toList ++ producersIdsFilter.toList ++ statesFilter.toList ++ nameFilter.toList)(
       Filters.and

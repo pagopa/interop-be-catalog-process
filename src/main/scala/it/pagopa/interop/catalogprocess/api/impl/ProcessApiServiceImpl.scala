@@ -73,11 +73,12 @@ final case class ProcessApiServiceImpl(
         Seq(clientSeed.producerId.toString),
         Seq.empty,
         0,
-        1
+        1,
+        true
       )(readModel)
-      eServiceName = maybeEservice.results.map(_.name)
+      maybeEServiceName = maybeEservice.results.headOption.map(_.name)
       _               <-
-        if (eServiceName.contains(eServiceSeed.name))
+        if (maybeEServiceName.contains(eServiceSeed.name))
           Future.failed(DuplicatedEServiceName(eServiceSeed.name))
         else Future.unit
       createdEService <- catalogManagementService.createEService(clientSeed)
@@ -136,9 +137,9 @@ final case class ProcessApiServiceImpl(
         limit: Int
       ): Future[PaginatedResult[CatalogItem]] = {
 
-        if (apiAgreementStates.isEmpty) {
+        if (apiAgreementStates.isEmpty)
           ReadModelQueries.listEServices(name, apiEServicesIds, apiProducersIds, apiStates, offset, limit)(readModel)
-        } else
+        else
           for {
             agreementEservicesIds <- ReadModelQueries
               .listAgreements(
