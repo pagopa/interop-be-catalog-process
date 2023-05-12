@@ -67,6 +67,19 @@ final case class ProcessApiServiceImpl(
     val result: Future[EService] = for {
       organizationId <- getOrganizationIdFutureUUID(contexts)
       clientSeed = Converter.convertToClientEServiceSeed(eServiceSeed, organizationId)
+      maybeEservice <- ReadModelQueries.listEServices(
+        eServiceSeed.name.some,
+        Seq.empty,
+        Seq(clientSeed.producerId.toString),
+        Seq.empty,
+        0,
+        1
+      )(readModel)
+      eServiceName = maybeEservice.results.map(_.name)
+      _               <-
+        if (eServiceName.contains(eServiceSeed.name))
+          Future.failed(DuplicatedEServiceName(eServiceSeed.name))
+        else Future.unit
       createdEService <- catalogManagementService.createEService(clientSeed)
       apiEService = Converter.convertToApiEService(createdEService)
     } yield apiEService
@@ -123,9 +136,9 @@ final case class ProcessApiServiceImpl(
         limit: Int
       ): Future[PaginatedResult[CatalogItem]] = {
 
-        if (apiAgreementStates.isEmpty)
+        if (apiAgreementStates.isEmpty) {
           ReadModelQueries.listEServices(name, apiEServicesIds, apiProducersIds, apiStates, offset, limit)(readModel)
-        else
+        } else
           for {
             agreementEservicesIds <- ReadModelQueries
               .listAgreements(

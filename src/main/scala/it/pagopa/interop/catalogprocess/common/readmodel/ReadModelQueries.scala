@@ -91,6 +91,7 @@ object ReadModelQueries {
         offset = offset,
         limit = limit
       )
+
       // Note: This could be obtained using $facet function (avoiding to execute the query twice),
       //   but it is not supported by DocumentDB
       count     <- readModel.aggregate[TotalCountResult](

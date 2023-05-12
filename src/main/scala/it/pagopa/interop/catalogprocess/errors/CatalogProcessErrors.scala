@@ -40,4 +40,7 @@ object CatalogProcessErrors {
   final case class EServiceCannotBeUpdated(eServiceId: String)
       extends ComponentError("0009", s"EService $eServiceId contains valid descriptors and cannot be updated")
 
+  final case class DuplicatedEServiceName(name: String)
+      extends ComponentError("0010", s"EService with name: $name already in use")
+
 }
