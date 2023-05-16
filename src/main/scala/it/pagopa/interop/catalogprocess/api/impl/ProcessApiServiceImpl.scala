@@ -67,19 +67,20 @@ final case class ProcessApiServiceImpl(
     val result: Future[EService] = for {
       organizationId <- getOrganizationIdFutureUUID(contexts)
       clientSeed = Converter.convertToClientEServiceSeed(eServiceSeed, organizationId)
-      maybeEservice <- ReadModelQueries.listEServices(
-        eServiceSeed.name.some,
-        Seq.empty,
-        Seq(clientSeed.producerId.toString),
-        Seq.empty,
-        0,
-        1,
-        exactMatchOnName = true
-      )(readModel)
-      maybeEServiceName = maybeEservice.results.headOption.map(_.name)
+      maybeEservice <- ReadModelQueries
+        .listEServices(
+          eServiceSeed.name.some,
+          Seq.empty,
+          Seq(clientSeed.producerId.toString),
+          Seq.empty,
+          0,
+          1,
+          exactMatchOnName = true
+        )(readModel)
+        .map(_.results.headOption.map(_.name))
+
       _               <-
-        if (maybeEServiceName.contains(eServiceSeed.name))
-          Future.failed(DuplicatedEServiceName(eServiceSeed.name))
+        if (maybeEservice.contains(eServiceSeed.name)) Future.failed(DuplicatedEServiceName(eServiceSeed.name))
         else Future.unit
       createdEService <- catalogManagementService.createEService(clientSeed)
       apiEService = Converter.convertToApiEService(createdEService)
