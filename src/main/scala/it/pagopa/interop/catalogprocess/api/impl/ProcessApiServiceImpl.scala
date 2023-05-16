@@ -74,7 +74,7 @@ final case class ProcessApiServiceImpl(
         Seq.empty,
         0,
         1,
-        true
+        exactMatchOnName = true
       )(readModel)
       maybeEServiceName = maybeEservice.results.headOption.map(_.name)
       _               <-

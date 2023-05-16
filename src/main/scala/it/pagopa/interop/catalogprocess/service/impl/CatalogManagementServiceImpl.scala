@@ -25,9 +25,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   implicit val logger: LoggerTakingImplicit[ContextFieldsToLog] =
     Logger.takingImplicit[ContextFieldsToLog](this.getClass)
 
-  override def createEService(
-    eServiceSeed: EServiceSeed
-  )(implicit contexts: Seq[(String, String)]): Future[EService] =
+  override def createEService(eServiceSeed: EServiceSeed)(implicit contexts: Seq[(String, String)]): Future[EService] =
     withHeaders { (bearerToken, correlationId, ip) =>
       val request =
         api.createEService(xCorrelationId = correlationId, eServiceSeed, xForwardedFor = ip)(BearerToken(bearerToken))
