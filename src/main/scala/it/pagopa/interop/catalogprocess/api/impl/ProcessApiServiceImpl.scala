@@ -79,9 +79,7 @@ final case class ProcessApiServiceImpl(
         )(readModel)
         .map(_.results.headOption.map(_.name))
 
-      _               <-
-        if (maybeEservice.contains(eServiceSeed.name)) Future.failed(DuplicatedEServiceName(eServiceSeed.name))
-        else Future.unit
+      _               <- maybeEservice.fold(Future.unit)(_ => Future.failed(DuplicatedEServiceName(eServiceSeed.name)))
       createdEService <- catalogManagementService.createEService(clientSeed)
       apiEService = Converter.convertToApiEService(createdEService)
     } yield apiEService

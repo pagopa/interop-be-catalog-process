@@ -123,6 +123,160 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val attributeId2: UUID = UUID.randomUUID()
       val attributeId3: UUID = UUID.randomUUID()
 
+      val catalogItems: Seq[CatalogItem] = Seq.empty
+
+      val apiSeed: EServiceSeed = EServiceSeed(
+        name = "MyService",
+        description = "My Service",
+        technology = EServiceTechnology.REST,
+        attributes = AttributesSeed(
+          certified = List(
+            AttributeSeed(
+              single = Some(AttributeValueSeed(attributeId1, explicitAttributeVerification = false)),
+              group = None
+            )
+          ),
+          declared = List(
+            AttributeSeed(
+              single = None,
+              group = Some(List(AttributeValueSeed(attributeId2, explicitAttributeVerification = false)))
+            )
+          ),
+          verified = List(
+            AttributeSeed(
+              single = Some(AttributeValueSeed(attributeId3, explicitAttributeVerification = true)),
+              group = None
+            )
+          )
+        )
+      )
+
+      val seed = CatalogManagementDependency.EServiceSeed(
+        producerId = AdminMockAuthenticator.requesterId,
+        name = "MyService",
+        description = "My Service",
+        technology = CatalogManagementDependency.EServiceTechnology.REST,
+        attributes = CatalogManagementDependency.Attributes(
+          certified = List(
+            CatalogManagementDependency
+              .Attribute(
+                single =
+                  Some(CatalogManagementDependency.AttributeValue(attributeId1, explicitAttributeVerification = false)),
+                group = None
+              )
+          ),
+          declared = List(
+            CatalogManagementDependency
+              .Attribute(
+                single = None,
+                group = Some(
+                  List(CatalogManagementDependency.AttributeValue(attributeId2, explicitAttributeVerification = false))
+                )
+              )
+          ),
+          verified = List(
+            CatalogManagementDependency
+              .Attribute(
+                single =
+                  Some(CatalogManagementDependency.AttributeValue(attributeId3, explicitAttributeVerification = true)),
+                group = None
+              )
+          )
+        )
+      )
+
+      val eservice = CatalogManagementDependency.EService(
+        id = UUID.randomUUID(),
+        producerId = seed.producerId,
+        name = seed.name,
+        description = seed.description,
+        technology = seed.technology,
+        attributes = seed.attributes,
+        descriptors = List(
+          CatalogManagementDependency.EServiceDescriptor(
+            id = UUID.randomUUID(),
+            version = "1",
+            description = None,
+            interface = None,
+            docs = Nil,
+            state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
+            audience = List("aud1"),
+            voucherLifespan = 1000,
+            dailyCallsPerConsumer = 1000,
+            dailyCallsTotal = 0,
+            agreementApprovalPolicy = AUTOMATIC,
+            serverUrls = Nil
+          )
+        )
+      )
+
+      // Data retrieve
+      (readModel
+        .aggregate(_: String, _: Seq[Bson], _: Int, _: Int)(_: JsonReader[_], _: ExecutionContext))
+        .expects("eservices", *, 0, 1, *, *)
+        .once()
+        .returns(Future.successful(catalogItems))
+
+      // Total count
+      (readModel
+        .aggregate(_: String, _: Seq[Bson], _: Int, _: Int)(_: JsonReader[_], _: ExecutionContext))
+        .expects("eservices", *, 0, Int.MaxValue, *, *)
+        .once()
+        .returns(Future.successful(Seq(TotalCountResult(0))))
+
+      (catalogManagementService
+        .createEService(_: CatalogManagementDependency.EServiceSeed)(_: Seq[(String, String)]))
+        .expects(seed, *)
+        .returning(Future.successful(eservice))
+        .once()
+
+      val requestData = apiSeed.toJson.toString
+
+      val response = request("eservices", HttpMethods.POST, Some(requestData))
+
+      val expected = EService(
+        id = eservice.id,
+        producerId = eservice.producerId,
+        name = seed.name,
+        description = seed.description,
+        technology = convertToApiTechnology(seed.technology),
+        attributes = Attributes(
+          certified = Seq(
+            Attribute(
+              single = Some(AttributeValue(id = attributeId1, explicitAttributeVerification = false)),
+              group = None
+            )
+          ),
+          declared = Seq(
+            Attribute(
+              single = None,
+              group = Some(Seq(AttributeValue(id = attributeId2, explicitAttributeVerification = false)))
+            )
+          ),
+          verified = Seq(
+            Attribute(
+              single = Some(AttributeValue(id = attributeId3, explicitAttributeVerification = true)),
+              group = None
+            )
+          )
+        ),
+        descriptors = eservice.descriptors.map(Converter.convertToApiDescriptor)
+      )
+
+      response.status shouldBe StatusCodes.OK
+
+      val body = Await.result(Unmarshal(response.entity).to[EService], Duration.Inf)
+
+      body shouldBe expected
+
+    }
+
+    "fail with conflict if an EService with the same name exists" in {
+
+      val attributeId1: UUID = UUID.randomUUID()
+      val attributeId2: UUID = UUID.randomUUID()
+      val attributeId3: UUID = UUID.randomUUID()
+
       val catalogItems: Seq[CatalogItem] = Seq(SpecData.catalogItem)
 
       val apiSeed: EServiceSeed = EServiceSeed(
@@ -234,40 +388,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       val response = request("eservices", HttpMethods.POST, Some(requestData))
 
-      val expected = EService(
-        id = eservice.id,
-        producerId = eservice.producerId,
-        name = seed.name,
-        description = seed.description,
-        technology = convertToApiTechnology(seed.technology),
-        attributes = Attributes(
-          certified = Seq(
-            Attribute(
-              single = Some(AttributeValue(id = attributeId1, explicitAttributeVerification = false)),
-              group = None
-            )
-          ),
-          declared = Seq(
-            Attribute(
-              single = None,
-              group = Some(Seq(AttributeValue(id = attributeId2, explicitAttributeVerification = false)))
-            )
-          ),
-          verified = Seq(
-            Attribute(
-              single = Some(AttributeValue(id = attributeId3, explicitAttributeVerification = true)),
-              group = None
-            )
-          )
-        ),
-        descriptors = eservice.descriptors.map(Converter.convertToApiDescriptor)
-      )
-
-      response.status shouldBe StatusCodes.OK
-
-      val body = Await.result(Unmarshal(response.entity).to[EService], Duration.Inf)
-
-      body shouldBe expected
+      response.status shouldBe StatusCodes.Conflict
 
     }
 
