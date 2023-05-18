@@ -6,9 +6,11 @@ import com.nimbusds.jwt.JWTClaimsSet
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
 import it.pagopa.interop.catalogmanagement.client.model.AgreementApprovalPolicy.AUTOMATIC
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
+import it.pagopa.interop.catalogmanagement.model.CatalogItem
 import it.pagopa.interop.catalogprocess.api.impl.Converter.convertToApiTechnology
 import it.pagopa.interop.catalogprocess.api.impl._
 import it.pagopa.interop.catalogprocess.api.{HealthApi, ProcessApi}
+import it.pagopa.interop.catalogprocess.common.readmodel.TotalCountResult
 import it.pagopa.interop.catalogprocess.model.EServiceDescriptorState._
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.server.Controller
@@ -16,14 +18,15 @@ import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt.service.JWTReader
+import org.mongodb.scala.bson.conversions.Bson
 import org.scalamock.scalatest.MockFactory
-import org.scalatest.{Assertion, BeforeAndAfterAll}
 import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.{Assertion, BeforeAndAfterAll}
 import spray.json._
 
 import java.util.UUID
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Success
 
 class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndAfterAll with MockFactory {
@@ -120,6 +123,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val attributeId2: UUID = UUID.randomUUID()
       val attributeId3: UUID = UUID.randomUUID()
 
+      val catalogItems: Seq[CatalogItem] = Seq.empty
+
       val apiSeed: EServiceSeed = EServiceSeed(
         name = "MyService",
         description = "My Service",
@@ -205,6 +210,20 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         )
       )
 
+      // Data retrieve
+      (readModel
+        .aggregate(_: String, _: Seq[Bson], _: Int, _: Int)(_: JsonReader[_], _: ExecutionContext))
+        .expects("eservices", *, 0, 1, *, *)
+        .once()
+        .returns(Future.successful(catalogItems))
+
+      // Total count
+      (readModel
+        .aggregate(_: String, _: Seq[Bson], _: Int, _: Int)(_: JsonReader[_], _: ExecutionContext))
+        .expects("eservices", *, 0, Int.MaxValue, *, *)
+        .once()
+        .returns(Future.successful(Seq(TotalCountResult(0))))
+
       (catalogManagementService
         .createEService(_: CatalogManagementDependency.EServiceSeed)(_: Seq[(String, String)]))
         .expects(seed, *)
@@ -251,6 +270,128 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       body shouldBe expected
 
     }
+
+    "fail with conflict if an EService with the same name exists" in {
+
+      val attributeId1: UUID = UUID.randomUUID()
+      val attributeId2: UUID = UUID.randomUUID()
+      val attributeId3: UUID = UUID.randomUUID()
+
+      val catalogItems: Seq[CatalogItem] = Seq(SpecData.catalogItem)
+
+      val apiSeed: EServiceSeed = EServiceSeed(
+        name = "MyService",
+        description = "My Service",
+        technology = EServiceTechnology.REST,
+        attributes = AttributesSeed(
+          certified = List(
+            AttributeSeed(
+              single = Some(AttributeValueSeed(attributeId1, explicitAttributeVerification = false)),
+              group = None
+            )
+          ),
+          declared = List(
+            AttributeSeed(
+              single = None,
+              group = Some(List(AttributeValueSeed(attributeId2, explicitAttributeVerification = false)))
+            )
+          ),
+          verified = List(
+            AttributeSeed(
+              single = Some(AttributeValueSeed(attributeId3, explicitAttributeVerification = true)),
+              group = None
+            )
+          )
+        )
+      )
+
+      val seed = CatalogManagementDependency.EServiceSeed(
+        producerId = AdminMockAuthenticator.requesterId,
+        name = "MyService",
+        description = "My Service",
+        technology = CatalogManagementDependency.EServiceTechnology.REST,
+        attributes = CatalogManagementDependency.Attributes(
+          certified = List(
+            CatalogManagementDependency
+              .Attribute(
+                single =
+                  Some(CatalogManagementDependency.AttributeValue(attributeId1, explicitAttributeVerification = false)),
+                group = None
+              )
+          ),
+          declared = List(
+            CatalogManagementDependency
+              .Attribute(
+                single = None,
+                group = Some(
+                  List(CatalogManagementDependency.AttributeValue(attributeId2, explicitAttributeVerification = false))
+                )
+              )
+          ),
+          verified = List(
+            CatalogManagementDependency
+              .Attribute(
+                single =
+                  Some(CatalogManagementDependency.AttributeValue(attributeId3, explicitAttributeVerification = true)),
+                group = None
+              )
+          )
+        )
+      )
+
+      val eservice = CatalogManagementDependency.EService(
+        id = UUID.randomUUID(),
+        producerId = seed.producerId,
+        name = seed.name,
+        description = seed.description,
+        technology = seed.technology,
+        attributes = seed.attributes,
+        descriptors = List(
+          CatalogManagementDependency.EServiceDescriptor(
+            id = UUID.randomUUID(),
+            version = "1",
+            description = None,
+            interface = None,
+            docs = Nil,
+            state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
+            audience = List("aud1"),
+            voucherLifespan = 1000,
+            dailyCallsPerConsumer = 1000,
+            dailyCallsTotal = 0,
+            agreementApprovalPolicy = AUTOMATIC,
+            serverUrls = Nil
+          )
+        )
+      )
+
+      // Data retrieve
+      (readModel
+        .aggregate(_: String, _: Seq[Bson], _: Int, _: Int)(_: JsonReader[_], _: ExecutionContext))
+        .expects("eservices", *, 0, 1, *, *)
+        .once()
+        .returns(Future.successful(catalogItems))
+
+      // Total count
+      (readModel
+        .aggregate(_: String, _: Seq[Bson], _: Int, _: Int)(_: JsonReader[_], _: ExecutionContext))
+        .expects("eservices", *, 0, Int.MaxValue, *, *)
+        .once()
+        .returns(Future.successful(Seq(TotalCountResult(1))))
+
+      (catalogManagementService
+        .createEService(_: CatalogManagementDependency.EServiceSeed)(_: Seq[(String, String)]))
+        .expects(seed, *)
+        .returning(Future.successful(eservice))
+        .once()
+
+      val requestData = apiSeed.toJson.toString
+
+      val response = request("eservices", HttpMethods.POST, Some(requestData))
+
+      response.status shouldBe StatusCodes.Conflict
+
+    }
+
   }
 
   "EService update" must {
