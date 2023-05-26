@@ -120,7 +120,7 @@ final case class ProcessApiServiceImpl(
     offset: Int,
     limit: Int
   )(implicit contexts: Seq[(String, String)], toEntityMarshallerEServices: ToEntityMarshaller[EServices]): Route =
-    authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
+    authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE, SUPPORT_ROLE) {
       val operationLabel =
         s"Getting e-service with name = $name, ids = $eServicesIds, producers = $producersIds, states = $states, agreementStates = $agreementStates, limit = $limit, offset = $offset"
       logger.info(operationLabel)
@@ -231,7 +231,7 @@ final case class ProcessApiServiceImpl(
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerEService: ToEntityMarshaller[EService]
-  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE, SUPPORT_ROLE) {
     val operationLabel = s"Retrieving EService $eServiceId"
     logger.info(operationLabel)
 
@@ -276,7 +276,7 @@ final case class ProcessApiServiceImpl(
     contexts: Seq[(String, String)],
     toEntityMarshallerEServiceDoc: ToEntityMarshaller[EServiceDoc],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
-  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE, SUPPORT_ROLE) {
     val operationLabel =
       s"Retrieving EService document $documentId for EService $eServiceId and descriptor $descriptorId"
     logger.info(operationLabel)
@@ -301,7 +301,7 @@ final case class ProcessApiServiceImpl(
   )(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerFlatEServicearray: ToEntityMarshaller[Seq[FlatEService]]
-  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE, SUPPORT_ROLE) {
     logger.info(
       "Getting flatten e-services list for caller {} where producer = {}, consumer = {}, state = {} and latest published only = {}",
       callerId,
