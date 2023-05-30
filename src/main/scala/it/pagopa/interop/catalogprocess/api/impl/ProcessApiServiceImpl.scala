@@ -1,24 +1,22 @@
 package it.pagopa.interop.catalogprocess.api.impl
 
 import akka.http.scaladsl.marshalling.ToEntityMarshaller
-import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.server.Directives.{complete, onComplete}
+import akka.http.scaladsl.server.Directives.onComplete
 import akka.http.scaladsl.server.Route
 import cats.implicits.toTraverseOps
 import cats.syntax.all._
 import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
-import it.pagopa.interop.agreementmanagement.client.{model => AgreementManagementDependency}
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
-import it.pagopa.interop.catalogmanagement.client
 import it.pagopa.interop.catalogmanagement.client.model.{
   EService => ManagementEService,
   EServiceDescriptor => ManagementDescriptor
 }
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
+import it.pagopa.interop.catalogmanagement.model.CatalogItem
 import it.pagopa.interop.catalogprocess.api.ProcessApiService
 import it.pagopa.interop.catalogprocess.api.impl.Converter._
 import it.pagopa.interop.catalogprocess.api.impl.ResponseHandlers._
-import it.pagopa.interop.catalogprocess.common.readmodel.ReadModelQueries
+import it.pagopa.interop.catalogprocess.common.readmodel.{PaginatedResult, ReadModelQueries}
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors._
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.service._
@@ -30,14 +28,10 @@ import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLo
 import it.pagopa.interop.commons.utils.AkkaUtils.getOrganizationIdFutureUUID
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
-import it.pagopa.interop.commons.utils.errors.{GenericComponentErrors, Problem => CommonProblem}
-import it.pagopa.interop.tenantmanagement.client.{model => TenantManagementDependency}
-import it.pagopa.interop.catalogprocess.common.readmodel.PaginatedResult
-import it.pagopa.interop.catalogmanagement.model.CatalogItem
+import it.pagopa.interop.commons.utils.errors.GenericComponentErrors
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
 
 final case class ProcessApiServiceImpl(
   catalogManagementService: CatalogManagementService,
@@ -290,89 +284,6 @@ final case class ProcessApiServiceImpl(
     }
   }
 
-  // TODO To be deleted
-  override def getFlatEServices(
-    callerId: String,
-    producerId: Option[String],
-    consumerId: Option[String],
-    agreementState: String,
-    state: Option[String],
-    latestPublishedOnly: Option[Boolean]
-  )(implicit
-    contexts: Seq[(String, String)],
-    toEntityMarshallerFlatEServicearray: ToEntityMarshaller[Seq[FlatEService]]
-  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE, SUPPORT_ROLE) {
-    logger.info(
-      "Getting flatten e-services list for caller {} where producer = {}, consumer = {}, state = {} and latest published only = {}",
-      callerId,
-      producerId,
-      consumerId,
-      state,
-      latestPublishedOnly
-    )
-    val result = for {
-      statusEnum         <- state.traverse(CatalogManagementDependency.EServiceDescriptorState.fromValue).toFuture
-      agreementStates    <- parseArrayParameters(agreementState).distinct.traverse(AgreementState.fromValue).toFuture
-      retrievedEservices <- retrieveEservices(producerId, consumerId, statusEnum, agreementStates)
-      eservices          <- processEservicesWithLatestFilter(retrievedEservices, latestPublishedOnly)
-      eserviceAndTenant  <- Future.traverse(eservices.toList)(getGetEserviceAndTenant)
-      agreements         <- Future
-        .traverse(eservices.toList)(eService =>
-          agreementManagementService.getAgreements(
-            consumerId = callerId.some,
-            producerId = eService.producerId.toString.some,
-            eServiceId = eService.id.toString.some,
-            states = agreementStates.map(convertToApiAgreementState)
-          )
-        )
-        .map(_.flatten)
-
-      flattenServices = eserviceAndTenant.flatMap { case (service, tenant) =>
-        convertToFlattenEservice(service, agreements, tenant)
-      }
-
-      stateProcessEnum <- state.traverse(EServiceDescriptorState.fromValue).toFuture
-      filteredDescriptors = flattenServices.filter(item => stateProcessEnum.forall(item.state.contains))
-    } yield filteredDescriptors
-
-    onComplete(result) {
-      case Success(response) => getFlatEServices200(response)
-      case Failure(ex)       =>
-        logger.error(
-          s"Error while getting flatten e-services list for caller $callerId where producer = $producerId, consumer = $consumerId, state = $state and latest published only = $latestPublishedOnly",
-          ex
-        )
-        val error = CommonProblem(StatusCodes.InternalServerError, FlattenedEServicesRetrievalError, serviceCode, None)
-        complete(error.status, error)
-    }
-  }
-
-  private def getGetEserviceAndTenant(eservice: client.model.EService)(implicit
-    contexts: Seq[(String, String)]
-  ): Future[(client.model.EService, TenantManagementDependency.Tenant)] = tenantManagementService
-    .getTenant(eservice.producerId)
-    .tupleLeft(eservice)
-
-  private def processEservicesWithLatestFilter(
-    eservices: Seq[CatalogManagementDependency.EService],
-    latestOnly: Option[Boolean]
-  ): Future[Seq[CatalogManagementDependency.EService]] = latestOnly match {
-    case Some(true) =>
-      Future.successful(eservices.map(eservice => {
-        val latestDescriptor = eservice.descriptors
-          .filter(d =>
-            d.state == CatalogManagementDependency.EServiceDescriptorState.PUBLISHED || d.state == CatalogManagementDependency.EServiceDescriptorState.SUSPENDED
-          )
-          .sortWith((ver1, ver2) => Ordering[Option[Long]].gt(ver1.version.toLongOption, ver2.version.toLongOption))
-          .headOption
-
-        eservice.copy(descriptors =
-          latestDescriptor.fold(Seq.empty[CatalogManagementDependency.EServiceDescriptor])(latest => Seq(latest))
-        )
-      }))
-    case _          => Future.successful(eservices)
-  }
-
   override def createDescriptor(eServiceId: String, eServiceDescriptorSeed: EServiceDescriptorSeed)(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerEServiceDescriptor: ToEntityMarshaller[EServiceDescriptor],
@@ -447,29 +358,6 @@ final case class ProcessApiServiceImpl(
     }
   }
 
-  private def retrieveEservices(
-    producerId: Option[String],
-    consumerId: Option[String],
-    status: Option[CatalogManagementDependency.EServiceDescriptorState],
-    agreementStates: List[AgreementState]
-  )(implicit contexts: Seq[(String, String)]): Future[Seq[CatalogManagementDependency.EService]] =
-    if (agreementStates.isEmpty && consumerId.isEmpty)
-      catalogManagementService.listEServices(producerId, status)
-    else
-      for {
-        agreements <- agreementManagementService.getAgreements(
-          consumerId,
-          producerId,
-          agreementStates.distinct.map(convertToApiAgreementState),
-          eServiceId = None
-        )
-        ids = agreements.map(_.eserviceId.toString).distinct
-        eservices <- Future.traverse(ids)(catalogManagementService.getEService(_))
-      } yield eservices.filter(eService =>
-        producerId.forall(_ == eService.producerId.toString) &&
-          status.forall(s => eService.descriptors.exists(_.state == s))
-      )
-
   private[this] def deprecateDescriptorOrCancelPublication(
     eServiceId: String,
     descriptorIdToDeprecate: String,
@@ -494,43 +382,6 @@ final case class ProcessApiServiceImpl(
       logger.info(s"Publication cancelled for descriptor $descriptorId in EService $eServiceId")
       result
     }
-
-  private def convertToFlattenEservice(
-    eservice: client.model.EService,
-    agreements: Seq[AgreementManagementDependency.Agreement],
-    tenant: TenantManagementDependency.Tenant
-  ): Seq[FlatEService] = {
-    val flatEServiceZero: FlatEService = FlatEService(
-      id = eservice.id,
-      producerId = eservice.producerId,
-      name = eservice.name,
-      producerName = tenant.name,
-      version = None,
-      state = None,
-      descriptorId = None,
-      description = eservice.description,
-      agreement = agreements.find(agr => agr.eserviceId == eservice.id).map(toFlatAgreement),
-      certifiedAttributes = eservice.attributes.certified.map(toFlatAttribute)
-    )
-
-    val flatEServices: Seq[FlatEService] = eservice.descriptors.map { descriptor =>
-      flatEServiceZero.copy(
-        version = Some(descriptor.version),
-        state = Some(convertToApiDescriptorState(descriptor.state)),
-        descriptorId = Some(descriptor.id.toString)
-      )
-    }
-
-    Option(flatEServices).filter(_.nonEmpty).getOrElse(Seq(flatEServiceZero))
-  }
-
-  private def toFlatAgreement(agreement: AgreementManagementDependency.Agreement): FlatAgreement =
-    FlatAgreement(id = agreement.id, state = convertFromApiAgreementState(agreement.state))
-
-  private def toFlatAttribute(attribute: client.model.Attribute): FlatAttribute = FlatAttribute(
-    single = attribute.single.map(a => FlatAttributeValue(a.id)),
-    group = attribute.group.map(a => a.map(attr => FlatAttributeValue(attr.id)))
-  )
 
   private def descriptorCanBeSuspended(
     descriptor: CatalogManagementDependency.EServiceDescriptor
