@@ -1120,16 +1120,17 @@ components:
         - descriptorVersion
         - descriptorState
         - agreementState
-        - consumer
+        - consumerName
         - consumerExternalId
       properties:
         descriptorVersion:
-          type: string
+          type: integer
+          format: int32
         descriptorState:
           $ref: '#/components/schemas/EServiceDescriptorState'
         agreementState:
           $ref: '#/components/schemas/AgreementState'
-        consumer:
+        consumerName:
           type: string
         consumerExternalId:
           type: string

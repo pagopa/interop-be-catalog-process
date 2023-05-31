@@ -11,7 +11,7 @@ final case class Consumers(
   descriptorVersion: String,
   descriptorState: CatalogDescriptorState,
   agreementState: PersistentAgreementState,
-  consumer: String,
+  consumerName: String,
   consumerExternalId: String
 )
 

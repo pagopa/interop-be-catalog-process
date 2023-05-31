@@ -725,14 +725,14 @@ final case class ProcessApiServiceImpl(
     contexts: Seq[(String, String)],
     toEntityMarshallerEServiceConsumers: ToEntityMarshaller[EServiceConsumers],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
-  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE, SUPPORT_ROLE) {
     val operationLabel =
       s"Retrieving consumers for EService $eServiceId"
     logger.info(operationLabel)
 
     val result: Future[EServiceConsumers] = for {
       result <- ReadModelQueries.listConsumers(eServiceId, offset, limit)(readModel)
-      apiResults = result.results.map(_.toApi)
+      apiResults = result.results.map(_.toApi).sortBy(r => (r.descriptorVersion, r.consumerName.toLowerCase()))
     } yield EServiceConsumers(results = apiResults, totalCount = result.totalCount)
 
     onComplete(result) {

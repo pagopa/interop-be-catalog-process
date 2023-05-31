@@ -317,7 +317,7 @@ object Converter {
     }
   }
 
-  implicit class ManagementAgreementStateWrapper(private val as: AgreementPersistenceModel.PersistentAgreementState)
+  implicit class ReadModelAgreementStateWrapper(private val as: AgreementPersistenceModel.PersistentAgreementState)
       extends AnyVal {
     def toApi: AgreementState = as match {
       case AgreementPersistenceModel.Draft                      => AgreementState.DRAFT
@@ -444,10 +444,10 @@ object Converter {
 
   implicit class ReadModelConsumersWrapper(private val item: Consumers) extends AnyVal {
     def toApi: EServiceConsumer = EServiceConsumer(
-      descriptorVersion = item.descriptorVersion,
+      descriptorVersion = item.descriptorVersion.toInt,
       descriptorState = item.descriptorState.toApi,
       agreementState = item.agreementState.toApi,
-      consumer = item.consumer,
+      consumerName = item.consumerName,
       consumerExternalId = item.consumerExternalId
     )
   }
