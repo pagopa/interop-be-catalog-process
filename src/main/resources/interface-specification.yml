@@ -136,56 +136,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  /flatten/eservices:
-    parameters:
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/IpAddress'
-    get:
-      security:
-        - bearerAuth: []
-      tags:
-        - process
-      summary: Retrieve a flatten list of E-Service
-      operationId: getFlatEServices
-      parameters:
-        - in: query
-          name: callerId
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - in: query
-          name: producerId
-          schema:
-            type: string
-        - in: query
-          name: consumerId
-          schema:
-            type: string
-        - in: query
-          name: agreementStates
-          description: comma separated sequence of agreement states to filter the response with
-          schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/AgreementState'
-            default: []
-          explode: false
-        - in: query
-          name: state
-          schema:
-            $ref: '#/components/schemas/EServiceDescriptorState'
-        - in: query
-          name: latestPublishedOnly
-          schema:
-            type: boolean
-      responses:
-        '200':
-          description: A list of flattened E-Services
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FlatEServices'
   /eservices/{eServiceId}:
     parameters:
       - $ref: '#/components/parameters/CorrelationIdHeader'
