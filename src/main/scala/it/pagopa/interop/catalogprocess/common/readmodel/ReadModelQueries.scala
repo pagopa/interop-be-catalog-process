@@ -67,7 +67,6 @@ object ReadModelQueries {
         computed("agreementState", "$agreements.data.state"),
         computed("consumerName", "$tenants.data.name"),
         computed("consumerExternalId", "$tenants.data.externalId.value"),
-        computed("lowerName", Document("""{ "$toLower" : "$tenants.data.name" }""")),
         excludeId()
       )
     )
@@ -78,7 +77,7 @@ object ReadModelQueries {
       consumers <- readModel.aggregateRaw[Consumers](
         "eservices",
         filterPipeline ++
-          Seq(projection, sort(ascending("lowerName"))),
+          Seq(projection),
         offset = offset,
         limit = limit
       )
