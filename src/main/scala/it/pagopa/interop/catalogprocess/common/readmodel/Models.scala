@@ -13,7 +13,7 @@ final case class Consumers(
   agreementState: PersistentAgreementState,
   consumer: String,
   consumerExternalId: String
-) {}
+)
 
 object Consumers {
   implicit val format: RootJsonFormat[Consumers] = jsonFormat5(Consumers.apply)
