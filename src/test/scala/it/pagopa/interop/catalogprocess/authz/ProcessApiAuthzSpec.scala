@@ -98,6 +98,14 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
       )
     }
 
+    "accept authorized roles for getEServiceConsumers" in {
+      val endpoint = AuthorizedRoutes.endpoints("getEServiceConsumers")
+      validateAuthorization(
+        endpoint,
+        { implicit c: Seq[(String, String)] => service.getEServiceConsumers(0, 0, "fake") }
+      )
+    }
+
     "accept authorized roles for getEServiceDocumentById" in {
       val endpoint = AuthorizedRoutes.endpoints("getEServiceDocumentById")
       validateAuthorization(
