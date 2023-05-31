@@ -720,6 +720,25 @@ final case class ProcessApiServiceImpl(
       suspendDescriptorResponse[Unit](operationLabel)(_ => suspendDescriptor204)
     }
   }
+
+  override def getEServiceConsumers(offset: Int, limit: Int, eServiceId: String)(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerEServiceConsumers: ToEntityMarshaller[EServiceConsumers],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
+    val operationLabel =
+      s"Retrieving consumers for EService $eServiceId"
+    logger.info(operationLabel)
+
+    val result: Future[EServiceConsumers] = for {
+      result <- ReadModelQueries.listConsumers(eServiceId, offset, limit)(readModel)
+      apiResults = result.results.map(_.toApi)
+    } yield EServiceConsumers(results = apiResults, totalCount = result.totalCount)
+
+    onComplete(result) {
+      getEServiceConsumersResponse[EServiceConsumers](operationLabel)(getEServiceConsumers200)
+    }
+  }
 }
 
 object ProcessApiServiceImpl {
