@@ -4,19 +4,95 @@ import it.pagopa.interop.agreementmanagement.model.agreement.PersistentAgreement
 import it.pagopa.interop.agreementmanagement.model.persistence.JsonFormats._
 import it.pagopa.interop.catalogprocess.api.impl.Converter._
 import it.pagopa.interop.catalogprocess.model.{EServiceDescriptorState, AgreementState}
-import it.pagopa.interop.catalogmanagement.model.CatalogItem
+import it.pagopa.interop.catalogmanagement.model.{CatalogItem, Suspended, Deprecated, Published}
+import it.pagopa.interop.agreementmanagement.model.{agreement => ManagementAgreementState}
 import it.pagopa.interop.catalogmanagement.model.persistence.JsonFormats._
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import org.mongodb.scala.Document
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.Aggregates.{`match`, count, project, sort}
-import org.mongodb.scala.model.Filters
-import org.mongodb.scala.model.Projections.{computed, fields, include}
+import org.mongodb.scala.model.Aggregates.{`match`, count, project, sort, lookup, unwind, addFields}
+import org.mongodb.scala.model.{Filters, Field}
+import org.mongodb.scala.model.Projections.{computed, fields, include, excludeId}
 import org.mongodb.scala.model.Sorts.ascending
 
 import scala.concurrent.{ExecutionContext, Future}
 
 object ReadModelQueries {
+
+  private def listConsumersFilter(eServiceId: String): Bson = {
+
+    val idFilter = Filters.eq("data.id", eServiceId)
+
+    val descriptorsStateFilter =
+      Filters.in("data.descriptors.state", Published.toString, Deprecated.toString, Suspended.toString)
+
+    mapToVarArgs(Seq(idFilter) ++ Seq(descriptorsStateFilter))(Filters.and).getOrElse(Filters.empty())
+
+  }
+  def listConsumers(eServiceId: String, offset: Int, limit: Int)(
+    readModel: ReadModelService
+  )(implicit ec: ExecutionContext): Future[PaginatedResult[Consumers]] = {
+    val query: Bson = listConsumersFilter(eServiceId)
+
+    val filterPipeline: Seq[Bson] = Seq(
+      `match`(query),
+      lookup(from = "agreements", localField = "data.id", foreignField = "data.eserviceId", as = "agreements"),
+      unwind("$agreements"),
+      lookup(from = "tenants", localField = "agreements.data.consumerId", foreignField = "data.id", as = "tenants"),
+      unwind("$tenants"),
+      `match`(
+        Filters.in(
+          "agreements.data.state",
+          ManagementAgreementState.Active.toString,
+          ManagementAgreementState.Suspended.toString
+        )
+      ),
+      addFields(
+        Field(
+          "validDescriptor",
+          Document("""{ $filter: {
+              input: "$data.descriptors",
+              as: "fd",         
+              cond: {  $eq: ["$$fd.id" , "$agreements.data.descriptorId"]}}} }""")
+        )
+      ),
+      unwind("$validDescriptor"),
+      `match`(Filters.exists("validDescriptor", true))
+    )
+
+    val projection: Bson = project(
+      fields(
+        computed("descriptorVersion", "$validDescriptor.version"),
+        computed("descriptorState", "$validDescriptor.state"),
+        computed("agreementState", "$agreements.data.state"),
+        computed("consumerName", "$tenants.data.name"),
+        computed("consumerExternalId", "$tenants.data.externalId.value"),
+        computed("lowerName", Document("""{ "$toLower" : "$tenants.data.name" }""")),
+        excludeId()
+      )
+    )
+
+    for {
+      // Using aggregate to perform case insensitive sorting
+      //   N.B.: Required because DocumentDB does not support collation
+      consumers <- readModel.aggregateRaw[Consumers](
+        "eservices",
+        filterPipeline ++
+          Seq(projection, sort(ascending("lowerName"))),
+        offset = offset,
+        limit = limit
+      )
+      // Note: This could be obtained using $facet function (avoiding to execute the query twice),
+      //   but it is not supported by DocumentDB
+      count     <- readModel.aggregate[TotalCountResult](
+        "eservices",
+        filterPipeline ++
+          Seq(count("totalCount"), project(computed("data", Document("""{ "totalCount" : "$totalCount" }""")))),
+        offset = 0,
+        limit = Int.MaxValue
+      )
+    } yield PaginatedResult(results = consumers, totalCount = count.headOption.map(_.totalCount).getOrElse(0))
+  }
 
   def emptyResults[T] = PaginatedResult[T](results = Nil, totalCount = 0)
 

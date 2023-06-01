@@ -21,6 +21,11 @@
       "roles": ["admin", "api", "security", "m2m", "support"],
       "verb": "GET"
     },
+    {
+      "route": "getEServiceConsumers",
+      "roles": ["admin", "api", "security", "m2m", "support"],
+      "verb": "GET"
+    },
     { "route": "deleteDraft", "roles": ["admin", "api"], "verb": "DELETE" },
     {
       "route": "updateDraftDescriptor",

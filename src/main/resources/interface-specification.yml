@@ -136,56 +136,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  /flatten/eservices:
-    parameters:
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/IpAddress'
-    get:
-      security:
-        - bearerAuth: []
-      tags:
-        - process
-      summary: Retrieve a flatten list of E-Service
-      operationId: getFlatEServices
-      parameters:
-        - in: query
-          name: callerId
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - in: query
-          name: producerId
-          schema:
-            type: string
-        - in: query
-          name: consumerId
-          schema:
-            type: string
-        - in: query
-          name: agreementStates
-          description: comma separated sequence of agreement states to filter the response with
-          schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/AgreementState'
-            default: []
-          explode: false
-        - in: query
-          name: state
-          schema:
-            $ref: '#/components/schemas/EServiceDescriptorState'
-        - in: query
-          name: latestPublishedOnly
-          schema:
-            type: boolean
-      responses:
-        '200':
-          description: A list of flattened E-Services
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FlatEServices'
   /eservices/{eServiceId}:
     parameters:
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -289,6 +239,59 @@ paths:
                 $ref: '#/components/schemas/Problem'
         '404':
           description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /eservices/{eServiceId}/consumers:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/IpAddress'
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - process
+      summary: Retrieve Consumers for an EService
+      operationId: getEServiceConsumers
+      parameters:
+        - name: eServiceId
+          in: path
+          description: The E-Service id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: offset
+          required: true
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+        - in: query
+          name: limit
+          required: true
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 50    
+      responses:
+        '200':
+          description: E-Service consumers retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EServiceConsumers'
+        '404':
+          description: E-Service not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '400':
+          description: Bad request
           content:
             application/problem+json:
               schema:
@@ -1048,6 +1051,39 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EServiceDescriptor'
+    EServiceConsumers:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EServiceConsumer'
+        totalCount:
+          type: integer
+          format: int32
+      required:
+        - results
+        - totalCount
+    EServiceConsumer:
+      type: object
+      required:
+        - descriptorVersion
+        - descriptorState
+        - agreementState
+        - consumerName
+        - consumerExternalId
+      properties:
+        descriptorVersion:
+          type: integer
+          format: int32
+        descriptorState:
+          $ref: '#/components/schemas/EServiceDescriptorState'
+        agreementState:
+          $ref: '#/components/schemas/AgreementState'
+        consumerName:
+          type: string
+        consumerExternalId:
+          type: string
     EServices:
       type: object
       properties:
