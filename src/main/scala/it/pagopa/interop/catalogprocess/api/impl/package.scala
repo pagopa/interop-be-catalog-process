@@ -13,18 +13,18 @@ package object impl extends SprayJsonSupport with DefaultJsonProtocol {
   implicit val eServiceAttributes2Format: RootJsonFormat[Attributes]                = jsonFormat3(Attributes)
   implicit val organizationFormat: RootJsonFormat[Organization]                     = jsonFormat2(Organization)
   implicit val eServiceDocFormat: RootJsonFormat[EServiceDoc]                       = jsonFormat5(EServiceDoc)
-  implicit val eServiceDescriptorFormat: RootJsonFormat[EServiceDescriptor]         = jsonFormat16(EServiceDescriptor)
-  implicit val eServiceDescriptorSeedFormat: RootJsonFormat[EServiceDescriptorSeed] =
-    jsonFormat6(EServiceDescriptorSeed)
-  implicit val eServiceFormat: RootJsonFormat[EService]                             = jsonFormat7(EService)
+  implicit val eServiceDescriptorFormat: RootJsonFormat[EServiceDescriptor]         = jsonFormat17(EServiceDescriptor)
+  implicit val eServiceFormat: RootJsonFormat[EService]                             = jsonFormat6(EService)
   implicit val eServicesFormat: RootJsonFormat[EServices]                           = jsonFormat2(EServices)
   implicit val eServiceAttributeValueSeedFormat: RootJsonFormat[AttributeValueSeed] = jsonFormat2(AttributeValueSeed)
   implicit val eServiceAttributeSeedFormat: RootJsonFormat[AttributeSeed]           = jsonFormat2(AttributeSeed)
   implicit val eServiceAttributesSeedFormat: RootJsonFormat[AttributesSeed]         = jsonFormat3(AttributesSeed)
-  implicit val eServiceSeedFormat: RootJsonFormat[EServiceSeed]                     = jsonFormat4(EServiceSeed)
-  implicit val updateEServiceSeedFormat: RootJsonFormat[UpdateEServiceSeed]         = jsonFormat4(UpdateEServiceSeed)
+  implicit val eServiceSeedFormat: RootJsonFormat[EServiceSeed]                     = jsonFormat3(EServiceSeed)
+  implicit val updateEServiceSeedFormat: RootJsonFormat[UpdateEServiceSeed]         = jsonFormat3(UpdateEServiceSeed)
+  implicit val eServiceDescriptorSeedFormat: RootJsonFormat[EServiceDescriptorSeed] =
+    jsonFormat7(EServiceDescriptorSeed)
   implicit val updateEServiceDescriptorSeedFormat: RootJsonFormat[UpdateEServiceDescriptorSeed]                 =
-    jsonFormat6(UpdateEServiceDescriptorSeed)
+    jsonFormat7(UpdateEServiceDescriptorSeed)
   implicit val updateEServiceDescriptorDocumentSeedFormat: RootJsonFormat[UpdateEServiceDescriptorDocumentSeed] =
     jsonFormat1(UpdateEServiceDescriptorDocumentSeed)
   implicit val createEServiceDescriptorDocumentSeedFormat: RootJsonFormat[CreateEServiceDescriptorDocumentSeed] =
