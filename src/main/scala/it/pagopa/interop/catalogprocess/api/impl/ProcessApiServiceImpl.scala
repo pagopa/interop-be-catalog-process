@@ -107,7 +107,7 @@ final case class ProcessApiServiceImpl(
     offset: Int,
     limit: Int
   )(implicit contexts: Seq[(String, String)], toEntityMarshallerEServices: ToEntityMarshaller[EServices]): Route =
-    authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
+    authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE, SUPPORT_ROLE) {
       val operationLabel =
         s"Getting e-service with name = $name, ids = $eServicesIds, producers = $producersIds, states = $states, agreementStates = $agreementStates, limit = $limit, offset = $offset"
       logger.info(operationLabel)
@@ -222,7 +222,7 @@ final case class ProcessApiServiceImpl(
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerEService: ToEntityMarshaller[EService]
-  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE, SUPPORT_ROLE) {
     val operationLabel = s"Retrieving EService $eServiceId"
     logger.info(operationLabel)
 
@@ -275,7 +275,7 @@ final case class ProcessApiServiceImpl(
     contexts: Seq[(String, String)],
     toEntityMarshallerEServiceDoc: ToEntityMarshaller[EServiceDoc],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
-  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE) {
+  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE, SUPPORT_ROLE) {
     val operationLabel =
       s"Retrieving EService document $documentId for EService $eServiceId and descriptor $descriptorId"
     logger.info(operationLabel)
@@ -628,6 +628,25 @@ final case class ProcessApiServiceImpl(
 
     onComplete(result) {
       suspendDescriptorResponse[Unit](operationLabel)(_ => suspendDescriptor204)
+    }
+  }
+
+  override def getEServiceConsumers(offset: Int, limit: Int, eServiceId: String)(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerEServiceConsumers: ToEntityMarshaller[EServiceConsumers],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+  ): Route = authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE, SUPPORT_ROLE) {
+    val operationLabel =
+      s"Retrieving consumers for EService $eServiceId"
+    logger.info(operationLabel)
+
+    val result: Future[EServiceConsumers] = for {
+      result <- ReadModelQueries.listConsumers(eServiceId, offset, limit)(readModel)
+      apiResults = result.results.map(_.toApi)
+    } yield EServiceConsumers(results = apiResults, totalCount = result.totalCount)
+
+    onComplete(result) {
+      getEServiceConsumersResponse[EServiceConsumers](operationLabel)(getEServiceConsumers200)
     }
   }
 }

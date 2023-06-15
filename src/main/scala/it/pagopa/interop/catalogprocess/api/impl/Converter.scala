@@ -5,6 +5,7 @@ import it.pagopa.interop.agreementmanagement.model.{agreement => AgreementPersis
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.catalogmanagement.{model => readmodel}
 import it.pagopa.interop.catalogprocess.model._
+import it.pagopa.interop.catalogprocess.common.readmodel.Consumers
 
 import java.util.UUID
 
@@ -129,6 +130,19 @@ object Converter {
     }
   }
 
+  implicit class ReadModelAgreementStateWrapper(private val as: AgreementPersistenceModel.PersistentAgreementState)
+      extends AnyVal {
+    def toApi: AgreementState = as match {
+      case AgreementPersistenceModel.Draft                      => AgreementState.DRAFT
+      case AgreementPersistenceModel.Pending                    => AgreementState.PENDING
+      case AgreementPersistenceModel.Active                     => AgreementState.ACTIVE
+      case AgreementPersistenceModel.Suspended                  => AgreementState.SUSPENDED
+      case AgreementPersistenceModel.Archived                   => AgreementState.ARCHIVED
+      case AgreementPersistenceModel.MissingCertifiedAttributes => AgreementState.MISSING_CERTIFIED_ATTRIBUTES
+      case AgreementPersistenceModel.Rejected                   => AgreementState.REJECTED
+    }
+  }
+
   implicit class ManagementEServiceWrapper(private val eService: CatalogManagementDependency.EService) extends AnyVal {
     def toApi: EService = EService(
       id = eService.id,
@@ -246,6 +260,16 @@ object Converter {
       technology = item.technology.toApi,
       attributes = item.attributes.toApi,
       descriptors = item.descriptors.map(_.toApi)
+    )
+  }
+
+  implicit class ReadModelConsumersWrapper(private val item: Consumers) extends AnyVal {
+    def toApi: EServiceConsumer = EServiceConsumer(
+      descriptorVersion = item.descriptorVersion.toInt,
+      descriptorState = item.descriptorState.toApi,
+      agreementState = item.agreementState.toApi,
+      consumerName = item.consumerName,
+      consumerExternalId = item.consumerExternalId
     )
   }
 

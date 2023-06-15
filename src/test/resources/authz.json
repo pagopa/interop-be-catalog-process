@@ -8,17 +8,22 @@
     },
     {
       "route": "getEServiceById",
-      "roles": ["admin", "api", "security", "m2m"],
+      "roles": ["admin", "api", "security", "m2m", "support"],
       "verb": "GET"
     },
     {
       "route": "getEServices",
-      "roles": ["admin", "api", "security", "m2m"],
+      "roles": ["admin", "api", "security", "m2m", "support"],
       "verb": "GET"
     },
     {
       "route": "getEServiceDocumentById",
-      "roles": ["admin", "api", "security", "m2m"],
+      "roles": ["admin", "api", "security", "m2m", "support"],
+      "verb": "GET"
+    },
+    {
+      "route": "getEServiceConsumers",
+      "roles": ["admin", "api", "security", "m2m", "support"],
       "verb": "GET"
     },
     { "route": "deleteDraft", "roles": ["admin", "api"], "verb": "DELETE" },
