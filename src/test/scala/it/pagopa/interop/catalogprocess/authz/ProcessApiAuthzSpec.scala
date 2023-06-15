@@ -1,7 +1,5 @@
 package it.pagopa.interop.catalogprocess.authz
 
-import com.nimbusds.jose.proc.SecurityContext
-import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier
 import it.pagopa.interop.catalogprocess.api.impl.ProcessApiMarshallerImpl._
 import it.pagopa.interop.catalogprocess.api.impl.ProcessApiServiceImpl
 import it.pagopa.interop.catalogprocess.model.AgreementApprovalPolicy.AUTOMATIC
@@ -9,11 +7,9 @@ import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.catalogprocess.util.FakeDependencies._
 import it.pagopa.interop.catalogprocess.util.{AuthorizedRoutes, AuthzScalatestRouteTest}
-import it.pagopa.interop.commons.cqrs.service.ReadModelService
+import it.pagopa.interop.commons.cqrs.service.{ReadModelService, MongoDbReadModelService}
+import it.pagopa.interop.commons.cqrs.model.ReadModelConfig
 import it.pagopa.interop.commons.files.service.FileManager
-import it.pagopa.interop.commons.jwt.service.JWTReader
-import it.pagopa.interop.commons.jwt.service.impl.{DefaultJWTReader, getClaimsVerifier}
-import it.pagopa.interop.commons.jwt.{KID, PublicKeysHolder, SerializedKey}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpecLike
 
@@ -23,34 +19,26 @@ import java.util.UUID
 
 class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with AuthzScalatestRouteTest {
 
-  val fakeCatalogManagementService: CatalogManagementService                     = new FakeCatalogManagementService()
-  val fakeAttributeRegistryManagementService: AttributeRegistryManagementService =
-    new FakeAttributeRegistryManagementService()
-  val fakeAgreementManagementService: AgreementManagementService                 = new FakeAgreementManagementService()
+  val fakeCatalogManagementService: CatalogManagementService             = new FakeCatalogManagementService()
   val fakeAuthorizationManagementService: AuthorizationManagementService = new FakeAuthorizationManagementService()
-  val fakeTenantManagementService: TenantManagementService               = new FakeTenantManagementService()
   private val threadPool: ExecutorService                                = Executors.newSingleThreadExecutor()
   private val blockingEc: ExecutionContextExecutor = ExecutionContext.fromExecutorService(threadPool)
   val fakeFileManager: FileManager                 = FileManager.get(FileManager.File)(blockingEc)
-  val fakeReadModel: ReadModelService              = new FakeReadModelService
-  val fakeJwtReader: JWTReader                     = new DefaultJWTReader with PublicKeysHolder {
-    var publicKeyset: Map[KID, SerializedKey]                                        = Map.empty
-    override protected val claimsVerifier: DefaultJWTClaimsVerifier[SecurityContext] =
-      getClaimsVerifier(audience = Set("fake"))
-  }
+  val fakeReadModel: ReadModelService              = new MongoDbReadModelService(
+    ReadModelConfig(
+      "mongodb://localhost/?socketTimeoutMS=1&serverSelectionTimeoutMS=1&connectTimeoutMS=1&&autoReconnect=false&keepAlive=false",
+      "db"
+    )
+  )
 
   override def afterAll(): Unit = { threadPool.shutdown() }
 
   val service: ProcessApiServiceImpl =
     ProcessApiServiceImpl(
       fakeCatalogManagementService,
-      fakeAttributeRegistryManagementService,
-      fakeAgreementManagementService,
       fakeAuthorizationManagementService,
-      fakeTenantManagementService,
       fakeReadModel,
-      fakeFileManager,
-      fakeJwtReader
+      fakeFileManager
     )(ExecutionContext.global)
 
   "E-Service api operation authorization spec" should {

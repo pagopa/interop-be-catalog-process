@@ -1,16 +1,15 @@
 package it.pagopa.interop.catalogprocess
 
-import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.catalogprocess.api.impl.ProcessApiServiceImpl
 import org.scalatest.concurrent.ScalaFutures._
 import org.scalatest.matchers.should.Matchers._
 import org.scalatest.wordspec.AnyWordSpecLike
 
-import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext}
 import scala.util.{Failure, Try}
+import it.pagopa.interop.catalogprocess.model._
 
 class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration {
 
@@ -18,7 +17,7 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
 
   "Publication" must {
     "be eligible" in {
-      val descriptor = CatalogManagementDependency.EServiceDescriptor(
+      val descriptor = EServiceDescriptor(
         id = UUID.randomUUID(),
         version = "1",
         description = None,
@@ -27,19 +26,17 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
         dailyCallsPerConsumer = 0,
         dailyCallsTotal = 0,
         interface = Some(
-          CatalogManagementDependency.EServiceDoc(
+          EServiceDoc(
             id = UUID.randomUUID(),
             name = "fileName",
             contentType = "contentType",
             prettyName = "description",
-            path = "path",
-            checksum = "checksum",
-            uploadDate = OffsetDateTime.now()
+            path = "path"
           )
         ),
         docs = Seq.empty,
-        state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
-        agreementApprovalPolicy = CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC,
+        state = EServiceDescriptorState.DRAFT,
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
         serverUrls = Nil
       )
 
@@ -47,7 +44,7 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
     }
 
     "be denied if descriptor is not in Draft status" in {
-      val descriptor = CatalogManagementDependency.EServiceDescriptor(
+      val descriptor = EServiceDescriptor(
         id = UUID.randomUUID(),
         version = "1",
         description = None,
@@ -56,19 +53,17 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
         dailyCallsPerConsumer = 0,
         dailyCallsTotal = 0,
         interface = Some(
-          CatalogManagementDependency.EServiceDoc(
+          EServiceDoc(
             id = UUID.randomUUID(),
             name = "fileName",
             contentType = "contentType",
             prettyName = "description",
-            path = "path",
-            checksum = "checksum",
-            uploadDate = OffsetDateTime.now()
+            path = "path"
           )
         ),
         docs = Seq.empty,
-        state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED,
-        agreementApprovalPolicy = CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC,
+        state = EServiceDescriptorState.PUBLISHED,
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
         serverUrls = Nil
       )
 
@@ -76,7 +71,7 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
     }
 
     "be denied if descriptor has no interface" in {
-      val descriptor = CatalogManagementDependency.EServiceDescriptor(
+      val descriptor = EServiceDescriptor(
         id = UUID.randomUUID(),
         version = "1",
         description = None,
@@ -86,8 +81,8 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
         dailyCallsTotal = 0,
         interface = None,
         docs = Seq.empty,
-        state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
-        agreementApprovalPolicy = CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC,
+        state = EServiceDescriptorState.DRAFT,
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
         serverUrls = Nil
       )
 

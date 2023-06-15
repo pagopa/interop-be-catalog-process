@@ -1,107 +1,42 @@
 package it.pagopa.interop.catalogprocess
 
-import akka.actor
-import akka.actor.testkit.typed.scaladsl.{ActorTestKit, ScalaTestWithActorTestKit}
-import akka.actor.typed.ActorSystem
-import akka.actor.typed.scaladsl.Behaviors
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.OAuth2BearerToken
-import akka.http.scaladsl.server.Directives.Authenticator
-import akka.http.scaladsl.server.directives.Credentials.{Missing, Provided}
-import akka.http.scaladsl.server.directives.{AuthenticationDirective, Credentials, SecurityDirectives}
-import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
-import it.pagopa.interop.catalogprocess.server.Controller
-import it.pagopa.interop.commons.utils.{BEARER, ORGANIZATION_ID_CLAIM, USER_ROLES}
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
+import spray.json._
+import org.scalamock.scalatest.MockFactory
+import com.typesafe.config.{Config, ConfigFactory}
 
-import java.net.InetAddress
-import java.util.UUID
-import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContextExecutor, Future}
+import it.pagopa.interop.commons.cqrs.service.ReadModelService
+import it.pagopa.interop.commons.files.service.FileManager
+import it.pagopa.interop.catalogprocess.service._
+import it.pagopa.interop.catalogprocess.model._
+import it.pagopa.interop.catalogprocess.api.ProcessApiService
+import it.pagopa.interop.catalogprocess.api.impl._
 
-abstract class SpecHelper extends ScalaTestWithActorTestKit(SpecConfiguration.config) with SpecConfiguration {
+import scala.concurrent.ExecutionContext
 
-  var bindServer: Option[Future[Http.ServerBinding]] = None
+trait SpecHelper extends SprayJsonSupport with DefaultJsonProtocol with MockFactory {
 
-  val bearerToken: String                   = "token"
-  final val requestHeaders: Seq[HttpHeader] =
-    Seq(
-      headers.Authorization(OAuth2BearerToken(bearerToken)),
-      headers.RawHeader("X-Correlation-Id", "test-id"),
-      headers.`X-Forwarded-For`(RemoteAddress(InetAddress.getByName("127.0.0.1")))
-    )
+  final val bearerToken: String = "token"
 
-  val httpSystem: ActorSystem[Any]                        =
-    ActorSystem(Behaviors.ignore[Any], name = system.name, config = system.settings.config)
-  implicit val executionContext: ExecutionContextExecutor = httpSystem.executionContext
-  implicit val classicSystem: actor.ActorSystem           = httpSystem.classicSystem
+  val config: Config = ConfigFactory
+    .parseResourcesAnySyntax("application-test")
+    .resolve()
 
-  val wrappingDirective: AuthenticationDirective[Seq[(String, String)]] =
-    SecurityDirectives.authenticateOAuth2("SecurityRealm", AdminMockAuthenticator)
+  val mockReadModel: ReadModelService                                    = mock[ReadModelService]
+  val mockfileManager: FileManager                                       = mock[FileManager]
+  val mockAuthorizationManagementService: AuthorizationManagementService = mock[AuthorizationManagementService]
+  val mockCatalogManagementService: CatalogManagementService             = mock[CatalogManagementService]
 
-  def descriptorStub: CatalogManagementDependency.EServiceDescriptor = CatalogManagementDependency.EServiceDescriptor(
-    id = UUID.randomUUID(),
-    version = "1",
-    description = None,
-    audience = Seq.empty,
-    voucherLifespan = 0,
-    dailyCallsPerConsumer = 0,
-    dailyCallsTotal = 0,
-    interface = None,
-    docs = Seq.empty,
-    state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED,
-    agreementApprovalPolicy = CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC,
-    serverUrls = Nil
-  )
+  val service: ProcessApiService = ProcessApiServiceImpl(
+    mockCatalogManagementService,
+    mockAuthorizationManagementService,
+    mockReadModel,
+    mockfileManager
+  )(ExecutionContext.global)
 
-  def eServiceStub: CatalogManagementDependency.EService = CatalogManagementDependency.EService(
-    id = UUID.randomUUID(),
-    producerId = UUID.randomUUID(),
-    name = "EService1",
-    description = "",
-    technology = CatalogManagementDependency.EServiceTechnology.REST,
-    attributes = CatalogManagementDependency.Attributes(Seq.empty, Seq.empty, Seq.empty),
-    descriptors = Seq.empty
-  )
-
-  def startServer(controller: Controller): Http.ServerBinding = {
-    bindServer = Some(
-      Http()
-        .newServerAt("0.0.0.0", servicePort)
-        .bind(controller.routes)
-    )
-
-    Await.result(bindServer.get, 100.seconds)
-  }
-
-  def shutDownServer(): Unit = {
-    bindServer.foreach(_.foreach(_.unbind()))
-    ActorTestKit.shutdown(httpSystem, 5.seconds)
-  }
-
-  def request(path: String, verb: HttpMethod, data: Option[String] = None): HttpResponse = {
-    val entity: RequestEntity = data match {
-      case Some(d) => HttpEntity(ContentTypes.`application/json`, d)
-      case None    => HttpEntity.Empty.withContentType(ContentTypes.`application/json`)
-    }
-    Await.result(
-      Http().singleRequest(
-        HttpRequest(uri = s"$serviceURL/$path", method = verb, entity = entity, headers = requestHeaders)
-      ),
-      10.seconds
-    )
-  }
-}
-
-//mocks admin user role rights for every call
-object AdminMockAuthenticator extends Authenticator[Seq[(String, String)]] {
-  val requesterId: UUID = UUID.randomUUID()
-
-  override def apply(credentials: Credentials): Option[Seq[(String, String)]] = {
-    credentials match {
-      case Provided(identifier) =>
-        Some(Seq(BEARER -> identifier, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString))
-      case Missing              => None
-    }
-  }
+  implicit def fromResponseUnmarshallerProblem: FromEntityUnmarshaller[Problem]   =
+    sprayJsonUnmarshaller[Problem]
+  implicit def fromResponseUnmarshallerEService: FromEntityUnmarshaller[EService] =
+    sprayJsonUnmarshaller[EService]
 }

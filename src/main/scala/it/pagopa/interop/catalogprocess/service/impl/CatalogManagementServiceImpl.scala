@@ -1,16 +1,13 @@
 package it.pagopa.interop.catalogprocess.service.impl
 
-import it.pagopa.interop.catalogmanagement.client
 import it.pagopa.interop.catalogmanagement.client.api.EServiceApi
 import it.pagopa.interop.catalogmanagement.client.invoker.{ApiError, BearerToken}
 import it.pagopa.interop.catalogmanagement.client.model._
 import it.pagopa.interop.catalogprocess.service.{CatalogManagementInvoker, CatalogManagementService}
-import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils._
 import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors.{
   DescriptorDocumentNotFound,
-  DraftDescriptorAlreadyExists,
   EServiceDescriptorNotFound,
   EServiceNotFound
 }
@@ -68,25 +65,6 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       invoker.invoke(request, s"E-Service $eServiceId deleted").recoverWith {
         case err: ApiError[_] if err.code == 404 =>
           Future.failed(EServiceNotFound(eServiceId))
-      }
-    }
-
-  override def listEServices(producerId: Option[String], state: Option[EServiceDescriptorState])(implicit
-    contexts: Seq[(String, String)]
-  ): Future[Seq[EService]] = withHeaders { (bearerToken, correlationId, ip) =>
-    val request =
-      api.getEServices(xCorrelationId = correlationId, producerId = producerId, state = state, xForwardedFor = ip)(
-        BearerToken(bearerToken)
-      )
-    invoker.invoke(request, s"E-Services list retrieved for filters: producerId = $producerId,  status = $state")
-  }
-
-  override def getEService(eServiceId: String)(implicit contexts: Seq[(String, String)]): Future[EService] =
-    withHeaders { (bearerToken, correlationId, ip) =>
-      val request =
-        api.getEService(xCorrelationId = correlationId, eServiceId, xForwardedFor = ip)(BearerToken(bearerToken))
-      invoker.invoke(request, s"E-Service with id $eServiceId retrieved").recoverWith {
-        case err: ApiError[_] if err.code == 404 => Future.failed(EServiceNotFound(eServiceId))
       }
     }
 
@@ -171,15 +149,6 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
     invoker.invoke(request, s"Eservice $eServiceId descriptor $descriptorId has been moved to draft")
   }
 
-  override def hasNotDraftDescriptor(eService: EService)(implicit contexts: Seq[(String, String)]): Future[Boolean] =
-    Either
-      .cond(
-        eService.descriptors.count(_.state == EServiceDescriptorState.DRAFT) < 1,
-        true,
-        DraftDescriptorAlreadyExists(eService.id.toString)
-      )
-      .toFuture
-
   def createDescriptor(eServiceId: String, eServiceDescriptorSeed: EServiceDescriptorSeed)(implicit
     contexts: Seq[(String, String)]
   ): Future[EServiceDescriptor] = withHeaders { (bearerToken, correlationId, ip) =>
@@ -214,21 +183,6 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       .recoverWith {
         case err: ApiError[_] if err.code == 404 =>
           Future.failed(EServiceDescriptorNotFound(eServiceId.toString, descriptorId.toString))
-      }
-  }
-
-  override def getEServiceDocument(eServiceId: String, descriptorId: String, documentId: String)(implicit
-    contexts: Seq[(String, String)]
-  ): Future[client.model.EServiceDoc] = withHeaders { (bearerToken, correlationId, ip) =>
-    val request =
-      api.getEServiceDocument(xCorrelationId = correlationId, eServiceId, descriptorId, documentId, xForwardedFor = ip)(
-        BearerToken(bearerToken)
-      )
-    invoker
-      .invoke(request, s"Document with id $documentId retrieval")
-      .recoverWith {
-        case err: ApiError[_] if err.code == 404 =>
-          Future.failed(DescriptorDocumentNotFound(eServiceId, descriptorId, documentId))
       }
   }
 

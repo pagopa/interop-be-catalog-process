@@ -15,10 +15,32 @@ import org.mongodb.scala.model.Projections.{computed, fields, include}
 import org.mongodb.scala.model.Sorts.ascending
 
 import scala.concurrent.{ExecutionContext, Future}
+import it.pagopa.interop.catalogmanagement.model.CatalogDocument
+import java.util.UUID
 
 object ReadModelQueries {
 
   def emptyResults[T] = PaginatedResult[T](results = Nil, totalCount = 0)
+
+  def getEServiceDocument(eServiceId: UUID, descriptorId: UUID, documentId: UUID)(
+    readModel: ReadModelService
+  )(implicit ec: ExecutionContext): Future[Option[CatalogDocument]] = {
+    val filters = Filters.and(
+      Filters.eq("data.id", eServiceId.toString),
+      Filters.eq("data.descriptors.id", descriptorId.toString),
+      Filters.or(
+        Filters.eq("data.descriptors.docs.id", documentId.toString),
+        Filters.eq("data.descriptors.interface.id", documentId.toString)
+      )
+    )
+    readModel.findOne[CatalogDocument]("eservices", filters)
+  }
+
+  def getEService(
+    eServiceId: UUID
+  )(readModel: ReadModelService)(implicit ec: ExecutionContext): Future[Option[CatalogItem]] = {
+    readModel.findOne[CatalogItem]("eservices", Filters.eq("data.id", eServiceId.toString))
+  }
 
   def listAgreements(
     eServicesIds: Seq[String],

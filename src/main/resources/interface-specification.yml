@@ -154,6 +154,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         '200':
           description: E-Service retrieved
@@ -187,6 +188,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
       requestBody:
         description: An E-Service update seed containing the possible updatable fields
         required: true
@@ -261,6 +263,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
       requestBody:
         description: An E-Service Descriptor seed
         content:
@@ -305,12 +308,14 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
         - name: descriptorId
           in: path
           description: The Descriptor Id
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         '204':
           description: E-Service draft Descriptor deleted
@@ -340,12 +345,14 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
         - name: descriptorId
           in: path
           description: The Descriptor Id
           required: true
           schema:
             type: string
+            format: uuid
       requestBody:
         description: An E-Service Descriptor seed
         content:
@@ -390,12 +397,14 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
         - name: descriptorId
           in: path
           description: the descriptor Id
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         '204':
           description: E-Service Descriptor published
@@ -429,12 +438,14 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
         - name: descriptorId
           in: path
           description: the descriptor Id
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         '204':
           description: E-Service Descriptor suspended
@@ -468,12 +479,14 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
         - name: descriptorId
           in: path
           description: the descriptor Id
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         '204':
           description: E-Service Descriptor activated
@@ -552,12 +565,14 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
         - name: descriptorId
           in: path
           description: the descriptor Id
           required: true
           schema:
-            type: string  
+            type: string
+            format: uuid
       requestBody:
         description: E-Service document
         required: true
@@ -602,18 +617,21 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
         - name: descriptorId
           in: path
           description: the descriptor Id
           required: true
           schema:
             type: string
+            format: uuid
         - name: documentId
           in: path
           description: the document id
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         '200':
           description: EService document metadata retrieved
@@ -647,18 +665,21 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
         - name: descriptorId
           in: path
           description: the descriptor Id
           required: true
           schema:
             type: string
+            format: uuid
         - name: documentId
           in: path
           description: the document id
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         '204':
           description: Document deleted.
@@ -692,18 +713,21 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
         - name: descriptorId
           in: path
           description: the descriptor Id
           required: true
           schema:
             type: string
+            format: uuid
         - name: documentId
           in: path
           description: the document id
           required: true
           schema:
             type: string
+            format: uuid
       requestBody:
         description: A payload containing the possible document updatable fields
         required: true
