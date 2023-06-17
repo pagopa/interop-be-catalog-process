@@ -16,7 +16,6 @@ import org.mongodb.scala.model.Projections.{computed, fields, include, excludeId
 import org.mongodb.scala.model.Sorts.ascending
 
 import scala.concurrent.{ExecutionContext, Future}
-import it.pagopa.interop.catalogmanagement.model.CatalogDocument
 import java.util.UUID
 
 object ReadModelQueries {
@@ -100,7 +99,7 @@ object ReadModelQueries {
 
   def getEServiceDocument(eServiceId: UUID, descriptorId: UUID, documentId: UUID)(
     readModel: ReadModelService
-  )(implicit ec: ExecutionContext): Future[Option[CatalogDocument]] = {
+  )(implicit ec: ExecutionContext): Future[Option[CatalogItem]] = {
     val filters = Filters.and(
       Filters.eq("data.id", eServiceId.toString),
       Filters.eq("data.descriptors.id", descriptorId.toString),
@@ -109,7 +108,7 @@ object ReadModelQueries {
         Filters.eq("data.descriptors.interface.id", documentId.toString)
       )
     )
-    readModel.findOne[CatalogDocument]("eservices", filters)
+    readModel.findOne[CatalogItem]("eservices", filters)
   }
 
   def getEService(

@@ -21,58 +21,6 @@ import scala.concurrent.{Future, ExecutionContext}
 
 class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestRouteTest {
 
-  "flatten e-service filter" should {
-    "filter properly" in {
-      val flattenServices = Seq(
-        FlatEService(
-          id = UUID.randomUUID(),
-          producerId = UUID.randomUUID(),
-          producerName = "test",
-          name = "test",
-          version = None,
-          state = Some(EServiceDescriptorState.PUBLISHED),
-          descriptorId = Some("1d"),
-          description = "",
-          agreement = None,
-          certifiedAttributes = Seq.empty
-        ),
-        FlatEService(
-          id = UUID.randomUUID(),
-          producerId = UUID.randomUUID(),
-          producerName = "test2",
-          name = "test2",
-          version = None,
-          state = Some(EServiceDescriptorState.SUSPENDED),
-          descriptorId = Some("2d"),
-          description = "",
-          agreement = None,
-          certifiedAttributes = Seq.empty
-        ),
-        FlatEService(
-          id = UUID.randomUUID(),
-          producerId = UUID.randomUUID(),
-          producerName = "test3",
-          name = "test3",
-          version = None,
-          state = Some(EServiceDescriptorState.SUSPENDED),
-          descriptorId = Some("3d"),
-          description = "",
-          agreement = None,
-          certifiedAttributes = Seq.empty
-        )
-      )
-
-      val published = EServiceDescriptorState.fromValue("PUBLISHED").toOption
-      flattenServices.filter(item => published.forall(item.state.contains)) should have size 1
-
-      val draft = EServiceDescriptorState.fromValue("DRAFT").toOption
-      flattenServices.filter(item => draft.forall(item.state.contains)) should have size 0
-
-      val suspended = EServiceDescriptorState.fromValue("SUSPENDED").toOption
-      flattenServices.filter(item => suspended.forall(item.state.contains)) should have size 2
-    }
-  }
-
   "EService creation" should {
 
     "succeed" in {
@@ -1878,6 +1826,157 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       Post() ~> service.createEServiceDocument(UUID.randomUUID().toString, UUID.randomUUID().toString, seed) ~> check {
         status shouldEqual StatusCodes.Forbidden
+      }
+    }
+  }
+  "Document retrieve" should {
+
+    "succeed if document is an interface" in {
+
+      val descriptorId = UUID.randomUUID()
+      val documentId   = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      val descriptor = SpecData.catalogDescriptor.copy(
+        id = descriptorId,
+        interface = Some(SpecData.catalogDocument.copy(id = documentId))
+      )
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor))
+
+      (mockReadModel
+        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
+        .expects("eservices", *, *, *)
+        .once()
+        .returns(Future.successful(Some(eService)))
+
+      Post() ~> service.getEServiceDocumentById(
+        SpecData.catalogItem.id.toString,
+        descriptorId.toString,
+        documentId.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+
+    "succeed if document is not an interface" in {
+
+      val descriptorId = UUID.randomUUID()
+      val documentId   = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      val descriptor =
+        SpecData.catalogDescriptor.copy(id = descriptorId, docs = Seq(SpecData.catalogDocument.copy(id = documentId)))
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor))
+
+      (mockReadModel
+        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
+        .expects("eservices", *, *, *)
+        .once()
+        .returns(Future.successful(Some(eService)))
+
+      Post() ~> service.getEServiceDocumentById(
+        SpecData.catalogItem.id.toString,
+        descriptorId.toString,
+        documentId.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+    "fail if EService does not exist" in {
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      (mockReadModel
+        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
+        .expects("eservices", *, *, *)
+        .once()
+        .returns(Future.successful(None))
+
+      Post() ~> service.getEServiceDocumentById(
+        UUID.randomUUID.toString,
+        UUID.randomUUID.toString,
+        UUID.randomUUID.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
+    "fail if EService Descriptor does not exist" in {
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      (mockReadModel
+        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
+        .expects("eservices", *, *, *)
+        .once()
+        .returns(Future.successful(Some(SpecData.catalogItem)))
+
+      Post() ~> service.getEServiceDocumentById(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID.toString,
+        UUID.randomUUID.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
+    "fail if Descriptor Document does not exist (No documents at all)" in {
+
+      val descriptorId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      val descriptor =
+        SpecData.catalogDescriptor.copy(id = descriptorId)
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor))
+
+      (mockReadModel
+        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
+        .expects("eservices", *, *, *)
+        .once()
+        .returns(Future.successful(Some(eService)))
+
+      Post() ~> service.getEServiceDocumentById(
+        SpecData.catalogItem.id.toString,
+        descriptorId.toString,
+        UUID.randomUUID.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
+    "fail if Descriptor Document does not exist (No document id found)" in {
+
+      val descriptorId = UUID.randomUUID()
+      val documentId   = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      val descriptor =
+        SpecData.catalogDescriptor.copy(id = descriptorId, docs = Seq(SpecData.catalogDocument.copy(id = documentId)))
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor))
+
+      (mockReadModel
+        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
+        .expects("eservices", *, *, *)
+        .once()
+        .returns(Future.successful(Some(eService)))
+
+      Post() ~> service.getEServiceDocumentById(
+        SpecData.catalogItem.id.toString,
+        descriptorId.toString,
+        UUID.randomUUID.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.NotFound
       }
     }
   }

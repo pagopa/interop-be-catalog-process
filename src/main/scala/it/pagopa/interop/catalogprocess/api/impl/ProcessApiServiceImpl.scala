@@ -3,7 +3,6 @@ package it.pagopa.interop.catalogprocess.api.impl
 import akka.http.scaladsl.marshalling.ToEntityMarshaller
 import akka.http.scaladsl.server.Directives.onComplete
 import akka.http.scaladsl.server.Route
-import cats.implicits.toTraverseOps
 import cats.syntax.all._
 import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
@@ -86,10 +85,8 @@ final case class ProcessApiServiceImpl(
     val result: Future[Unit] = for {
       organizationId <- getOrganizationIdFutureUUID(contexts)
       eServiceUuid   <- eServiceId.toFutureUUID
-      catalogItem    <- ReadModelQueries
-        .getEService(eServiceUuid)(readModel)
-      eService       <- catalogItem.toFuture(EServiceNotFound(eServiceId))
-      _              <- assertRequesterAllowed(eService.producerId)(organizationId)
+      catalogItem    <- getEService(eServiceUuid)(readModel, ec)
+      _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       result         <- catalogManagementService.deleteDraft(eServiceId, descriptorId)
     } yield result
 
@@ -182,18 +179,13 @@ final case class ProcessApiServiceImpl(
     val result: Future[Unit] = for {
       organizationId <- getOrganizationIdFutureUUID(contexts)
       eServiceUuid   <- eServiceId.toFutureUUID
-      catalogItem    <- ReadModelQueries
-        .getEService(eServiceUuid)(readModel)
-      eService       <- catalogItem.toFuture(EServiceNotFound(eServiceId))
-      apiEService = eService.toApi
-      _          <- assertRequesterAllowed(apiEService.producerId)(organizationId)
-      descriptor <- apiEService.descriptors
+      eService       <- getEService(eServiceUuid)(readModel, ec)
+      _              <- assertRequesterAllowed(eService.producerId)(organizationId)
+      descriptor     <- eService.descriptors
         .find(_.id.toString == descriptorId)
         .toFuture(EServiceDescriptorNotFound(eServiceId, descriptorId))
-      _          <- verifyPublicationEligibility(descriptor)
-      currentActiveDescriptor = apiEService.descriptors.find(d =>
-        d.state == EServiceDescriptorState.PUBLISHED
-      ) // Must be at most one
+      _              <- verifyPublicationEligibility(descriptor)
+      currentActiveDescriptor = eService.descriptors.find(d => d.state == readmodel.Published) // Must be at most one
       _ <- catalogManagementService.publishDescriptor(eServiceId, descriptorId)
       _ <- currentActiveDescriptor
         .map(oldDescriptor =>
@@ -205,7 +197,7 @@ final case class ProcessApiServiceImpl(
         )
         .sequence
       _ <- authorizationManagementService.updateStateOnClients(
-        apiEService.id,
+        eService.id,
         descriptor.id,
         AuthorizationManagementDependency.ClientComponentState.ACTIVE,
         descriptor.audience,
@@ -228,9 +220,7 @@ final case class ProcessApiServiceImpl(
 
     val result: Future[EService] = for {
       eServiceUuid <- eServiceId.toFutureUUID
-      catalogItem  <- ReadModelQueries
-        .getEService(eServiceUuid)(readModel)
-      eService     <- catalogItem.toFuture(EServiceNotFound(eServiceId))
+      eService     <- getEService(eServiceUuid)(readModel, ec)
     } yield eService.toApi
 
     onComplete(result) {
@@ -256,14 +246,12 @@ final case class ProcessApiServiceImpl(
     val result: Future[EService] = for {
       organizationId <- getOrganizationIdFutureUUID(contexts)
       eServiceUuid   <- eServiceId.toFutureUUID
-      catalogItem    <- ReadModelQueries
-        .getEService(eServiceUuid)(readModel)
-      eService       <- catalogItem.toFuture(EServiceNotFound(eServiceId))
-      _              <- assertRequesterAllowed(eService.producerId)(organizationId)
-      descriptor     <- eService.descriptors
+      catalogItem    <- getEService(eServiceUuid)(readModel, ec)
+      _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
+      descriptor     <- catalogItem.descriptors
         .find(_.id.toString == descriptorId)
         .toFuture(EServiceDescriptorNotFound(eServiceId, descriptorId))
-      updated        <- catalogManagementService.createEServiceDocument(eService.id, descriptor.id, managementSeed)
+      updated        <- catalogManagementService.createEServiceDocument(catalogItem.id, descriptor.id, managementSeed)
     } yield updated.toApi
 
     onComplete(result) {
@@ -280,14 +268,34 @@ final case class ProcessApiServiceImpl(
       s"Retrieving EService document $documentId for EService $eServiceId and descriptor $descriptorId"
     logger.info(operationLabel)
 
+    def getDocument(
+      catalogItem: Option[readmodel.CatalogItem],
+      descriptorId: String,
+      documentId: String
+    ): Option[readmodel.CatalogDocument] = {
+
+      def lookup(catalogDescriptor: readmodel.CatalogDescriptor): Option[readmodel.CatalogDocument]                 = {
+        val interface = catalogDescriptor.interface.fold(Seq.empty[readmodel.CatalogDocument])(doc => Seq(doc))
+        (interface ++: catalogDescriptor.docs).find(_.id.toString == documentId)
+      }
+      def getDescriptor(eService: readmodel.CatalogItem, descriptorId: String): Option[readmodel.CatalogDescriptor] =
+        eService.descriptors.find(_.id.toString == descriptorId)
+
+      for {
+        eService   <- catalogItem
+        descriptor <- getDescriptor(eService, descriptorId)
+        document   <- lookup(descriptor)
+      } yield document
+    }
+
     val result: Future[EServiceDoc] = for {
-      eServiceUuid    <- eServiceId.toFutureUUID
-      descriptorUuid  <- descriptorId.toFutureUUID
-      documentIdUuid  <- documentId.toFutureUUID
-      catalogItem     <- ReadModelQueries.getEService(eServiceUuid)(readModel)
-      _               <- catalogItem.toFuture(EServiceNotFound(eServiceId))
-      catalogDocument <- ReadModelQueries.getEServiceDocument(eServiceUuid, descriptorUuid, documentIdUuid)(readModel)
-      eServiceDoc     <- catalogDocument.toFuture(DescriptorDocumentNotFound(eServiceId, descriptorId, documentId))
+      eServiceUuid   <- eServiceId.toFutureUUID
+      descriptorUuid <- descriptorId.toFutureUUID
+      documentIdUuid <- documentId.toFutureUUID
+      catalogItem    <- ReadModelQueries.getEServiceDocument(eServiceUuid, descriptorUuid, documentIdUuid)(readModel)
+      eServiceDoc    <- getDocument(catalogItem, descriptorId, documentId).toFuture(
+        DescriptorDocumentNotFound(eServiceId, descriptorId, documentId)
+      )
     } yield eServiceDoc.toApi
 
     onComplete(result) {
@@ -306,11 +314,9 @@ final case class ProcessApiServiceImpl(
     val result: Future[EServiceDescriptor] = for {
       organizationId            <- getOrganizationIdFutureUUID(contexts)
       eServiceUuid              <- eServiceId.toFutureUUID
-      catalogItem               <- ReadModelQueries
-        .getEService(eServiceUuid)(readModel)
-      eService                  <- catalogItem.toFuture(EServiceNotFound(eServiceId))
-      _                         <- assertRequesterAllowed(eService.producerId)(organizationId)
-      _                         <- hasNotDraftDescriptor(eService).toFuture
+      catalogItem               <- getEService(eServiceUuid)(readModel, ec)
+      _                         <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
+      _                         <- hasNotDraftDescriptor(catalogItem).toFuture
       createdEServiceDescriptor <- catalogManagementService.createDescriptor(
         eServiceId,
         eServiceDescriptorSeed.toDependency
@@ -337,11 +343,9 @@ final case class ProcessApiServiceImpl(
     val result: Future[EService] = for {
       organizationId  <- getOrganizationIdFutureUUID(contexts)
       eServiceUuid    <- eServiceId.toFutureUUID
-      catalogItem     <- ReadModelQueries
-        .getEService(eServiceUuid)(readModel)
-      eService        <- catalogItem.toFuture(EServiceNotFound(eServiceId)).map(_.toApi)
-      _               <- assertRequesterAllowed(eService.producerId)(organizationId)
-      descriptor      <- eService.descriptors
+      catalogItem     <- getEService(eServiceUuid)(readModel, ec)
+      _               <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
+      descriptor      <- catalogItem.descriptors
         .find(_.id.toString == descriptorId)
         .toFuture(EServiceDescriptorNotFound(eServiceId, descriptorId))
       _               <- isDraftDescriptor(descriptor)
@@ -368,11 +372,9 @@ final case class ProcessApiServiceImpl(
     val result = for {
       organizationId  <- getOrganizationIdFutureUUID(contexts)
       eServiceUuid    <- eServiceId.toFutureUUID
-      catalogItem     <- ReadModelQueries
-        .getEService(eServiceUuid)(readModel)
-      eService        <- catalogItem.toFuture(EServiceNotFound(eServiceId))
-      _               <- assertRequesterAllowed(eService.producerId)(organizationId)
-      _               <- eServiceCanBeUpdated(eService).toFuture
+      catalogItem     <- getEService(eServiceUuid)(readModel, ec)
+      _               <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
+      _               <- eServiceCanBeUpdated(catalogItem).toFuture
       updatedEService <- catalogManagementService.updateEServiceById(eServiceId, updateEServiceSeed.toDependency)
     } yield updatedEService.toApi
 
@@ -447,10 +449,8 @@ final case class ProcessApiServiceImpl(
       eServiceUuid   <- eServiceId.toFutureUUID
       descriptorUuid <- descriptorId.toFutureUUID
       documentUuid   <- documentId.toFutureUUID
-      catalogItem    <- ReadModelQueries
-        .getEService(eServiceUuid)(readModel)
-      eService       <- catalogItem.toFuture(EServiceNotFound(eServiceId))
-      _              <- assertRequesterAllowed(eService.producerId)(organizationId)
+      catalogItem    <- getEService(eServiceUuid)(readModel, ec)
+      _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       result         <- catalogManagementService.deleteEServiceDocument(
         eServiceUuid.toString,
         descriptorUuid.toString,
@@ -484,10 +484,8 @@ final case class ProcessApiServiceImpl(
       eServiceUuid   <- eServiceId.toFutureUUID
       descriptorUuid <- descriptorId.toFutureUUID
       documentUuid   <- documentId.toFutureUUID
-      catalogItem    <- ReadModelQueries
-        .getEService(eServiceUuid)(readModel)
-      eService       <- catalogItem.toFuture(EServiceNotFound(eServiceId))
-      _              <- assertRequesterAllowed(eService.producerId)(organizationId)
+      catalogItem    <- getEService(eServiceUuid)(readModel, ec)
+      _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       result         <- catalogManagementService
         .updateEServiceDocument(eServiceId, descriptorUuid.toString, documentUuid.toString, clientSeed)
         .map(_.toApi)
@@ -510,10 +508,8 @@ final case class ProcessApiServiceImpl(
       organizationId <- getOrganizationIdFutureUUID(contexts)
       eServiceUuid   <- eServiceId.toFutureUUID
       descriptorUuid <- descriptorId.toFutureUUID
-      catalogItem    <- ReadModelQueries
-        .getEService(eServiceUuid)(readModel)
-      eService       <- catalogItem.toFuture(EServiceNotFound(eServiceId))
-      _              <- assertRequesterAllowed(eService.producerId)(organizationId)
+      catalogItem    <- getEService(eServiceUuid)(readModel, ec)
+      _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       clonedEService <- catalogManagementService.cloneEService(eServiceUuid, descriptorUuid)
     } yield clonedEService.toApi
 
@@ -535,8 +531,7 @@ final case class ProcessApiServiceImpl(
       val result: Future[Unit] = for {
         organizationId <- getOrganizationIdFutureUUID(contexts)
         eServiceUuid   <- eServiceId.toFutureUUID
-        catalogItem    <- ReadModelQueries
-          .getEService(eServiceUuid)(readModel)
+        catalogItem    <- ReadModelQueries.getEService(eServiceUuid)(readModel)
         eService       <- catalogItem.toFuture(EServiceNotFound(eServiceId))
         _              <- assertRequesterAllowed(eService.producerId)(organizationId)
         result         <- catalogManagementService.deleteEService(eServiceId)
@@ -574,17 +569,15 @@ final case class ProcessApiServiceImpl(
       organizationId <- getOrganizationIdFutureUUID(contexts)
       eServiceUuid   <- eServiceId.toFutureUUID
       descriptorUuid <- descriptorId.toFutureUUID
-      catalogItem    <- ReadModelQueries
-        .getEService(eServiceUuid)(readModel)
-      eService       <- catalogItem.toFuture(EServiceNotFound(eServiceId))
-      _              <- assertRequesterAllowed(eService.producerId)(organizationId)
-      descriptor     <- eService.descriptors
+      catalogItem    <- getEService(eServiceUuid)(readModel, ec)
+      _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
+      descriptor     <- catalogItem.descriptors
         .find(_.id == descriptorUuid)
         .toFuture(EServiceDescriptorNotFound(eServiceId, descriptorId))
       _              <- descriptorCanBeActivated(descriptor)
-      _              <- activateDescriptor(eService, descriptor)
+      _              <- activateDescriptor(catalogItem, descriptor)
       _              <- authorizationManagementService.updateStateOnClients(
-        eService.id,
+        catalogItem.id,
         descriptor.id,
         AuthorizationManagementDependency.ClientComponentState.ACTIVE,
         descriptor.audience,
@@ -608,17 +601,15 @@ final case class ProcessApiServiceImpl(
       organizationId <- getOrganizationIdFutureUUID(contexts)
       eServiceUuid   <- eServiceId.toFutureUUID
       descriptorUuid <- descriptorId.toFutureUUID
-      catalogItem    <- ReadModelQueries
-        .getEService(eServiceUuid)(readModel)
-      eService       <- catalogItem.toFuture(EServiceNotFound(eServiceId))
-      _              <- assertRequesterAllowed(eService.producerId)(organizationId)
-      descriptor     <- eService.descriptors
+      catalogItem    <- getEService(eServiceUuid)(readModel, ec)
+      _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
+      descriptor     <- catalogItem.descriptors
         .find(_.id == descriptorUuid)
         .toFuture(EServiceDescriptorNotFound(eServiceId, descriptorId))
       _              <- descriptorCanBeSuspended(descriptor)
       _              <- catalogManagementService.suspendDescriptor(eServiceId, descriptorId)
       _              <- authorizationManagementService.updateStateOnClients(
-        eService.id,
+        catalogItem.id,
         descriptor.id,
         AuthorizationManagementDependency.ClientComponentState.INACTIVE,
         descriptor.audience,
@@ -649,18 +640,28 @@ final case class ProcessApiServiceImpl(
       getEServiceConsumersResponse[EServiceConsumers](operationLabel)(getEServiceConsumers200)
     }
   }
+
+  private def getEService(
+    eServiceId: UUID
+  )(implicit readModel: ReadModelService, ec: ExecutionContext): Future[readmodel.CatalogItem] = for {
+    catalogItem <- ReadModelQueries.getEService(eServiceId)(readModel)
+    eService    <- catalogItem.toFuture(EServiceNotFound(eServiceId.toString))
+  } yield eService
 }
 
 object ProcessApiServiceImpl {
-  def verifyPublicationEligibility(descriptor: EServiceDescriptor)(implicit ec: ExecutionContext): Future[Unit] =
+  def verifyPublicationEligibility(
+    descriptor: readmodel.CatalogDescriptor
+  )(implicit ec: ExecutionContext): Future[Unit] =
     isDraftDescriptor(descriptor) >> descriptor.interface
       .toFuture(EServiceDescriptorWithoutInterface(descriptor.id.toString))
       .void
 
-  def isDraftDescriptor(descriptor: EServiceDescriptor): Future[EServiceDescriptor] = descriptor.state match {
-    case EServiceDescriptorState.DRAFT => Future.successful(descriptor)
-    case _ => Future.failed(NotValidDescriptor(descriptor.id.toString, descriptor.state.toString))
-  }
+  def isDraftDescriptor(descriptor: readmodel.CatalogDescriptor): Future[readmodel.CatalogDescriptor] =
+    descriptor.state match {
+      case readmodel.Draft => Future.successful(descriptor)
+      case _               => Future.failed(NotValidDescriptor(descriptor.id.toString, descriptor.state.toString))
+    }
 
   private def assertRequesterAllowed(resourceId: UUID)(requesterId: UUID)(implicit ec: ExecutionContext): Future[Unit] =
     Future.failed(GenericComponentErrors.OperationForbidden).unlessA(resourceId == requesterId)

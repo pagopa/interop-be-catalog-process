@@ -9,7 +9,8 @@ import java.util.UUID
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext}
 import scala.util.{Failure, Try}
-import it.pagopa.interop.catalogprocess.model._
+import it.pagopa.interop.catalogmanagement.model._
+import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
 
 class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration {
 
@@ -17,7 +18,7 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
 
   "Publication" must {
     "be eligible" in {
-      val descriptor = EServiceDescriptor(
+      val descriptor = CatalogDescriptor(
         id = UUID.randomUUID(),
         version = "1",
         description = None,
@@ -26,25 +27,32 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
         dailyCallsPerConsumer = 0,
         dailyCallsTotal = 0,
         interface = Some(
-          EServiceDoc(
+          CatalogDocument(
             id = UUID.randomUUID(),
             name = "fileName",
             contentType = "contentType",
             prettyName = "description",
-            path = "path"
+            path = "path",
+            checksum = "checksum",
+            uploadDate = OffsetDateTimeSupplier.get().minusDays(10)
           )
         ),
         docs = Seq.empty,
-        state = EServiceDescriptorState.DRAFT,
-        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
-        serverUrls = Nil
+        state = Draft,
+        agreementApprovalPolicy = Some(Automatic),
+        serverUrls = Nil,
+        createdAt = OffsetDateTimeSupplier.get().minusDays(10),
+        publishedAt = None,
+        deprecatedAt = None,
+        suspendedAt = None,
+        archivedAt = None
       )
 
       Await.result(ProcessApiServiceImpl.verifyPublicationEligibility(descriptor), Duration.Inf) shouldBe ()
     }
 
     "be denied if descriptor is not in Draft status" in {
-      val descriptor = EServiceDescriptor(
+      val descriptor = CatalogDescriptor(
         id = UUID.randomUUID(),
         version = "1",
         description = None,
@@ -53,25 +61,32 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
         dailyCallsPerConsumer = 0,
         dailyCallsTotal = 0,
         interface = Some(
-          EServiceDoc(
+          CatalogDocument(
             id = UUID.randomUUID(),
             name = "fileName",
             contentType = "contentType",
             prettyName = "description",
-            path = "path"
+            path = "path",
+            checksum = "checksum",
+            uploadDate = OffsetDateTimeSupplier.get().minusDays(10)
           )
         ),
         docs = Seq.empty,
-        state = EServiceDescriptorState.PUBLISHED,
-        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
-        serverUrls = Nil
+        state = Published,
+        agreementApprovalPolicy = Some(Automatic),
+        serverUrls = Nil,
+        createdAt = OffsetDateTimeSupplier.get().minusDays(10),
+        publishedAt = None,
+        deprecatedAt = None,
+        suspendedAt = None,
+        archivedAt = None
       )
 
       Try(ProcessApiServiceImpl.verifyPublicationEligibility(descriptor).futureValue) shouldBe a[Failure[_]]
     }
 
     "be denied if descriptor has no interface" in {
-      val descriptor = EServiceDescriptor(
+      val descriptor = CatalogDescriptor(
         id = UUID.randomUUID(),
         version = "1",
         description = None,
@@ -81,9 +96,14 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
         dailyCallsTotal = 0,
         interface = None,
         docs = Seq.empty,
-        state = EServiceDescriptorState.DRAFT,
-        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
-        serverUrls = Nil
+        state = Draft,
+        agreementApprovalPolicy = Some(Automatic),
+        serverUrls = Nil,
+        createdAt = OffsetDateTimeSupplier.get().minusDays(10),
+        publishedAt = None,
+        deprecatedAt = None,
+        suspendedAt = None,
+        archivedAt = None
       )
 
       Try(ProcessApiServiceImpl.verifyPublicationEligibility(descriptor).futureValue) shouldBe a[Failure[_]]
