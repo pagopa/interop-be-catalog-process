@@ -12,7 +12,7 @@ object SpecData {
     name = "CatalogItemName",
     description = "CatalogItemDescription",
     technology = CatalogManagement.Rest,
-    attributes = CatalogManagement.CatalogAttributes(Seq.empty, Seq.empty, Seq.empty),
+    attributes = None,
     descriptors = Seq.empty,
     createdAt = OffsetDateTimeSupplier.get()
   )

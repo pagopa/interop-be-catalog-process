@@ -37,21 +37,20 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
   override def beforeAll(): Unit = {
 
-    val processApi =
-      new ProcessApi(
-        ProcessApiServiceImpl(
-          catalogManagementService = catalogManagementService,
-          attributeRegistryManagementService = attributeRegistryManagementService,
-          agreementManagementService = agreementManagementService,
-          authorizationManagementService = authorizationManagementService,
-          tenantManagementService = tenantManagementService,
-          fileManager = fileManager,
-          readModel = readModel,
-          jwtReader = jwtReader
-        ),
-        ProcessApiMarshallerImpl,
-        wrappingDirective
-      )
+    val processApi = new ProcessApi(
+      ProcessApiServiceImpl(
+        catalogManagementService = catalogManagementService,
+        attributeRegistryManagementService = attributeRegistryManagementService,
+        agreementManagementService = agreementManagementService,
+        authorizationManagementService = authorizationManagementService,
+        tenantManagementService = tenantManagementService,
+        fileManager = fileManager,
+        readModel = readModel,
+        jwtReader = jwtReader
+      ),
+      ProcessApiMarshallerImpl,
+      wrappingDirective
+    )
 
     controller = Some(new Controller(mockHealthApi, processApi))
 
@@ -125,64 +124,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       val catalogItems: Seq[CatalogItem] = Seq.empty
 
-      val apiSeed: EServiceSeed = EServiceSeed(
-        name = "MyService",
-        description = "My Service",
-        technology = EServiceTechnology.REST,
-        attributes = AttributesSeed(
-          certified = List(
-            AttributeSeed(
-              single = Some(AttributeValueSeed(attributeId1, explicitAttributeVerification = false)),
-              group = None
-            )
-          ),
-          declared = List(
-            AttributeSeed(
-              single = None,
-              group = Some(List(AttributeValueSeed(attributeId2, explicitAttributeVerification = false)))
-            )
-          ),
-          verified = List(
-            AttributeSeed(
-              single = Some(AttributeValueSeed(attributeId3, explicitAttributeVerification = true)),
-              group = None
-            )
-          )
-        )
-      )
+      val apiSeed: EServiceSeed =
+        EServiceSeed(name = "MyService", description = "My Service", technology = EServiceTechnology.REST)
 
       val seed = CatalogManagementDependency.EServiceSeed(
         producerId = AdminMockAuthenticator.requesterId,
         name = "MyService",
         description = "My Service",
-        technology = CatalogManagementDependency.EServiceTechnology.REST,
-        attributes = CatalogManagementDependency.Attributes(
-          certified = List(
-            CatalogManagementDependency
-              .Attribute(
-                single =
-                  Some(CatalogManagementDependency.AttributeValue(attributeId1, explicitAttributeVerification = false)),
-                group = None
-              )
-          ),
-          declared = List(
-            CatalogManagementDependency
-              .Attribute(
-                single = None,
-                group = Some(
-                  List(CatalogManagementDependency.AttributeValue(attributeId2, explicitAttributeVerification = false))
-                )
-              )
-          ),
-          verified = List(
-            CatalogManagementDependency
-              .Attribute(
-                single =
-                  Some(CatalogManagementDependency.AttributeValue(attributeId3, explicitAttributeVerification = true)),
-                group = None
-              )
-          )
-        )
+        technology = CatalogManagementDependency.EServiceTechnology.REST
       )
 
       val eservice = CatalogManagementDependency.EService(
@@ -191,7 +140,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         name = seed.name,
         description = seed.description,
         technology = seed.technology,
-        attributes = seed.attributes,
         descriptors = List(
           CatalogManagementDependency.EServiceDescriptor(
             id = UUID.randomUUID(),
@@ -205,7 +153,35 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
             dailyCallsPerConsumer = 1000,
             dailyCallsTotal = 0,
             agreementApprovalPolicy = AUTOMATIC,
-            serverUrls = Nil
+            serverUrls = Nil,
+            attributes = CatalogManagementDependency.Attributes(
+              certified = List(
+                CatalogManagementDependency.Attribute(
+                  single = Some(
+                    CatalogManagementDependency.AttributeValue(attributeId1, explicitAttributeVerification = false)
+                  ),
+                  group = None
+                )
+              ),
+              declared = List(
+                CatalogManagementDependency.Attribute(
+                  single = None,
+                  group = Some(
+                    List(
+                      CatalogManagementDependency.AttributeValue(attributeId2, explicitAttributeVerification = false)
+                    )
+                  )
+                )
+              ),
+              verified = List(
+                CatalogManagementDependency.Attribute(
+                  single = Some(
+                    CatalogManagementDependency.AttributeValue(attributeId3, explicitAttributeVerification = true)
+                  ),
+                  group = None
+                )
+              )
+            )
           )
         )
       )
@@ -240,26 +216,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         name = seed.name,
         description = seed.description,
         technology = convertToApiTechnology(seed.technology),
-        attributes = Attributes(
-          certified = Seq(
-            Attribute(
-              single = Some(AttributeValue(id = attributeId1, explicitAttributeVerification = false)),
-              group = None
-            )
-          ),
-          declared = Seq(
-            Attribute(
-              single = None,
-              group = Some(Seq(AttributeValue(id = attributeId2, explicitAttributeVerification = false)))
-            )
-          ),
-          verified = Seq(
-            Attribute(
-              single = Some(AttributeValue(id = attributeId3, explicitAttributeVerification = true)),
-              group = None
-            )
-          )
-        ),
         descriptors = eservice.descriptors.map(Converter.convertToApiDescriptor)
       )
 
@@ -279,64 +235,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       val catalogItems: Seq[CatalogItem] = Seq(SpecData.catalogItem)
 
-      val apiSeed: EServiceSeed = EServiceSeed(
-        name = "MyService",
-        description = "My Service",
-        technology = EServiceTechnology.REST,
-        attributes = AttributesSeed(
-          certified = List(
-            AttributeSeed(
-              single = Some(AttributeValueSeed(attributeId1, explicitAttributeVerification = false)),
-              group = None
-            )
-          ),
-          declared = List(
-            AttributeSeed(
-              single = None,
-              group = Some(List(AttributeValueSeed(attributeId2, explicitAttributeVerification = false)))
-            )
-          ),
-          verified = List(
-            AttributeSeed(
-              single = Some(AttributeValueSeed(attributeId3, explicitAttributeVerification = true)),
-              group = None
-            )
-          )
-        )
-      )
+      val apiSeed: EServiceSeed =
+        EServiceSeed(name = "MyService", description = "My Service", technology = EServiceTechnology.REST)
 
       val seed = CatalogManagementDependency.EServiceSeed(
         producerId = AdminMockAuthenticator.requesterId,
         name = "MyService",
         description = "My Service",
-        technology = CatalogManagementDependency.EServiceTechnology.REST,
-        attributes = CatalogManagementDependency.Attributes(
-          certified = List(
-            CatalogManagementDependency
-              .Attribute(
-                single =
-                  Some(CatalogManagementDependency.AttributeValue(attributeId1, explicitAttributeVerification = false)),
-                group = None
-              )
-          ),
-          declared = List(
-            CatalogManagementDependency
-              .Attribute(
-                single = None,
-                group = Some(
-                  List(CatalogManagementDependency.AttributeValue(attributeId2, explicitAttributeVerification = false))
-                )
-              )
-          ),
-          verified = List(
-            CatalogManagementDependency
-              .Attribute(
-                single =
-                  Some(CatalogManagementDependency.AttributeValue(attributeId3, explicitAttributeVerification = true)),
-                group = None
-              )
-          )
-        )
+        technology = CatalogManagementDependency.EServiceTechnology.REST
       )
 
       val eservice = CatalogManagementDependency.EService(
@@ -345,7 +251,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         name = seed.name,
         description = seed.description,
         technology = seed.technology,
-        attributes = seed.attributes,
         descriptors = List(
           CatalogManagementDependency.EServiceDescriptor(
             id = UUID.randomUUID(),
@@ -359,7 +264,38 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
             dailyCallsPerConsumer = 1000,
             dailyCallsTotal = 0,
             agreementApprovalPolicy = AUTOMATIC,
-            serverUrls = Nil
+            serverUrls = Nil,
+            attributes = CatalogManagementDependency.Attributes(
+              certified = List(
+                CatalogManagementDependency
+                  .Attribute(
+                    single = Some(
+                      CatalogManagementDependency.AttributeValue(attributeId1, explicitAttributeVerification = false)
+                    ),
+                    group = None
+                  )
+              ),
+              declared = List(
+                CatalogManagementDependency
+                  .Attribute(
+                    single = None,
+                    group = Some(
+                      List(
+                        CatalogManagementDependency.AttributeValue(attributeId2, explicitAttributeVerification = false)
+                      )
+                    )
+                  )
+              ),
+              verified = List(
+                CatalogManagementDependency
+                  .Attribute(
+                    single = Some(
+                      CatalogManagementDependency.AttributeValue(attributeId3, explicitAttributeVerification = true)
+                    ),
+                    group = None
+                  )
+              )
+            )
           )
         )
       )
@@ -402,18 +338,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val eServiceUuid = eService.id
       val eServiceId   = eServiceUuid.toString
 
-      val eServiceSeed = UpdateEServiceSeed(
-        name = "newName",
-        description = "newDescription",
-        technology = EServiceTechnology.REST,
-        attributes = AttributesSeed(Nil, Nil, Nil)
-      )
+      val eServiceSeed =
+        UpdateEServiceSeed(name = "newName", description = "newDescription", technology = EServiceTechnology.REST)
 
       val updatedEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
         name = "newName",
         description = "newDescription",
-        technology = eService.technology,
-        attributes = eService.attributes
+        technology = eService.technology
       )
 
       val updatedEService = CatalogManagementDependency.EService(
@@ -422,7 +353,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         name = "newName",
         description = "newDescription",
         technology = eService.technology,
-        attributes = eService.attributes,
         descriptors = Seq(descriptor)
       )
 
@@ -454,18 +384,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val eServiceUuid = eService.id
       val eServiceId   = eServiceUuid.toString
 
-      val eServiceSeed = UpdateEServiceSeed(
-        name = "newName",
-        description = "newDescription",
-        technology = EServiceTechnology.REST,
-        attributes = AttributesSeed(Nil, Nil, Nil)
-      )
+      val eServiceSeed =
+        UpdateEServiceSeed(name = "newName", description = "newDescription", technology = EServiceTechnology.REST)
 
       val updatedEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
         name = "newName",
         description = "newDescription",
-        technology = eService.technology,
-        attributes = eService.attributes
+        technology = eService.technology
       )
 
       val updatedEService = CatalogManagementDependency.EService(
@@ -474,7 +399,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         name = "newName",
         description = "newDescription",
         technology = eService.technology,
-        attributes = eService.attributes,
         descriptors = Seq.empty
       )
 
@@ -507,18 +431,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       val eServiceUuid = eService.id
       val eServiceId   = eServiceUuid.toString
 
-      val eServiceSeed = UpdateEServiceSeed(
-        name = "newName",
-        description = "newDescription",
-        technology = EServiceTechnology.REST,
-        attributes = AttributesSeed(Nil, Nil, Nil)
-      )
+      val eServiceSeed =
+        UpdateEServiceSeed(name = "newName", description = "newDescription", technology = EServiceTechnology.REST)
 
       val updatedEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
         name = "newName",
         description = "newDescription",
-        technology = eService.technology,
-        attributes = eService.attributes
+        technology = eService.technology
       )
 
       val updatedEService = CatalogManagementDependency.EService(
@@ -527,7 +446,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         name = "newName",
         description = "newDescription",
         technology = eService.technology,
-        attributes = eService.attributes,
         descriptors = Seq(descriptor)
       )
 
@@ -554,12 +472,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
     }
 
     "fail if requester is not the Producer" in {
-      val seed = UpdateEServiceSeed(
-        name = "newName",
-        description = "newDescription",
-        technology = EServiceTechnology.REST,
-        attributes = AttributesSeed(Nil, Nil, Nil)
-      )
+      val seed =
+        UpdateEServiceSeed(name = "newName", description = "newDescription", technology = EServiceTechnology.REST)
 
       failOnRequesterNotProducer(id => request(s"eservices/$id", HttpMethods.PUT, Some(seed.toJson.toString)))
     }
@@ -624,7 +538,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         voucherLifespan = 60,
         dailyCallsPerConsumer = 0,
         dailyCallsTotal = 0,
-        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
       failOnRequesterNotProducer(id =>
@@ -643,7 +558,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         voucherLifespan = 60,
         dailyCallsPerConsumer = 0,
         dailyCallsTotal = 0,
-        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
       failOnRequesterNotProducer(id =>
@@ -1204,7 +1120,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         dailyCallsPerConsumer = 1000,
         dailyCallsTotal = 0,
         agreementApprovalPolicy = AUTOMATIC,
-        serverUrls = Nil
+        serverUrls = Nil,
+        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil)
       )
 
       val otherDescriptor = CatalogManagementDependency.EServiceDescriptor(
@@ -1219,7 +1136,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         dailyCallsPerConsumer = 1000,
         dailyCallsTotal = 0,
         agreementApprovalPolicy = AUTOMATIC,
-        serverUrls = Nil
+        serverUrls = Nil,
+        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil)
       )
 
       val eservice = CatalogManagementDependency.EService(
@@ -1228,7 +1146,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         name = "Name",
         description = "Description",
         technology = CatalogManagementDependency.EServiceTechnology.REST,
-        attributes = CatalogManagementDependency.Attributes(certified = Nil, verified = Nil, declared = Nil),
         descriptors = List(draftDescriptor, otherDescriptor)
       )
 
@@ -1263,7 +1180,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         dailyCallsPerConsumer = 1000,
         dailyCallsTotal = 0,
         agreementApprovalPolicy = AUTOMATIC,
-        serverUrls = Nil
+        serverUrls = Nil,
+        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil)
       )
 
       val eservice = CatalogManagementDependency.EService(
@@ -1272,7 +1190,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         name = "Name",
         description = "Description",
         technology = CatalogManagementDependency.EServiceTechnology.REST,
-        attributes = CatalogManagementDependency.Attributes(certified = Nil, verified = Nil, declared = Nil),
         descriptors = List(draftDescriptor)
       )
 
@@ -1362,7 +1279,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       name = "name",
       description = "description",
       technology = CatalogManagementDependency.EServiceTechnology.REST,
-      attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil),
       descriptors = Nil
     )
 

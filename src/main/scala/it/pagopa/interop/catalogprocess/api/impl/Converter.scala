@@ -20,7 +20,6 @@ object Converter {
     name = eService.name,
     description = eService.description,
     technology = convertToApiTechnology(eService.technology),
-    attributes = convertToApiAttributes(eService.attributes),
     descriptors = eService.descriptors.map(convertToApiDescriptor)
   )
 
@@ -30,7 +29,6 @@ object Converter {
     name = eService.name,
     description = eService.description,
     technology = convertToApiTechnology(eService.technology),
-    attributes = convertToApiAttributes(eService.attributes),
     descriptors = eService.descriptors.map(convertToApiDescriptor)
   )
 
@@ -88,7 +86,8 @@ object Converter {
       publishedAt = descriptor.publishedAt,
       suspendedAt = descriptor.suspendedAt,
       deprecatedAt = descriptor.deprecatedAt,
-      archivedAt = descriptor.archivedAt
+      archivedAt = descriptor.archivedAt,
+      attributes = convertToApiAttributes(descriptor.attributes)
     )
 
   def convertToApiEServiceDoc(document: readmodel.CatalogDocument): EServiceDoc = EServiceDoc(
@@ -141,7 +140,8 @@ object Converter {
       publishedAt = descriptor.publishedAt,
       suspendedAt = descriptor.suspendedAt,
       deprecatedAt = descriptor.deprecatedAt,
-      archivedAt = descriptor.archivedAt
+      archivedAt = descriptor.archivedAt,
+      attributes = convertToApiAttributes(descriptor.attributes)
     )
 
   def convertToApiEserviceDoc(document: CatalogManagementDependency.EServiceDoc): EServiceDoc = EServiceDoc(
@@ -183,8 +183,7 @@ object Converter {
       producerId = producerId,
       name = eServiceSeed.name,
       description = eServiceSeed.description,
-      technology = convertFromApiTechnology(eServiceSeed.technology),
-      attributes = convertToCatalogClientAttributes(eServiceSeed.attributes)
+      technology = convertFromApiTechnology(eServiceSeed.technology)
     )
 
   def convertToClientEServiceDescriptorSeed(
@@ -196,7 +195,8 @@ object Converter {
       voucherLifespan = descriptor.voucherLifespan,
       dailyCallsPerConsumer = descriptor.dailyCallsPerConsumer,
       dailyCallsTotal = descriptor.dailyCallsTotal,
-      agreementApprovalPolicy = convertFromApiAgreementApprovalPolicy(descriptor.agreementApprovalPolicy)
+      agreementApprovalPolicy = convertFromApiAgreementApprovalPolicy(descriptor.agreementApprovalPolicy),
+      attributes = convertToCatalogClientAttributes(descriptor.attributes)
     )
 
   def convertToClientUpdateEServiceSeed(
@@ -204,8 +204,7 @@ object Converter {
   ): CatalogManagementDependency.UpdateEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
     name = eServiceSeed.name,
     description = eServiceSeed.description,
-    technology = convertFromApiTechnology(eServiceSeed.technology),
-    attributes = convertToCatalogClientAttributes(eServiceSeed.attributes)
+    technology = convertFromApiTechnology(eServiceSeed.technology)
   )
 
   def convertToManagementEServiceDescriptorDocumentSeed(
@@ -245,7 +244,8 @@ object Converter {
       dailyCallsPerConsumer = seed.dailyCallsPerConsumer,
       dailyCallsTotal = seed.dailyCallsTotal,
       state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
-      agreementApprovalPolicy = convertFromApiAgreementApprovalPolicy(seed.agreementApprovalPolicy)
+      agreementApprovalPolicy = convertFromApiAgreementApprovalPolicy(seed.agreementApprovalPolicy),
+      attributes = convertToCatalogClientAttributes(seed.attributes)
     )
 
   def convertToApiDescriptorState(
@@ -337,7 +337,6 @@ object Converter {
       name = eService.name,
       description = eService.description,
       technology = eService.technology.toApi,
-      attributes = eService.attributes.toApi,
       descriptors = eService.descriptors.map(_.toApi)
     )
   }
@@ -417,7 +416,8 @@ object Converter {
       publishedAt = descriptor.publishedAt,
       suspendedAt = descriptor.suspendedAt,
       deprecatedAt = descriptor.deprecatedAt,
-      archivedAt = descriptor.archivedAt
+      archivedAt = descriptor.archivedAt,
+      attributes = descriptor.attributes.toApi
     )
   }
 
@@ -437,7 +437,6 @@ object Converter {
       name = item.name,
       description = item.description,
       technology = item.technology.toApi,
-      attributes = item.attributes.toApi,
       descriptors = item.descriptors.map(_.toApi)
     )
   }
@@ -495,7 +494,8 @@ object Converter {
       publishedAt = descriptor.publishedAt,
       suspendedAt = descriptor.suspendedAt,
       deprecatedAt = descriptor.deprecatedAt,
-      archivedAt = descriptor.archivedAt
+      archivedAt = descriptor.archivedAt,
+      attributes = descriptor.attributes.toApi
     )
   }
 
