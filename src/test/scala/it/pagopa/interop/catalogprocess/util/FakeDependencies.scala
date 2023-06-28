@@ -92,8 +92,6 @@ object FakeDependencies {
         agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
         serverUrls = Nil,
         attributes = Attributes(Nil, Nil, Nil)
-        serverUrls = Nil,
-        attributes = Attributes(Nil, Nil, Nil)
       )
     )
 
@@ -154,8 +152,6 @@ object FakeDependencies {
             docs = Seq.empty,
             state = EServiceDescriptorState.PUBLISHED,
             agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
-            serverUrls = Nil,
-            attributes = Attributes(Nil, Nil, Nil)
             serverUrls = Nil,
             attributes = Attributes(Nil, Nil, Nil)
           )

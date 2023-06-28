@@ -233,14 +233,12 @@ object Converter {
       dailyCallsPerConsumer = descriptor.dailyCallsPerConsumer,
       dailyCallsTotal = descriptor.dailyCallsTotal,
       agreementApprovalPolicy = descriptor.agreementApprovalPolicy.toApi,
+      attributes = descriptor.attributes.toApi,
       serverUrls = descriptor.serverUrls,
       publishedAt = descriptor.publishedAt,
       suspendedAt = descriptor.suspendedAt,
       deprecatedAt = descriptor.deprecatedAt,
-      archivedAt = descriptor.archivedAt,
-      attributes = descriptor.attributes.toApi
-      archivedAt = descriptor.archivedAt,
-      attributes = descriptor.attributes.toApi
+      archivedAt = descriptor.archivedAt
     )
   }
 
@@ -317,8 +315,6 @@ object Converter {
       publishedAt = descriptor.publishedAt,
       suspendedAt = descriptor.suspendedAt,
       deprecatedAt = descriptor.deprecatedAt,
-      archivedAt = descriptor.archivedAt,
-      attributes = descriptor.attributes.toApi
       archivedAt = descriptor.archivedAt,
       attributes = descriptor.attributes.toApi
     )
