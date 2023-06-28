@@ -45,7 +45,8 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
         publishedAt = None,
         deprecatedAt = None,
         suspendedAt = None,
-        archivedAt = None
+        archivedAt = None,
+        attributes = CatalogAttributes.empty
       )
 
       Await.result(ProcessApiServiceImpl.verifyPublicationEligibility(descriptor), Duration.Inf) shouldBe ()
@@ -79,7 +80,8 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
         publishedAt = None,
         deprecatedAt = None,
         suspendedAt = None,
-        archivedAt = None
+        archivedAt = None,
+        attributes = CatalogAttributes.empty
       )
 
       Try(ProcessApiServiceImpl.verifyPublicationEligibility(descriptor).futureValue) shouldBe a[Failure[_]]
@@ -103,7 +105,8 @@ class PublicationEligibilitySpec extends AnyWordSpecLike with SpecConfiguration 
         publishedAt = None,
         deprecatedAt = None,
         suspendedAt = None,
-        archivedAt = None
+        archivedAt = None,
+        attributes = CatalogAttributes.empty
       )
 
       Try(ProcessApiServiceImpl.verifyPublicationEligibility(descriptor).futureValue) shouldBe a[Failure[_]]

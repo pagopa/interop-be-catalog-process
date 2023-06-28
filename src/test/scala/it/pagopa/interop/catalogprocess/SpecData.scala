@@ -44,7 +44,8 @@ object SpecData {
     publishedAt = Some(OffsetDateTimeSupplier.get()),
     suspendedAt = None,
     deprecatedAt = None,
-    archivedAt = None
+    archivedAt = None,
+    attributes = CatalogManagement.CatalogAttributes.empty
   )
 
   val eServiceDescriptor: CatalogManagementDependency.EServiceDescriptor =
@@ -60,7 +61,8 @@ object SpecData {
       docs = Seq.empty,
       state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED,
       agreementApprovalPolicy = CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC,
-      serverUrls = Nil
+      serverUrls = Nil,
+      attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil)
     )
 
   val eServiceDoc: CatalogManagementDependency.EServiceDoc =
@@ -80,7 +82,6 @@ object SpecData {
     name = "EService1",
     description = "description",
     technology = CatalogManagementDependency.EServiceTechnology.REST,
-    attributes = CatalogManagementDependency.Attributes(Seq.empty, Seq.empty, Seq.empty),
     descriptors = Seq.empty
   )
 }

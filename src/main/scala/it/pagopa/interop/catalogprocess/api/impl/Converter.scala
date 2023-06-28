@@ -18,8 +18,7 @@ object Converter {
         producerId = producerId,
         name = seed.name,
         description = seed.description,
-        technology = seed.technology.toDependency,
-        attributes = seed.attributes.toDependency
+        technology = seed.technology.toDependency
       )
   }
 
@@ -70,15 +69,16 @@ object Converter {
       }
   }
 
-  implicit class eServiceDescriptorSeedWrapper(private val descriptor: EServiceDescriptorSeed) extends AnyVal {
+  implicit class eServiceDescriptorSeedWrapper(private val seed: EServiceDescriptorSeed) extends AnyVal {
     def toDependency: CatalogManagementDependency.EServiceDescriptorSeed =
       CatalogManagementDependency.EServiceDescriptorSeed(
-        description = descriptor.description,
-        audience = descriptor.audience,
-        voucherLifespan = descriptor.voucherLifespan,
-        dailyCallsPerConsumer = descriptor.dailyCallsPerConsumer,
-        dailyCallsTotal = descriptor.dailyCallsTotal,
-        agreementApprovalPolicy = descriptor.agreementApprovalPolicy.toDependency
+        description = seed.description,
+        audience = seed.audience,
+        voucherLifespan = seed.voucherLifespan,
+        dailyCallsPerConsumer = seed.dailyCallsPerConsumer,
+        dailyCallsTotal = seed.dailyCallsTotal,
+        agreementApprovalPolicy = seed.agreementApprovalPolicy.toDependency,
+        attributes = seed.attributes.toDependency
       )
   }
 
@@ -91,7 +91,8 @@ object Converter {
         dailyCallsPerConsumer = seed.dailyCallsPerConsumer,
         dailyCallsTotal = seed.dailyCallsTotal,
         state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
-        agreementApprovalPolicy = seed.agreementApprovalPolicy.toDependency
+        agreementApprovalPolicy = seed.agreementApprovalPolicy.toDependency,
+        attributes = seed.attributes.toDependency
       )
   }
 
@@ -99,8 +100,7 @@ object Converter {
     def toDependency: CatalogManagementDependency.UpdateEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
       name = seed.name,
       description = seed.description,
-      technology = seed.technology.toDependency,
-      attributes = seed.attributes.toDependency
+      technology = seed.technology.toDependency
     )
   }
 

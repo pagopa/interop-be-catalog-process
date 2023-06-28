@@ -36,31 +36,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      val apiSeed: EServiceSeed = EServiceSeed(
-        name = "MyService",
-        description = "My Service",
-        technology = EServiceTechnology.REST,
-        attributes = AttributesSeed(
-          certified = List(
-            AttributeSeed(
-              single = Some(AttributeValueSeed(attributeId1, explicitAttributeVerification = false)),
-              group = None
-            )
-          ),
-          declared = List(
-            AttributeSeed(
-              single = None,
-              group = Some(List(AttributeValueSeed(attributeId2, explicitAttributeVerification = false)))
-            )
-          ),
-          verified = List(
-            AttributeSeed(
-              single = Some(AttributeValueSeed(attributeId3, explicitAttributeVerification = true)),
-              group = None
-            )
-          )
-        )
-      )
+      val apiSeed: EServiceSeed =
+        EServiceSeed(name = "MyService", description = "My Service", technology = EServiceTechnology.REST)
 
       val seed = CatalogManagementDependency.EServiceSeed(
         producerId = requesterId,
@@ -147,26 +124,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name = seed.name,
         description = seed.description,
         technology = seed.technology.toApi,
-        attributes = Attributes(
-          certified = Seq(
-            Attribute(
-              single = Some(AttributeValue(id = attributeId1, explicitAttributeVerification = false)),
-              group = None
-            )
-          ),
-          declared = Seq(
-            Attribute(
-              single = None,
-              group = Some(Seq(AttributeValue(id = attributeId2, explicitAttributeVerification = false)))
-            )
-          ),
-          verified = Seq(
-            Attribute(
-              single = Some(AttributeValue(id = attributeId3, explicitAttributeVerification = true)),
-              group = None
-            )
-          )
-        ),
         descriptors = eservice.descriptors.map(_.toApi)
       )
 
@@ -181,40 +138,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       val requesterId = UUID.randomUUID()
 
-      val attributeId1: UUID = UUID.randomUUID()
-      val attributeId2: UUID = UUID.randomUUID()
-      val attributeId3: UUID = UUID.randomUUID()
-
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
       val catalogItems: Seq[readmodel.CatalogItem] = Seq(SpecData.catalogItem)
 
-      val apiSeed: EServiceSeed = EServiceSeed(
-        name = "MyService",
-        description = "My Service",
-        technology = EServiceTechnology.REST,
-        attributes = AttributesSeed(
-          certified = List(
-            AttributeSeed(
-              single = Some(AttributeValueSeed(attributeId1, explicitAttributeVerification = false)),
-              group = None
-            )
-          ),
-          declared = List(
-            AttributeSeed(
-              single = None,
-              group = Some(List(AttributeValueSeed(attributeId2, explicitAttributeVerification = false)))
-            )
-          ),
-          verified = List(
-            AttributeSeed(
-              single = Some(AttributeValueSeed(attributeId3, explicitAttributeVerification = true)),
-              group = None
-            )
-          )
-        )
-      )
+      val apiSeed: EServiceSeed =
+        EServiceSeed(name = "MyService", description = "My Service", technology = EServiceTechnology.REST)
 
       // Data retrieve
       (mockReadModel
@@ -247,12 +177,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       val eService = SpecData.eService.copy(descriptors = Seq(descriptor), producerId = requesterId)
 
-      val eServiceSeed = UpdateEServiceSeed(
-        name = "newName",
-        description = "newDescription",
-        technology = EServiceTechnology.REST,
-        attributes = AttributesSeed(Nil, Nil, Nil)
-      )
+      val eServiceSeed =
+        UpdateEServiceSeed(name = "newName", description = "newDescription", technology = EServiceTechnology.REST)
 
       val updatedEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
         name = "newName",
@@ -298,8 +224,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val eServiceSeed = UpdateEServiceSeed(
         name = "newName",
         description = "newDescription",
-        technology = EServiceTechnology.REST,
-        attributes = AttributesSeed(Nil, Nil, Nil)
+        technology = EServiceTechnology.REST
+        // attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
       val updatedEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
@@ -348,8 +274,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val eServiceSeed = UpdateEServiceSeed(
         name = "newName",
         description = "newDescription",
-        technology = EServiceTechnology.REST,
-        attributes = AttributesSeed(Nil, Nil, Nil)
+        technology = EServiceTechnology.REST
+        // attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
       (mockReadModel
@@ -378,8 +304,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val eServiceSeed = UpdateEServiceSeed(
         name = "newName",
         description = "newDescription",
-        technology = EServiceTechnology.REST,
-        attributes = AttributesSeed(Nil, Nil, Nil)
+        technology = EServiceTechnology.REST
+        // attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
       (mockReadModel
@@ -409,8 +335,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val eServiceSeed = UpdateEServiceSeed(
         name = "newName",
         description = "newDescription",
-        technology = EServiceTechnology.REST,
-        attributes = AttributesSeed(Nil, Nil, Nil)
+        technology = EServiceTechnology.REST
+        // attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
       (mockReadModel
@@ -572,13 +498,37 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
+      val attributeId1: UUID = UUID.randomUUID()
+      val attributeId2: UUID = UUID.randomUUID()
+      val attributeId3: UUID = UUID.randomUUID()
+
       val seed = EServiceDescriptorSeed(
         description = None,
         audience = Seq("aud"),
         voucherLifespan = 60,
         dailyCallsPerConsumer = 0,
         dailyCallsTotal = 0,
-        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(
+          certified = List(
+            AttributeSeed(
+              single = Some(AttributeValueSeed(attributeId1, explicitAttributeVerification = false)),
+              group = None
+            )
+          ),
+          declared = List(
+            AttributeSeed(
+              single = None,
+              group = Some(List(AttributeValueSeed(attributeId2, explicitAttributeVerification = false)))
+            )
+          ),
+          verified = List(
+            AttributeSeed(
+              single = Some(AttributeValueSeed(attributeId3, explicitAttributeVerification = true)),
+              group = None
+            )
+          )
+        )
       )
 
       val eServiceDescriptorSeed = CatalogManagementDependency.EServiceDescriptorSeed(
@@ -587,7 +537,31 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         voucherLifespan = 60,
         dailyCallsPerConsumer = 0,
         dailyCallsTotal = 0,
-        agreementApprovalPolicy = CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC
+        agreementApprovalPolicy = CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC,
+        attributes = CatalogManagementDependency.Attributes(
+          certified = List(
+            CatalogManagementDependency.Attribute(
+              single =
+                Some(CatalogManagementDependency.AttributeValue(attributeId1, explicitAttributeVerification = false)),
+              group = None
+            )
+          ),
+          declared = List(
+            CatalogManagementDependency.Attribute(
+              single = None,
+              group = Some(
+                List(CatalogManagementDependency.AttributeValue(attributeId2, explicitAttributeVerification = false))
+              )
+            )
+          ),
+          verified = List(
+            CatalogManagementDependency.Attribute(
+              single =
+                Some(CatalogManagementDependency.AttributeValue(attributeId3, explicitAttributeVerification = true)),
+              group = None
+            )
+          )
+        )
       )
 
       val eServiceDescriptor = CatalogManagementDependency.EServiceDescriptor(
@@ -602,7 +576,31 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         dailyCallsPerConsumer = 0,
         dailyCallsTotal = 0,
         agreementApprovalPolicy = AUTOMATIC,
-        serverUrls = Nil
+        serverUrls = Nil,
+        attributes = CatalogManagementDependency.Attributes(
+          certified = List(
+            CatalogManagementDependency.Attribute(
+              single =
+                Some(CatalogManagementDependency.AttributeValue(attributeId1, explicitAttributeVerification = false)),
+              group = None
+            )
+          ),
+          declared = List(
+            CatalogManagementDependency.Attribute(
+              single = None,
+              group = Some(
+                List(CatalogManagementDependency.AttributeValue(attributeId2, explicitAttributeVerification = false))
+              )
+            )
+          ),
+          verified = List(
+            CatalogManagementDependency.Attribute(
+              single =
+                Some(CatalogManagementDependency.AttributeValue(attributeId3, explicitAttributeVerification = true)),
+              group = None
+            )
+          )
+        )
       )
 
       (mockReadModel
@@ -637,7 +635,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         voucherLifespan = 60,
         dailyCallsPerConsumer = 0,
         dailyCallsTotal = 0,
-        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
       Post() ~> service.createDescriptor(UUID.randomUUID().toString, seed) ~> check {
@@ -656,7 +655,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         voucherLifespan = 60,
         dailyCallsPerConsumer = 0,
         dailyCallsTotal = 0,
-        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
       (mockReadModel
@@ -698,7 +698,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         voucherLifespan = 60,
         dailyCallsPerConsumer = 0,
         dailyCallsTotal = 0,
-        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
       val depSeed = CatalogManagementDependency.UpdateEServiceDescriptorSeed(
@@ -708,7 +709,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         dailyCallsPerConsumer = 0,
         dailyCallsTotal = 0,
         agreementApprovalPolicy = CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC,
-        state = CatalogManagementDependency.EServiceDescriptorState.DRAFT
+        state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
+        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil)
       )
 
       (mockCatalogManagementService
@@ -754,7 +756,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         voucherLifespan = 60,
         dailyCallsPerConsumer = 0,
         dailyCallsTotal = 0,
-        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
       Put() ~> service.updateDraftDescriptor(
@@ -777,7 +780,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         voucherLifespan = 60,
         dailyCallsPerConsumer = 0,
         dailyCallsTotal = 0,
-        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
       (mockReadModel
@@ -806,7 +810,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         voucherLifespan = 60,
         dailyCallsPerConsumer = 0,
         dailyCallsTotal = 0,
-        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
       (mockReadModel
@@ -840,7 +845,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         voucherLifespan = 60,
         dailyCallsPerConsumer = 0,
         dailyCallsTotal = 0,
-        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
       Put() ~> service.updateDraftDescriptor(UUID.randomUUID().toString, UUID.randomUUID().toString, seed) ~> check {
