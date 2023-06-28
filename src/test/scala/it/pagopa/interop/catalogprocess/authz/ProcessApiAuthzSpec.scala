@@ -46,7 +46,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
     "accept authorized roles for createEService" in {
       val endpoint = AuthorizedRoutes.endpoints("createEService")
       val fakeSeed =
-        EServiceSeed("test", "test", EServiceTechnology.REST, AttributesSeed(Seq.empty, Seq.empty, Seq.empty))
+        EServiceSeed("test", "test", EServiceTechnology.REST)
       validateAuthorization(endpoint, { implicit c: Seq[(String, String)] => service.createEService(fakeSeed) })
     }
 
@@ -109,7 +109,15 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
 
     "accept authorized roles for updateDraftDescriptor" in {
       val endpoint = AuthorizedRoutes.endpoints("updateDraftDescriptor")
-      val fakeSeed = UpdateEServiceDescriptorSeed(None, Seq.empty, 0, 0, 0, AUTOMATIC)
+      val fakeSeed = UpdateEServiceDescriptorSeed(
+        None,
+        Seq.empty,
+        0,
+        0,
+        0,
+        AUTOMATIC,
+        AttributesSeed(Seq.empty, Seq.empty, Seq.empty)
+      )
       validateAuthorization(
         endpoint,
         { implicit c: Seq[(String, String)] => service.updateDraftDescriptor("fake", "fake", fakeSeed) }
@@ -119,7 +127,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
     "accept authorized roles for updateEServiceById" in {
       val endpoint = AuthorizedRoutes.endpoints("updateEServiceById")
       val fakeSeed =
-        UpdateEServiceSeed("test", "test", EServiceTechnology.REST, AttributesSeed(Seq.empty, Seq.empty, Seq.empty))
+        UpdateEServiceSeed("test", "test", EServiceTechnology.REST)
       validateAuthorization(
         endpoint,
         { implicit c: Seq[(String, String)] => service.updateEServiceById("fake", fakeSeed) }
@@ -128,7 +136,8 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
 
     "accept authorized roles for createDescriptor" in {
       val endpoint = AuthorizedRoutes.endpoints("createDescriptor")
-      val fakeSeed = EServiceDescriptorSeed(None, Seq.empty, 0, 0, 0, AUTOMATIC)
+      val fakeSeed =
+        EServiceDescriptorSeed(None, Seq.empty, 0, 0, 0, AUTOMATIC, AttributesSeed(Seq.empty, Seq.empty, Seq.empty))
       validateAuthorization(
         endpoint,
         { implicit c: Seq[(String, String)] => service.createDescriptor("fake", fakeSeed) }

@@ -38,7 +38,6 @@ object FakeDependencies {
         name = "fake",
         description = "fake",
         technology = EServiceTechnology.REST,
-        attributes = Attributes(Seq.empty, Seq.empty, Seq.empty),
         descriptors = Seq.empty
       )
     )
@@ -56,7 +55,6 @@ object FakeDependencies {
         name = "fake",
         description = "fake",
         technology = EServiceTechnology.REST,
-        attributes = Attributes(Seq.empty, Seq.empty, Seq.empty),
         descriptors = Seq.empty
       )
     )
@@ -70,7 +68,6 @@ object FakeDependencies {
         name = "fake",
         description = "fake",
         technology = EServiceTechnology.REST,
-        attributes = Attributes(Seq.empty, Seq.empty, Seq.empty),
         descriptors = Seq.empty
       )
     )
@@ -93,7 +90,8 @@ object FakeDependencies {
         docs = Seq.empty,
         state = EServiceDescriptorState.PUBLISHED,
         agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
-        serverUrls = Nil
+        serverUrls = Nil,
+        attributes = Attributes(Nil, Nil, Nil)
       )
     )
 
@@ -126,7 +124,6 @@ object FakeDependencies {
         name = "fake",
         description = "fake",
         technology = EServiceTechnology.REST,
-        attributes = Attributes(Seq.empty, Seq.empty, Seq.empty),
         descriptors = Seq.empty
       )
     )
@@ -142,7 +139,6 @@ object FakeDependencies {
         name = "fake",
         description = "fake",
         technology = EServiceTechnology.REST,
-        attributes = Attributes(Seq.empty, Seq.empty, Seq.empty),
         descriptors = Seq(
           EServiceDescriptor(
             id = descriptorId,
@@ -156,7 +152,8 @@ object FakeDependencies {
             docs = Seq.empty,
             state = EServiceDescriptorState.PUBLISHED,
             agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
-            serverUrls = Nil
+            serverUrls = Nil,
+            attributes = Attributes(Nil, Nil, Nil)
           )
         )
       )

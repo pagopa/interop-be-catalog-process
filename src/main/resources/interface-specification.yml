@@ -842,7 +842,6 @@ components:
         - name
         - description
         - technology
-        - attributes
       properties:
         name:
           type: string
@@ -854,15 +853,12 @@ components:
           maxLength: 250
         technology:
           $ref: '#/components/schemas/EServiceTechnology'
-        attributes:
-          $ref: '#/components/schemas/AttributesSeed'
     UpdateEServiceSeed:
       type: object
       required:
         - name
         - description
         - technology
-        - attributes
       properties:
         name:
           type: string
@@ -874,8 +870,6 @@ components:
           maxLength: 250
         technology:
           $ref: '#/components/schemas/EServiceTechnology'
-        attributes:
-          $ref: '#/components/schemas/AttributesSeed'
     EServiceDescriptorSeed:
       required:
         - audience
@@ -883,6 +877,7 @@ components:
         - dailyCallsPerConsumer
         - dailyCallsTotal
         - agreementApprovalPolicy
+        - attributes
       type: object
       properties:
         description:
@@ -912,6 +907,8 @@ components:
           minimum: 0
         agreementApprovalPolicy:
           $ref: '#/components/schemas/AgreementApprovalPolicy'
+        attributes:
+          $ref: '#/components/schemas/AttributesSeed'
     UpdateEServiceDescriptorSeed:
       required:
         - audience
@@ -919,6 +916,7 @@ components:
         - dailyCallsPerConsumer
         - dailyCallsTotal
         - agreementApprovalPolicy
+        - attributes
       type: object
       properties:
         description:
@@ -948,6 +946,8 @@ components:
           minimum: 0
         agreementApprovalPolicy:
           $ref: '#/components/schemas/AgreementApprovalPolicy'
+        attributes:
+          $ref: '#/components/schemas/AttributesSeed'
     CreateEServiceDescriptorDocumentSeed:
       required:
         - documentId
@@ -1054,7 +1054,6 @@ components:
         - name
         - description
         - technology
-        - attributes
         - descriptors
       properties:
         id:
@@ -1069,8 +1068,6 @@ components:
           type: string
         technology:
           $ref: '#/components/schemas/EServiceTechnology'
-        attributes:
-          $ref: '#/components/schemas/Attributes'
         descriptors:
           type: array
           items:
@@ -1155,6 +1152,7 @@ components:
         - dailyCallsTotal
         - agreementApprovalPolicy
         - serverUrls
+        - attributes
       properties:
         id:
           type: string
@@ -1206,6 +1204,8 @@ components:
         archivedAt:
           type: string
           format: date-time
+        attributes:
+          $ref: '#/components/schemas/Attributes'
     AttributeValue:
       type: object
       properties:

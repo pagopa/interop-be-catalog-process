@@ -150,7 +150,6 @@ object Converter {
       name = eService.name,
       description = eService.description,
       technology = eService.technology.toApi,
-      attributes = eService.attributes.toApi,
       descriptors = eService.descriptors.map(_.toApi)
     )
   }
@@ -238,7 +237,8 @@ object Converter {
       publishedAt = descriptor.publishedAt,
       suspendedAt = descriptor.suspendedAt,
       deprecatedAt = descriptor.deprecatedAt,
-      archivedAt = descriptor.archivedAt
+      archivedAt = descriptor.archivedAt,
+      attributes = descriptor.attributes.toApi
     )
   }
 
@@ -258,7 +258,6 @@ object Converter {
       name = item.name,
       description = item.description,
       technology = item.technology.toApi,
-      attributes = item.attributes.toApi,
       descriptors = item.descriptors.map(_.toApi)
     )
   }
@@ -316,7 +315,8 @@ object Converter {
       publishedAt = descriptor.publishedAt,
       suspendedAt = descriptor.suspendedAt,
       deprecatedAt = descriptor.deprecatedAt,
-      archivedAt = descriptor.archivedAt
+      archivedAt = descriptor.archivedAt,
+      attributes = descriptor.attributes.toApi
     )
   }
 

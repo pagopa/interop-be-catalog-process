@@ -66,34 +66,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         producerId = requesterId,
         name = "MyService",
         description = "My Service",
-        technology = CatalogManagementDependency.EServiceTechnology.REST,
-        attributes = CatalogManagementDependency.Attributes(
-          certified = List(
-            CatalogManagementDependency
-              .Attribute(
-                single =
-                  Some(CatalogManagementDependency.AttributeValue(attributeId1, explicitAttributeVerification = false)),
-                group = None
-              )
-          ),
-          declared = List(
-            CatalogManagementDependency
-              .Attribute(
-                single = None,
-                group = Some(
-                  List(CatalogManagementDependency.AttributeValue(attributeId2, explicitAttributeVerification = false))
-                )
-              )
-          ),
-          verified = List(
-            CatalogManagementDependency
-              .Attribute(
-                single =
-                  Some(CatalogManagementDependency.AttributeValue(attributeId3, explicitAttributeVerification = true)),
-                group = None
-              )
-          )
-        )
+        technology = CatalogManagementDependency.EServiceTechnology.REST
       )
 
       val eservice = CatalogManagementDependency.EService(
@@ -102,7 +75,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name = seed.name,
         description = seed.description,
         technology = seed.technology,
-        attributes = seed.attributes,
         descriptors = List(
           CatalogManagementDependency.EServiceDescriptor(
             id = UUID.randomUUID(),
@@ -116,7 +88,35 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
             dailyCallsPerConsumer = 1000,
             dailyCallsTotal = 0,
             agreementApprovalPolicy = AUTOMATIC,
-            serverUrls = Nil
+            serverUrls = Nil,
+            attributes = CatalogManagementDependency.Attributes(
+              certified = List(
+                CatalogManagementDependency.Attribute(
+                  single = Some(
+                    CatalogManagementDependency.AttributeValue(attributeId1, explicitAttributeVerification = false)
+                  ),
+                  group = None
+                )
+              ),
+              declared = List(
+                CatalogManagementDependency.Attribute(
+                  single = None,
+                  group = Some(
+                    List(
+                      CatalogManagementDependency.AttributeValue(attributeId2, explicitAttributeVerification = false)
+                    )
+                  )
+                )
+              ),
+              verified = List(
+                CatalogManagementDependency.Attribute(
+                  single = Some(
+                    CatalogManagementDependency.AttributeValue(attributeId3, explicitAttributeVerification = true)
+                  ),
+                  group = None
+                )
+              )
+            )
           )
         )
       )
@@ -257,8 +257,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val updatedEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
         name = "newName",
         description = "newDescription",
-        technology = eService.technology,
-        attributes = eService.attributes
+        technology = eService.technology
       )
 
       val updatedEService = CatalogManagementDependency.EService(
@@ -267,7 +266,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name = "newName",
         description = "newDescription",
         technology = eService.technology,
-        attributes = eService.attributes,
         descriptors = Seq(descriptor)
       )
 
@@ -307,8 +305,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val updatedEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
         name = "newName",
         description = "newDescription",
-        technology = eService.technology,
-        attributes = eService.attributes
+        technology = eService.technology
       )
 
       val updatedEService = CatalogManagementDependency.EService(
@@ -317,7 +314,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name = "newName",
         description = "newDescription",
         technology = eService.technology,
-        attributes = eService.attributes,
         descriptors = Seq.empty
       )
 
