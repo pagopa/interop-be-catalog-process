@@ -239,6 +239,8 @@ object Converter {
       deprecatedAt = descriptor.deprecatedAt,
       archivedAt = descriptor.archivedAt,
       attributes = descriptor.attributes.toApi
+      archivedAt = descriptor.archivedAt,
+      attributes = descriptor.attributes.toApi
     )
   }
 
@@ -315,6 +317,8 @@ object Converter {
       publishedAt = descriptor.publishedAt,
       suspendedAt = descriptor.suspendedAt,
       deprecatedAt = descriptor.deprecatedAt,
+      archivedAt = descriptor.archivedAt,
+      attributes = descriptor.attributes.toApi
       archivedAt = descriptor.archivedAt,
       attributes = descriptor.attributes.toApi
     )
