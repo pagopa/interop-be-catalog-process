@@ -67,6 +67,7 @@ final case class ProcessApiServiceImpl(
           Seq.empty,
           Seq(clientSeed.producerId.toString),
           Seq.empty,
+          Seq.empty,
           0,
           1,
           exactMatchOnName = true
@@ -109,6 +110,7 @@ final case class ProcessApiServiceImpl(
     name: Option[String],
     eServicesIds: String,
     producersIds: String,
+    attributesIds: String,
     states: String,
     agreementStates: String,
     offset: Int,
@@ -116,7 +118,7 @@ final case class ProcessApiServiceImpl(
   )(implicit contexts: Seq[(String, String)], toEntityMarshallerEServices: ToEntityMarshaller[EServices]): Route =
     authorize(ADMIN_ROLE, API_ROLE, SECURITY_ROLE, M2M_ROLE, SUPPORT_ROLE) {
       val operationLabel =
-        s"Getting e-service with name = $name, ids = $eServicesIds, producers = $producersIds, states = $states, agreementStates = $agreementStates, limit = $limit, offset = $offset"
+        s"Getting e-service with name = $name, ids = $eServicesIds, producers = $producersIds, attributes = $attributesIds, states = $states, agreementStates = $agreementStates, limit = $limit, offset = $offset"
       logger.info(operationLabel)
 
       def getEservicesInner(
@@ -124,6 +126,7 @@ final case class ProcessApiServiceImpl(
         name: Option[String],
         apiEServicesIds: List[String],
         apiProducersIds: List[String],
+        apiAttributesIds: List[String],
         apiStates: List[EServiceDescriptorState],
         apiAgreementStates: List[AgreementState],
         offset: Int,
@@ -131,7 +134,15 @@ final case class ProcessApiServiceImpl(
       ): Future[PaginatedResult[CatalogItem]] = {
 
         if (apiAgreementStates.isEmpty)
-          ReadModelQueries.listEServices(name, apiEServicesIds, apiProducersIds, apiStates, offset, limit)(readModel)
+          ReadModelQueries.listEServices(
+            name,
+            apiEServicesIds,
+            apiProducersIds,
+            apiAttributesIds,
+            apiStates,
+            offset,
+            limit
+          )(readModel)
         else
           for {
             agreementEservicesIds <- ReadModelQueries
@@ -146,9 +157,15 @@ final case class ProcessApiServiceImpl(
               if (agreementEservicesIds.isEmpty)
                 Future.successful(ReadModelQueries.emptyResults[CatalogItem])
               else
-                ReadModelQueries.listEServices(name, agreementEservicesIds, apiProducersIds, apiStates, offset, limit)(
-                  readModel
-                )
+                ReadModelQueries.listEServices(
+                  name,
+                  agreementEservicesIds,
+                  apiProducersIds,
+                  apiAttributesIds,
+                  apiStates,
+                  offset,
+                  limit
+                )(readModel)
 
           } yield result
       }
@@ -156,8 +173,9 @@ final case class ProcessApiServiceImpl(
       val result: Future[EServices] = for {
         organizationId <- getOrganizationIdFutureUUID(contexts)
         apiStates      <- parseArrayParameters(states).traverse(EServiceDescriptorState.fromValue).toFuture
-        apiProducersIds = parseArrayParameters(producersIds)
-        apiEServicesIds = parseArrayParameters(eServicesIds)
+        apiProducersIds  = parseArrayParameters(producersIds)
+        apiAttributesIds = parseArrayParameters(attributesIds)
+        apiEServicesIds  = parseArrayParameters(eServicesIds)
         apiAgreementStates <- parseArrayParameters(agreementStates)
           .traverse(AgreementState.fromValue)
           .toFuture
@@ -167,6 +185,7 @@ final case class ProcessApiServiceImpl(
             name,
             apiEServicesIds,
             apiProducersIds,
+            apiAttributesIds,
             apiStates,
             apiAgreementStates,
             offset,
