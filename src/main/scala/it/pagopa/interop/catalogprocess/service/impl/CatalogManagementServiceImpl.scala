@@ -1,10 +1,14 @@
 package it.pagopa.interop.catalogprocess.service.impl
 
 import it.pagopa.interop.catalogmanagement.client.api.EServiceApi
+import it.pagopa.interop.catalogprocess.common.readmodel.ReadModelCatalogQueries
+import it.pagopa.interop.commons.cqrs.service.ReadModelService
+import it.pagopa.interop.catalogmanagement.model.{CatalogItem, CatalogDocument, CatalogDescriptor}
 import it.pagopa.interop.catalogmanagement.client.invoker.{ApiError, BearerToken}
 import it.pagopa.interop.catalogmanagement.client.model._
 import it.pagopa.interop.catalogprocess.service.{CatalogManagementInvoker, CatalogManagementService}
 import it.pagopa.interop.commons.utils._
+import it.pagopa.interop.commons.utils.TypeConversions._
 import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors.{
   DescriptorDocumentNotFound,
@@ -242,6 +246,38 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
         case err: ApiError[_] if err.code == 404 =>
           Future.failed(EServiceDescriptorNotFound(eServiceId, descriptorId))
       }
+  }
+
+  override def getEServiceById(
+    eServiceId: UUID
+  )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[CatalogItem] =
+    ReadModelCatalogQueries.getEServiceById(eServiceId).flatMap(_.toFuture(EServiceNotFound(eServiceId.toString)))
+
+  override def getEServiceDocument(eServiceId: UUID, descriptorId: UUID, documentId: UUID)(implicit
+    ec: ExecutionContext,
+    readModel: ReadModelService
+  ): Future[CatalogDocument] = for {
+    catalogItem     <- ReadModelCatalogQueries
+      .getEServiceDocument(eServiceId, descriptorId, documentId)
+      .flatMap(_.toFuture(DescriptorDocumentNotFound(eServiceId.toString, descriptorId.toString, documentId.toString)))
+    catalogDocument <- getDocument(catalogItem, descriptorId, documentId).toFuture(
+      DescriptorDocumentNotFound(eServiceId.toString, descriptorId.toString, documentId.toString)
+    )
+  } yield catalogDocument
+
+  private def getDocument(eService: CatalogItem, descriptorId: UUID, documentId: UUID): Option[CatalogDocument] = {
+
+    def lookup(catalogDescriptor: CatalogDescriptor): Option[CatalogDocument]               = {
+      val interface = catalogDescriptor.interface.fold(Seq.empty[CatalogDocument])(doc => Seq(doc))
+      (interface ++: catalogDescriptor.docs).find(_.id == documentId)
+    }
+    def getDescriptor(eService: CatalogItem, descriptorId: UUID): Option[CatalogDescriptor] =
+      eService.descriptors.find(_.id == descriptorId)
+
+    for {
+      descriptor <- getDescriptor(eService, descriptorId)
+      document   <- lookup(descriptor)
+    } yield document
   }
 
 }

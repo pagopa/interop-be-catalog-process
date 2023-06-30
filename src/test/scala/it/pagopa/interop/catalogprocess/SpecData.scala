@@ -7,8 +7,12 @@ import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
 import java.util.UUID
 
 object SpecData {
+  val eServiceId   = UUID.randomUUID()
+  val docId        = UUID.randomUUID()
+  val descriptorId = UUID.randomUUID()
+
   val catalogItem: CatalogManagement.CatalogItem = CatalogManagement.CatalogItem(
-    id = UUID.randomUUID(),
+    id = eServiceId,
     producerId = UUID.randomUUID(),
     name = "CatalogItemName",
     description = "CatalogItemDescription",
@@ -19,7 +23,7 @@ object SpecData {
   )
 
   val catalogDocument: CatalogManagement.CatalogDocument     = CatalogManagement.CatalogDocument(
-    id = UUID.randomUUID(),
+    id = docId,
     name = "name",
     contentType = "application/pdf",
     prettyName = "prettyName",
@@ -28,7 +32,7 @@ object SpecData {
     uploadDate = OffsetDateTimeSupplier.get().minusDays(30)
   )
   val catalogDescriptor: CatalogManagement.CatalogDescriptor = CatalogManagement.CatalogDescriptor(
-    id = UUID.randomUUID(),
+    id = descriptorId,
     version = "1",
     description = None,
     audience = Seq.empty,
@@ -50,7 +54,7 @@ object SpecData {
 
   val eServiceDescriptor: CatalogManagementDependency.EServiceDescriptor =
     CatalogManagementDependency.EServiceDescriptor(
-      id = UUID.randomUUID(),
+      id = descriptorId,
       version = "1",
       description = None,
       audience = Seq.empty,
@@ -67,7 +71,7 @@ object SpecData {
 
   val eServiceDoc: CatalogManagementDependency.EServiceDoc =
     CatalogManagementDependency.EServiceDoc(
-      id = UUID.randomUUID(),
+      id = docId,
       name = "name",
       contentType = "application/pdf",
       prettyName = "pretty",
@@ -77,7 +81,7 @@ object SpecData {
     )
 
   val eService: CatalogManagementDependency.EService = CatalogManagementDependency.EService(
-    id = UUID.randomUUID(),
+    id = eServiceId,
     producerId = UUID.randomUUID(),
     name = "EService1",
     description = "description",

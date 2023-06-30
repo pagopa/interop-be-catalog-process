@@ -1,6 +1,8 @@
 package it.pagopa.interop.catalogprocess.util
 
 import it.pagopa.interop.authorizationmanagement.client.model._
+import it.pagopa.interop.commons.cqrs.service.ReadModelService
+import it.pagopa.interop.agreementmanagement.model.agreement.{PersistentAgreement, PersistentAgreementState}
 import it.pagopa.interop.catalogmanagement.client.model.{
   AgreementApprovalPolicy,
   Attributes,
@@ -16,11 +18,16 @@ import it.pagopa.interop.catalogmanagement.client.model.{
   UpdateEServiceSeed,
   CreateEServiceDescriptorDocumentSeed
 }
-import it.pagopa.interop.catalogprocess.service.{AuthorizationManagementService, CatalogManagementService}
+import it.pagopa.interop.catalogmanagement.model.{CatalogItem, Rest, CatalogAttributes, CatalogDocument}
+import it.pagopa.interop.catalogprocess.service.{
+  AuthorizationManagementService,
+  CatalogManagementService,
+  AgreementManagementService
+}
 
 import java.time.OffsetDateTime
 import java.util.UUID
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * Holds fake implementation of dependencies for tests not requiring neither mocks or stubs
@@ -28,6 +35,37 @@ import scala.concurrent.Future
 object FakeDependencies {
 
   class FakeCatalogManagementService extends CatalogManagementService {
+
+    override def getEServiceById(
+      eServiceId: UUID
+    )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[CatalogItem] =
+      Future.successful(
+        CatalogItem(
+          id = UUID.randomUUID(),
+          producerId = UUID.randomUUID(),
+          name = "fake",
+          description = "fake",
+          technology = Rest,
+          descriptors = Seq.empty,
+          attributes = Some(CatalogAttributes.empty),
+          createdAt = OffsetDateTime.now()
+        )
+      )
+
+    override def getEServiceDocument(eServiceId: UUID, descriptorId: UUID, documentId: UUID)(implicit
+      ec: ExecutionContext,
+      readModel: ReadModelService
+    ): Future[CatalogDocument] = Future.successful(
+      CatalogDocument(
+        id = UUID.randomUUID(),
+        name = "fake",
+        contentType = "fake",
+        prettyName = "fake",
+        path = "fake",
+        checksum = "fake",
+        uploadDate = OffsetDateTime.now()
+      )
+    )
 
     override def createEService(
       eServiceSeed: EServiceSeed
@@ -190,5 +228,15 @@ object FakeDependencies {
       audience: Seq[String],
       voucherLifespan: Int
     )(implicit contexts: Seq[(String, String)]): Future[Unit] = Future.successful(())
+  }
+
+  class FakeAgreementManagementService extends AgreementManagementService {
+    override def getAgreements(
+      eServicesIds: Seq[UUID],
+      consumersIds: Seq[UUID],
+      producersIds: Seq[UUID],
+      states: Seq[PersistentAgreementState]
+    )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[Seq[PersistentAgreement]] =
+      Future.successful(Seq.empty)
   }
 }

@@ -1,12 +1,16 @@
 package it.pagopa.interop.catalogprocess.service
 
 import it.pagopa.interop.catalogmanagement.client.model._
+import it.pagopa.interop.catalogmanagement.model.{CatalogDocument, CatalogItem}
+import it.pagopa.interop.commons.cqrs.service.ReadModelService
 
 import java.util.UUID
-import scala.concurrent.Future
+import scala.concurrent.{Future, ExecutionContext}
 
 trait CatalogManagementService {
   def createEService(eServiceSeed: EServiceSeed)(implicit contexts: Seq[(String, String)]): Future[EService]
+  def getEServiceById(eServiceId: UUID)(implicit ec: ExecutionContext, readModel: ReadModelService): Future[CatalogItem]
+
   def deleteDraft(eServiceId: String, descriptorId: String)(implicit contexts: Seq[(String, String)]): Future[Unit]
   def updateEServiceById(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed)(implicit
     contexts: Seq[(String, String)]
@@ -37,7 +41,10 @@ trait CatalogManagementService {
   def createEServiceDocument(eServiceId: UUID, descriptorId: UUID, documentSeed: CreateEServiceDescriptorDocumentSeed)(
     implicit contexts: Seq[(String, String)]
   ): Future[EService]
-
+  def getEServiceDocument(eServiceId: UUID, descriptorId: UUID, documentId: UUID)(implicit
+    ec: ExecutionContext,
+    readModel: ReadModelService
+  ): Future[CatalogDocument]
   def updateEServiceDocument(
     eServiceId: String,
     descriptorId: String,

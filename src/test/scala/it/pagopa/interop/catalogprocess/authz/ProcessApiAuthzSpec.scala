@@ -19,12 +19,13 @@ import java.util.UUID
 
 class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with AuthzScalatestRouteTest {
 
+  val fakeAgreementManagementService: AgreementManagementService         = new FakeAgreementManagementService()
   val fakeCatalogManagementService: CatalogManagementService             = new FakeCatalogManagementService()
   val fakeAuthorizationManagementService: AuthorizationManagementService = new FakeAuthorizationManagementService()
   private val threadPool: ExecutorService                                = Executors.newSingleThreadExecutor()
   private val blockingEc: ExecutionContextExecutor = ExecutionContext.fromExecutorService(threadPool)
   val fakeFileManager: FileManager                 = FileManager.get(FileManager.File)(blockingEc)
-  val fakeReadModel: ReadModelService              = new MongoDbReadModelService(
+  implicit val fakeReadModel: ReadModelService     = new MongoDbReadModelService(
     ReadModelConfig(
       "mongodb://localhost/?socketTimeoutMS=1&serverSelectionTimeoutMS=1&connectTimeoutMS=1&&autoReconnect=false&keepAlive=false",
       "db"
@@ -36,10 +37,10 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
   val service: ProcessApiServiceImpl =
     ProcessApiServiceImpl(
       fakeCatalogManagementService,
+      fakeAgreementManagementService,
       fakeAuthorizationManagementService,
-      fakeReadModel,
       fakeFileManager
-    )(ExecutionContext.global)
+    )(ExecutionContext.global, fakeReadModel)
 
   "E-Service api operation authorization spec" should {
 

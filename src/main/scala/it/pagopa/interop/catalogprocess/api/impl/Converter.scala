@@ -119,7 +119,7 @@ object Converter {
   }
 
   implicit class AgreementStateWrapper(private val as: AgreementState) extends AnyVal {
-    def toPersistence: AgreementPersistenceModel.PersistentAgreementState = as match {
+    def toPersistent: AgreementPersistenceModel.PersistentAgreementState = as match {
       case AgreementState.DRAFT                        => AgreementPersistenceModel.Draft
       case AgreementState.PENDING                      => AgreementPersistenceModel.Pending
       case AgreementState.ACTIVE                       => AgreementPersistenceModel.Active

@@ -57,7 +57,9 @@ trait Dependencies {
     )
     .toFuture
 
-  val readModelService: ReadModelService = new MongoDbReadModelService(ApplicationConfiguration.readModelConfig)
+  implicit val readModelService: ReadModelService = new MongoDbReadModelService(
+    ApplicationConfiguration.readModelConfig
+  )
 
   def processApi(jwtReader: JWTReader, fileManager: FileManager, blockingEc: ExecutionContextExecutor)(implicit
     ec: ExecutionContext,
@@ -66,8 +68,8 @@ trait Dependencies {
     new ProcessApi(
       ProcessApiServiceImpl(
         catalogManagementService = catalogManagementService(blockingEc),
+        AgreementManagementServiceImpl,
         authorizationManagementService = authorizationManagementService(blockingEc),
-        readModel = readModelService,
         fileManager = fileManager
       ),
       ProcessApiMarshallerImpl,

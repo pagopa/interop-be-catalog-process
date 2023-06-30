@@ -5,11 +5,13 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
 import it.pagopa.interop.catalogmanagement.client.model.AgreementApprovalPolicy.AUTOMATIC
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
-import it.pagopa.interop.catalogmanagement.{model => readmodel}
 import it.pagopa.interop.catalogprocess.api.impl.Converter._
 import it.pagopa.interop.catalogprocess.api.impl._
-import it.pagopa.interop.catalogprocess.common.readmodel.TotalCountResult
 import it.pagopa.interop.commons.utils.{ORGANIZATION_ID_CLAIM, USER_ROLES}
+import it.pagopa.interop.commons.cqrs.service.ReadModelService
+import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors.{EServiceNotFound, DescriptorDocumentNotFound}
+import it.pagopa.interop.catalogprocess.common.readmodel.TotalCountResult
+import it.pagopa.interop.catalogmanagement.model.{CatalogItem, Published, Draft, Deprecated, Archived, Suspended}
 import it.pagopa.interop.catalogprocess.model._
 import org.mongodb.scala.bson.conversions.Bson
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -31,7 +33,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val attributeId2: UUID = UUID.randomUUID()
       val attributeId3: UUID = UUID.randomUUID()
 
-      val catalogItems: Seq[readmodel.CatalogItem] = Seq.empty
+      val catalogItems: Seq[CatalogItem] = Seq.empty
 
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
@@ -141,7 +143,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      val catalogItems: Seq[readmodel.CatalogItem] = Seq(SpecData.catalogItem)
+      val catalogItems: Seq[CatalogItem] = Seq(SpecData.catalogItem)
 
       val apiSeed: EServiceSeed =
         EServiceSeed(name = "MyService", description = "My Service", technology = EServiceTechnology.REST)
@@ -195,11 +197,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         descriptors = Seq(descriptor)
       )
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eService.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = requesterId))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
 
       (mockCatalogManagementService
         .updateEServiceById(_: String, _: CatalogManagementDependency.UpdateEServiceSeed)(_: Seq[(String, String)]))
@@ -239,11 +241,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         descriptors = Seq.empty
       )
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eService.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = requesterId))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
 
       (mockCatalogManagementService
         .updateEServiceById(_: String, _: CatalogManagementDependency.UpdateEServiceSeed)(_: Seq[(String, String)]))
@@ -270,16 +272,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val eServiceSeed =
         UpdateEServiceSeed(name = "newName", description = "newDescription", technology = EServiceTechnology.REST)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eService.id, *, *)
         .once()
         .returns(
           Future.successful(
-            Some(
-              SpecData.catalogItem
-                .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor))
-            )
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor))
           )
         )
 
@@ -296,20 +296,18 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val eServiceSeed =
         UpdateEServiceSeed(name = "newName", description = "newDescription", technology = EServiceTechnology.REST)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
         .returns(
           Future.successful(
-            Some(
-              SpecData.catalogItem
-                .copy(producerId = UUID.randomUUID(), descriptors = Seq(SpecData.catalogDescriptor))
-            )
+            SpecData.catalogItem
+              .copy(producerId = UUID.randomUUID(), descriptors = Seq(SpecData.catalogDescriptor))
           )
         )
 
-      Put() ~> service.updateEServiceById(UUID.randomUUID().toString, eServiceSeed) ~> check {
+      Put() ~> service.updateEServiceById(SpecData.catalogItem.id.toString, eServiceSeed) ~> check {
         status shouldEqual StatusCodes.Forbidden
       }
     }
@@ -323,13 +321,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val eServiceSeed =
         UpdateEServiceSeed(name = "newName", description = "newDescription", technology = EServiceTechnology.REST)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(None))
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
 
-      Put() ~> service.updateEServiceById(UUID.randomUUID().toString, eServiceSeed) ~> check {
+      Put() ~> service.updateEServiceById(SpecData.catalogItem.id.toString, eServiceSeed) ~> check {
         status shouldEqual StatusCodes.NotFound
       }
     }
@@ -351,11 +349,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       val clonedEService = eService.copy(id = UUID.randomUUID())
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eService.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = requesterId))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
 
       (mockCatalogManagementService
         .cloneEService(_: UUID, _: UUID)(_: Seq[(String, String)]))
@@ -372,13 +370,16 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = UUID.randomUUID()))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
 
-      Post() ~> service.cloneEServiceByDescriptor(UUID.randomUUID().toString, UUID.randomUUID().toString) ~> check {
+      Post() ~> service.cloneEServiceByDescriptor(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID().toString
+      ) ~> check {
         status shouldEqual StatusCodes.Forbidden
       }
     }
@@ -388,13 +389,16 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(None))
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
 
-      Post() ~> service.cloneEServiceByDescriptor(UUID.randomUUID().toString, UUID.randomUUID().toString) ~> check {
+      Post() ~> service.cloneEServiceByDescriptor(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID().toString
+      ) ~> check {
         status shouldEqual StatusCodes.NotFound
       }
     }
@@ -416,11 +420,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       val eService = SpecData.eService.copy(descriptors = Seq(descriptor), producerId = requesterId)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eService.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(id = eService.id, producerId = requesterId))))
+        .returns(Future.successful(SpecData.catalogItem.copy(id = eService.id, producerId = requesterId)))
 
       (mockCatalogManagementService
         .deleteEServiceDocument(_: String, _: String, _: String)(_: Seq[(String, String)]))
@@ -440,14 +444,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = UUID.randomUUID()))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
 
       Delete() ~> service.deleteEServiceDocumentById(
-        UUID.randomUUID().toString,
+        SpecData.catalogItem.id.toString,
         UUID.randomUUID().toString,
         UUID.randomUUID().toString
       ) ~> check {
@@ -460,14 +464,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(None))
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
 
       Delete() ~> service.deleteEServiceDocumentById(
-        UUID.randomUUID().toString,
+        SpecData.catalogItem.id.toString,
         UUID.randomUUID().toString,
         UUID.randomUUID().toString
       ) ~> check {
@@ -587,11 +591,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         )
       )
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = requesterId))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
 
       (mockCatalogManagementService
         .createDescriptor(_: String, _: CatalogManagementDependency.EServiceDescriptorSeed)(_: Seq[(String, String)]))
@@ -607,11 +611,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = UUID.randomUUID()))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
 
       val seed = EServiceDescriptorSeed(
         description = None,
@@ -623,7 +627,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
-      Post() ~> service.createDescriptor(UUID.randomUUID().toString, seed) ~> check {
+      Post() ~> service.createDescriptor(SpecData.catalogItem.id.toString, seed) ~> check {
         status shouldEqual StatusCodes.Forbidden
       }
     }
@@ -643,11 +647,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(None))
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
 
       Post() ~> service.createDescriptor(SpecData.catalogItem.id.toString, seed) ~> check {
         status shouldEqual StatusCodes.NotFound
@@ -661,18 +665,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
         .returns(
           Future.successful(
-            Some(
-              SpecData.catalogItem.copy(
-                producerId = requesterId,
-                descriptors = Seq(SpecData.catalogDescriptor.copy(state = readmodel.Draft))
-              )
-            )
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Draft)))
           )
         )
 
@@ -719,18 +719,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
         .returns(
           Future.successful(
-            Some(
-              SpecData.catalogItem.copy(
-                producerId = requesterId,
-                descriptors = Seq(SpecData.catalogDescriptor.copy(state = readmodel.Published))
-              )
-            )
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Published)))
           )
         )
 
@@ -768,11 +764,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(None))
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
 
       Put() ~> service.updateDraftDescriptor(
         SpecData.catalogItem.id.toString,
@@ -798,11 +794,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = requesterId))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
 
       Put() ~> service.updateDraftDescriptor(
         SpecData.catalogItem.id.toString,
@@ -817,11 +813,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = UUID.randomUUID()))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
 
       val seed = UpdateEServiceDescriptorSeed(
         description = None,
@@ -833,7 +829,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
-      Put() ~> service.updateDraftDescriptor(UUID.randomUUID().toString, UUID.randomUUID().toString, seed) ~> check {
+      Put() ~> service.updateDraftDescriptor(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID().toString,
+        seed
+      ) ~> check {
         status shouldEqual StatusCodes.Forbidden
       }
     }
@@ -845,19 +845,16 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
         .returns(
           Future.successful(
-            Some(
-              SpecData.catalogItem.copy(
-                producerId = requesterId,
-                descriptors = Seq(
-                  SpecData.catalogDescriptor.copy(state = readmodel.Draft, interface = Option(SpecData.catalogDocument))
-                )
-              )
+            SpecData.catalogItem.copy(
+              producerId = requesterId,
+              descriptors =
+                Seq(SpecData.catalogDescriptor.copy(state = Draft, interface = Option(SpecData.catalogDocument)))
             )
           )
         )
@@ -900,18 +897,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
         .returns(
           Future.successful(
-            Some(
-              SpecData.catalogItem.copy(
-                producerId = requesterId,
-                descriptors = Seq(SpecData.catalogDescriptor.copy(state = readmodel.Draft))
-              )
-            )
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Draft)))
           )
         )
 
@@ -928,18 +921,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
         .returns(
           Future.successful(
-            Some(
-              SpecData.catalogItem.copy(
-                producerId = requesterId,
-                descriptors = Seq(SpecData.catalogDescriptor.copy(state = readmodel.Published))
-              )
-            )
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Published)))
           )
         )
 
@@ -956,11 +945,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(None))
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
 
       Post() ~> service.publishDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID.toString) ~> check {
         status shouldEqual StatusCodes.NotFound
@@ -972,11 +961,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = requesterId))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
 
       Post() ~> service.publishDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID.toString) ~> check {
         status shouldEqual StatusCodes.NotFound
@@ -987,13 +976,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = UUID.randomUUID()))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
 
-      Post() ~> service.publishDescriptor(UUID.randomUUID().toString, UUID.randomUUID.toString) ~> check {
+      Post() ~> service.publishDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID.toString) ~> check {
         status shouldEqual StatusCodes.Forbidden
       }
     }
@@ -1006,18 +995,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
         .returns(
           Future.successful(
-            Some(
-              SpecData.catalogItem.copy(
-                producerId = requesterId,
-                descriptors = Seq(SpecData.catalogDescriptor.copy(state = readmodel.Published))
-              )
-            )
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Published)))
           )
         )
 
@@ -1060,18 +1045,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
         .returns(
           Future.successful(
-            Some(
-              SpecData.catalogItem.copy(
-                producerId = requesterId,
-                descriptors = Seq(SpecData.catalogDescriptor.copy(state = readmodel.Deprecated))
-              )
-            )
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Deprecated)))
           )
         )
 
@@ -1114,18 +1095,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
         .returns(
           Future.successful(
-            Some(
-              SpecData.catalogItem.copy(
-                producerId = requesterId,
-                descriptors = Seq(SpecData.catalogDescriptor.copy(state = readmodel.Draft))
-              )
-            )
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Draft)))
           )
         )
 
@@ -1143,18 +1120,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
         .returns(
           Future.successful(
-            Some(
-              SpecData.catalogItem.copy(
-                producerId = requesterId,
-                descriptors = Seq(SpecData.catalogDescriptor.copy(state = readmodel.Archived))
-              )
-            )
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Archived)))
           )
         )
 
@@ -1171,13 +1144,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(None))
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
 
-      Post() ~> service.suspendDescriptor(UUID.randomUUID().toString, UUID.randomUUID().toString) ~> check {
+      Post() ~> service.suspendDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID().toString) ~> check {
         status shouldEqual StatusCodes.NotFound
       }
     }
@@ -1187,11 +1160,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = requesterId))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
 
       Post() ~> service.suspendDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID().toString) ~> check {
         status shouldEqual StatusCodes.NotFound
@@ -1202,13 +1175,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = UUID.randomUUID()))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
 
-      Post() ~> service.suspendDescriptor(UUID.randomUUID().toString, UUID.randomUUID.toString) ~> check {
+      Post() ~> service.suspendDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID.toString) ~> check {
         status shouldEqual StatusCodes.Forbidden
       }
     }
@@ -1223,23 +1196,23 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
       val descriptor =
-        SpecData.catalogDescriptor.copy(id = descriptorId, version = "3", state = readmodel.Suspended)
+        SpecData.catalogDescriptor.copy(id = descriptorId, version = "3", state = Suspended)
       val eService   = SpecData.catalogItem.copy(
         descriptors = Seq(
-          SpecData.catalogDescriptor.copy(version = "1", state = readmodel.Archived),
-          SpecData.catalogDescriptor.copy(version = "2", state = readmodel.Deprecated),
+          SpecData.catalogDescriptor.copy(version = "1", state = Archived),
+          SpecData.catalogDescriptor.copy(version = "2", state = Deprecated),
           descriptor,
-          SpecData.catalogDescriptor.copy(version = "4", state = readmodel.Suspended),
-          SpecData.catalogDescriptor.copy(version = "5", state = readmodel.Draft)
+          SpecData.catalogDescriptor.copy(version = "4", state = Suspended),
+          SpecData.catalogDescriptor.copy(version = "5", state = Draft)
         ),
         producerId = requesterId
       )
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(eService)))
+        .returns(Future.successful(eService))
 
       (mockCatalogManagementService
         .deprecateDescriptor(_: String, _: String)(_: Seq[(String, String)]))
@@ -1277,23 +1250,23 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
       val descriptor =
-        SpecData.catalogDescriptor.copy(id = descriptorId, version = "3", state = readmodel.Suspended)
+        SpecData.catalogDescriptor.copy(id = descriptorId, version = "3", state = Suspended)
       val eService   = SpecData.catalogItem.copy(
         descriptors = Seq(
-          SpecData.catalogDescriptor.copy(version = "1", state = readmodel.Archived),
-          SpecData.catalogDescriptor.copy(version = "2", state = readmodel.Deprecated),
+          SpecData.catalogDescriptor.copy(version = "1", state = Archived),
+          SpecData.catalogDescriptor.copy(version = "2", state = Deprecated),
           descriptor,
-          SpecData.catalogDescriptor.copy(version = "4", state = readmodel.Published),
-          SpecData.catalogDescriptor.copy(version = "5", state = readmodel.Draft)
+          SpecData.catalogDescriptor.copy(version = "4", state = Published),
+          SpecData.catalogDescriptor.copy(version = "5", state = Draft)
         ),
         producerId = requesterId
       )
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(eService)))
+        .returns(Future.successful(eService))
 
       (mockCatalogManagementService
         .deprecateDescriptor(_: String, _: String)(_: Seq[(String, String)]))
@@ -1331,24 +1304,24 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, version = "4", state = readmodel.Suspended)
+      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, version = "4", state = Suspended)
 
       val eService = SpecData.catalogItem.copy(
         descriptors = Seq(
-          SpecData.catalogDescriptor.copy(version = "1", state = readmodel.Archived),
-          SpecData.catalogDescriptor.copy(version = "2", state = readmodel.Deprecated),
-          SpecData.catalogDescriptor.copy(version = "3", state = readmodel.Suspended),
+          SpecData.catalogDescriptor.copy(version = "1", state = Archived),
+          SpecData.catalogDescriptor.copy(version = "2", state = Deprecated),
+          SpecData.catalogDescriptor.copy(version = "3", state = Suspended),
           descriptor,
-          SpecData.catalogDescriptor.copy(version = "5", state = readmodel.Draft)
+          SpecData.catalogDescriptor.copy(version = "5", state = Draft)
         ),
         producerId = requesterId
       )
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(eService)))
+        .returns(Future.successful(eService))
 
       (mockCatalogManagementService
         .publishDescriptor(_: String, _: String)(_: Seq[(String, String)]))
@@ -1387,22 +1360,22 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, version = "4", state = readmodel.Suspended)
+      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, version = "4", state = Suspended)
 
       val eService = SpecData.catalogItem.copy(
         descriptors = Seq(
-          SpecData.catalogDescriptor.copy(version = "1", state = readmodel.Archived),
-          SpecData.catalogDescriptor.copy(version = "2", state = readmodel.Suspended),
+          SpecData.catalogDescriptor.copy(version = "1", state = Archived),
+          SpecData.catalogDescriptor.copy(version = "2", state = Suspended),
           descriptor
         ),
         producerId = requesterId
       )
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(eService)))
+        .returns(Future.successful(eService))
 
       (mockCatalogManagementService
         .publishDescriptor(_: String, _: String)(_: Seq[(String, String)]))
@@ -1439,15 +1412,15 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, state = readmodel.Draft)
+      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, state = Draft)
 
       val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(eService)))
+        .returns(Future.successful(eService))
 
       Post() ~> service.activateDescriptor(SpecData.catalogItem.id.toString, descriptorId.toString) ~> check {
         status shouldEqual StatusCodes.BadRequest
@@ -1459,15 +1432,15 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, state = readmodel.Deprecated)
+      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, state = Deprecated)
 
       val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(eService)))
+        .returns(Future.successful(eService))
 
       Post() ~> service.activateDescriptor(SpecData.catalogItem.id.toString, descriptorId.toString) ~> check {
         status shouldEqual StatusCodes.BadRequest
@@ -1479,15 +1452,15 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, state = readmodel.Published)
+      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, state = Published)
 
       val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(eService)))
+        .returns(Future.successful(eService))
 
       Post() ~> service.activateDescriptor(SpecData.catalogItem.id.toString, descriptorId.toString) ~> check {
         status shouldEqual StatusCodes.BadRequest
@@ -1499,15 +1472,15 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, state = readmodel.Archived)
+      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, state = Archived)
 
       val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(eService)))
+        .returns(Future.successful(eService))
 
       Post() ~> service.activateDescriptor(SpecData.catalogItem.id.toString, descriptorId.toString) ~> check {
         status shouldEqual StatusCodes.BadRequest
@@ -1519,13 +1492,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(None))
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
 
-      Post() ~> service.activateDescriptor(UUID.randomUUID.toString, UUID.randomUUID.toString) ~> check {
+      Post() ~> service.activateDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID.toString) ~> check {
         status shouldEqual StatusCodes.NotFound
       }
     }
@@ -1535,11 +1508,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = requesterId))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
 
       Post() ~> service.activateDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID.toString) ~> check {
         status shouldEqual StatusCodes.NotFound
@@ -1549,13 +1522,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = UUID.randomUUID()))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
 
-      Post() ~> service.activateDescriptor(UUID.randomUUID().toString, UUID.randomUUID.toString) ~> check {
+      Post() ~> service.activateDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID.toString) ~> check {
         status shouldEqual StatusCodes.Forbidden
       }
     }
@@ -1568,15 +1541,15 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, state = readmodel.Draft)
+      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, state = Draft)
 
       val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(eService)))
+        .returns(Future.successful(eService))
 
       (mockCatalogManagementService
         .deleteDraft(_: String, _: String)(_: Seq[(String, String)]))
@@ -1594,13 +1567,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(None))
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
 
-      Delete() ~> service.deleteDraft(UUID.randomUUID.toString, UUID.randomUUID.toString) ~> check {
+      Delete() ~> service.deleteDraft(SpecData.catalogItem.id.toString, UUID.randomUUID.toString) ~> check {
         status shouldEqual StatusCodes.NotFound
       }
     }
@@ -1608,13 +1581,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = UUID.randomUUID()))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
 
-      Delete() ~> service.deleteDraft(UUID.randomUUID().toString, UUID.randomUUID.toString) ~> check {
+      Delete() ~> service.deleteDraft(SpecData.catalogItem.id.toString, UUID.randomUUID.toString) ~> check {
         status shouldEqual StatusCodes.Forbidden
       }
     }
@@ -1631,11 +1604,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(eService)))
+        .returns(Future.successful(eService))
 
       (mockCatalogManagementService
         .deleteEService(_: String)(_: Seq[(String, String)]))
@@ -1653,13 +1626,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(None))
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
 
-      Delete() ~> service.deleteEService(UUID.randomUUID().toString) ~> check {
+      Delete() ~> service.deleteEService(SpecData.catalogItem.id.toString) ~> check {
         status shouldEqual StatusCodes.NotFound
       }
     }
@@ -1667,13 +1640,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = UUID.randomUUID()))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
 
-      Delete() ~> service.deleteEService(UUID.randomUUID().toString) ~> check {
+      Delete() ~> service.deleteEService(SpecData.catalogItem.id.toString) ~> check {
         status shouldEqual StatusCodes.Forbidden
       }
     }
@@ -1713,11 +1686,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         serverUrls = Seq.empty
       )
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(eService)))
+        .returns(Future.successful(eService))
 
       (mockCatalogManagementService
         .createEServiceDocument(_: UUID, _: UUID, _: CatalogManagementDependency.CreateEServiceDescriptorDocumentSeed)(
@@ -1748,13 +1721,17 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         serverUrls = Seq.empty
       )
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(None))
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
 
-      Post() ~> service.createEServiceDocument(UUID.randomUUID().toString, UUID.randomUUID().toString, seed) ~> check {
+      Post() ~> service.createEServiceDocument(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID().toString,
+        seed
+      ) ~> check {
         status shouldEqual StatusCodes.NotFound
       }
     }
@@ -1775,11 +1752,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         serverUrls = Seq.empty
       )
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = requesterId))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
 
       Post() ~> service.createEServiceDocument(
         SpecData.catalogItem.id.toString,
@@ -1804,20 +1781,23 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         serverUrls = Seq.empty
       )
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = UUID.randomUUID()))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
 
-      Post() ~> service.createEServiceDocument(UUID.randomUUID().toString, UUID.randomUUID().toString, seed) ~> check {
+      Post() ~> service.createEServiceDocument(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID().toString,
+        seed
+      ) ~> check {
         status shouldEqual StatusCodes.Forbidden
       }
     }
   }
   "Document retrieve" should {
-
-    "succeed if document is an interface" in {
+    "succeed" in {
 
       val descriptorId = UUID.randomUUID()
       val documentId   = UUID.randomUUID()
@@ -1832,22 +1812,21 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor))
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceDocument(_: UUID, _: UUID, _: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, descriptorId, documentId, *, *)
         .once()
-        .returns(Future.successful(Some(eService)))
+        .returns(Future.successful(SpecData.catalogDocument.copy(id = documentId)))
 
       Post() ~> service.getEServiceDocumentById(
-        SpecData.catalogItem.id.toString,
+        eService.id.toString,
         descriptorId.toString,
         documentId.toString
       ) ~> check {
         status shouldEqual StatusCodes.OK
       }
     }
-
-    "succeed if document is not an interface" in {
+    "fail if Document does not exist" in {
 
       val descriptorId = UUID.randomUUID()
       val documentId   = UUID.randomUUID()
@@ -1855,112 +1834,25 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
 
-      val descriptor =
-        SpecData.catalogDescriptor.copy(id = descriptorId, docs = Seq(SpecData.catalogDocument.copy(id = documentId)))
+      val descriptor = SpecData.catalogDescriptor.copy(
+        id = descriptorId,
+        interface = Some(SpecData.catalogDocument.copy(id = documentId))
+      )
 
       val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor))
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceDocument(_: UUID, _: UUID, _: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, descriptorId, documentId, *, *)
         .once()
-        .returns(Future.successful(Some(eService)))
+        .returns(
+          Future.failed(DescriptorDocumentNotFound(eService.id.toString, descriptorId.toString, documentId.toString))
+        )
 
       Post() ~> service.getEServiceDocumentById(
-        SpecData.catalogItem.id.toString,
+        eService.id.toString,
         descriptorId.toString,
         documentId.toString
-      ) ~> check {
-        status shouldEqual StatusCodes.OK
-      }
-    }
-    "fail if EService does not exist" in {
-
-      implicit val context: Seq[(String, String)] =
-        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
-
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
-        .once()
-        .returns(Future.successful(None))
-
-      Post() ~> service.getEServiceDocumentById(
-        UUID.randomUUID.toString,
-        UUID.randomUUID.toString,
-        UUID.randomUUID.toString
-      ) ~> check {
-        status shouldEqual StatusCodes.NotFound
-      }
-    }
-    "fail if EService Descriptor does not exist" in {
-
-      implicit val context: Seq[(String, String)] =
-        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
-
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
-        .once()
-        .returns(Future.successful(Some(SpecData.catalogItem)))
-
-      Post() ~> service.getEServiceDocumentById(
-        SpecData.catalogItem.id.toString,
-        UUID.randomUUID.toString,
-        UUID.randomUUID.toString
-      ) ~> check {
-        status shouldEqual StatusCodes.NotFound
-      }
-    }
-    "fail if Descriptor Document does not exist (No documents at all)" in {
-
-      val descriptorId = UUID.randomUUID()
-
-      implicit val context: Seq[(String, String)] =
-        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
-
-      val descriptor =
-        SpecData.catalogDescriptor.copy(id = descriptorId)
-
-      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor))
-
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
-        .once()
-        .returns(Future.successful(Some(eService)))
-
-      Post() ~> service.getEServiceDocumentById(
-        SpecData.catalogItem.id.toString,
-        descriptorId.toString,
-        UUID.randomUUID.toString
-      ) ~> check {
-        status shouldEqual StatusCodes.NotFound
-      }
-    }
-    "fail if Descriptor Document does not exist (No document id found)" in {
-
-      val descriptorId = UUID.randomUUID()
-      val documentId   = UUID.randomUUID()
-
-      implicit val context: Seq[(String, String)] =
-        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
-
-      val descriptor =
-        SpecData.catalogDescriptor.copy(id = descriptorId, docs = Seq(SpecData.catalogDocument.copy(id = documentId)))
-
-      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor))
-
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
-        .once()
-        .returns(Future.successful(Some(eService)))
-
-      Post() ~> service.getEServiceDocumentById(
-        SpecData.catalogItem.id.toString,
-        descriptorId.toString,
-        UUID.randomUUID.toString
       ) ~> check {
         status shouldEqual StatusCodes.NotFound
       }
@@ -1985,11 +1877,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val managementSeed =
         CatalogManagementDependency.UpdateEServiceDescriptorDocumentSeed(prettyName = "prettyNameUpdated")
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(eService)))
+        .returns(Future.successful(eService))
 
       (mockCatalogManagementService
         .updateEServiceDocument(
@@ -2019,14 +1911,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       val seed = UpdateEServiceDescriptorDocumentSeed(prettyName = "prettyNameUpdated")
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(None))
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
 
       Post() ~> service.updateEServiceDocumentById(
-        UUID.randomUUID().toString,
+        SpecData.catalogItem.id.toString,
         UUID.randomUUID().toString,
         UUID.randomUUID().toString,
         seed
@@ -2040,14 +1932,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       val seed = UpdateEServiceDescriptorDocumentSeed(prettyName = "prettyNameUpdated")
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = UUID.randomUUID()))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
 
       Post() ~> service.updateEServiceDocumentById(
-        UUID.randomUUID().toString,
+        SpecData.catalogItem.id.toString,
         UUID.randomUUID().toString,
         UUID.randomUUID().toString,
         seed
@@ -2070,11 +1962,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(eService)))
+        .returns(Future.successful(eService))
 
       (mockCatalogManagementService
         .deleteEServiceDocument(_: String, _: String, _: String)(_: Seq[(String, String)]))
@@ -2096,14 +1988,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(None))
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
 
       Delete() ~> service.deleteEServiceDocumentById(
-        UUID.randomUUID().toString,
+        SpecData.catalogItem.id.toString,
         UUID.randomUUID().toString,
         UUID.randomUUID().toString
       ) ~> check {
@@ -2114,14 +2006,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
 
-      (mockReadModel
-        .findOne(_: String, _: Bson)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, *, *)
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(Some(SpecData.catalogItem.copy(producerId = UUID.randomUUID()))))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
 
       Delete() ~> service.deleteEServiceDocumentById(
-        UUID.randomUUID().toString,
+        SpecData.catalogItem.id.toString,
         UUID.randomUUID().toString,
         UUID.randomUUID().toString
       ) ~> check {
