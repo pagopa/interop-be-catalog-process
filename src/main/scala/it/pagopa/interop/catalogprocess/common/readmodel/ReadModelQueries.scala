@@ -156,6 +156,7 @@ object ReadModelQueries {
 
     val query = listEServicesFilters(name, eServicesIds, producersIds, attributesIds, states, exactMatchOnName)
 
+    println(query.toString())
     for {
       // Using aggregate to perform case insensitive sorting
       //   N.B.: Required because DocumentDB does not support collation
@@ -206,12 +207,12 @@ object ReadModelQueries {
       case attributes =>
         Some(
           Filters.or(
-            Filters.in("data.descriptors.attributes.certified.id.id", attributes),
-            Filters.in("data.descriptors.attributes.certified.ids.id", attributes),
-            Filters.in("data.descriptors.attributes.declared.id.id", attributes),
-            Filters.in("data.descriptors.attributes.declared.ids.id", attributes),
-            Filters.in("data.descriptors.attributes.verified.id.id", attributes),
-            Filters.in("data.descriptors.attributes.verified.ids.id", attributes)
+            Filters.in("data.descriptors.attributes.certified.id.id", attributes: _*),
+            Filters.in("data.descriptors.attributes.certified.ids.id", attributes: _*),
+            Filters.in("data.descriptors.attributes.declared.id.id", attributes: _*),
+            Filters.in("data.descriptors.attributes.declared.ids.id", attributes: _*),
+            Filters.in("data.descriptors.attributes.verified.id.id", attributes: _*),
+            Filters.in("data.descriptors.attributes.verified.ids.id", attributes: _*)
           )
         )
     }
