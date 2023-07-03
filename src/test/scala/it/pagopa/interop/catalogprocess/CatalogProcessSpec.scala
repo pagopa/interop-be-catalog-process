@@ -2,6 +2,7 @@ package it.pagopa.interop.catalogprocess
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import it.pagopa.interop.agreementmanagement.model.agreement.{PersistentAgreementState, Active}
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
 import it.pagopa.interop.catalogmanagement.client.model.AgreementApprovalPolicy.AUTOMATIC
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
@@ -10,18 +11,198 @@ import it.pagopa.interop.catalogprocess.api.impl._
 import it.pagopa.interop.commons.utils.{ORGANIZATION_ID_CLAIM, USER_ROLES}
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors.{EServiceNotFound, DescriptorDocumentNotFound}
-import it.pagopa.interop.catalogprocess.common.readmodel.TotalCountResult
-import it.pagopa.interop.catalogmanagement.model.{CatalogItem, Published, Draft, Deprecated, Archived, Suspended}
+import it.pagopa.interop.catalogmanagement.model.{
+  CatalogDescriptorState,
+  CatalogItem,
+  Published,
+  Draft,
+  Deprecated,
+  Archived,
+  Suspended
+}
 import it.pagopa.interop.catalogprocess.model._
-import org.mongodb.scala.bson.conversions.Bson
+import it.pagopa.interop.catalogprocess.common.readmodel.{PaginatedResult, Consumers}
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatest.matchers.should.Matchers._
-import spray.json._
 
 import java.util.UUID
 import scala.concurrent.{Future, ExecutionContext}
 
 class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestRouteTest {
+
+  "EService retrieve" should {
+
+    "succeed when Agreement States are empty" in {
+
+      val eServiceId  = UUID.randomUUID()
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val name            = None
+      val eServicesIds    = Seq(eServiceId)
+      val producersIds    = Seq.empty
+      val agreementStates = Seq.empty
+      val states          = Seq.empty
+      val offset          = 0
+      val limit           = 50
+
+      (mockCatalogManagementService
+        .getEServices(
+          _: Option[String],
+          _: Seq[UUID],
+          _: Seq[UUID],
+          _: Seq[CatalogDescriptorState],
+          _: Int,
+          _: Int,
+          _: Boolean
+        )(_: ExecutionContext, _: ReadModelService))
+        .expects(name, eServicesIds, producersIds, states, offset, limit, false, *, *)
+        .once()
+        .returns(Future.successful(PaginatedResult(results = Seq(SpecData.catalogItem), 1)))
+
+      Get() ~> service.getEServices(
+        name,
+        eServicesIds.mkString(","),
+        producersIds.mkString(","),
+        states.mkString(","),
+        agreementStates.mkString(","),
+        offset,
+        limit
+      ) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+    "succeed when Agreement States are not empty and EServices from agreements are not empty" in {
+
+      val requesterId = UUID.randomUUID()
+      val eServiceId  = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val name            = None
+      val eServicesIds    = Seq(eServiceId)
+      val producersIds    = Seq.empty
+      val agreementStates = Seq("ACTIVE")
+      val states          = Seq.empty
+      val offset          = 0
+      val limit           = 50
+
+      (mockAgreementManagementService
+        .getAgreements(_: Seq[UUID], _: Seq[UUID], _: Seq[UUID], _: Seq[PersistentAgreementState])(
+          _: ExecutionContext,
+          _: ReadModelService
+        ))
+        .expects(eServicesIds, Seq(requesterId), producersIds, Seq(Active), *, *)
+        .once()
+        .returns(Future.successful(Seq(SpecData.agreement)))
+
+      (mockCatalogManagementService
+        .getEServices(
+          _: Option[String],
+          _: Seq[UUID],
+          _: Seq[UUID],
+          _: Seq[CatalogDescriptorState],
+          _: Int,
+          _: Int,
+          _: Boolean
+        )(_: ExecutionContext, _: ReadModelService))
+        .expects(name, Seq(SpecData.agreement.eserviceId), producersIds, states, offset, limit, false, *, *)
+        .once()
+        .returns(Future.successful(PaginatedResult(results = Seq(SpecData.catalogItem), 1)))
+
+      Get() ~> service.getEServices(
+        name,
+        eServicesIds.mkString(","),
+        producersIds.mkString(","),
+        states.mkString(","),
+        agreementStates.mkString(","),
+        offset,
+        limit
+      ) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+    "succeed when Agreement States are not empty and EServices from agreements are empty" in {
+
+      val requesterId = UUID.randomUUID()
+      val eServiceId  = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val name            = None
+      val eServicesIds    = Seq(eServiceId)
+      val producersIds    = Seq.empty
+      val agreementStates = Seq("ACTIVE")
+      val states          = Seq.empty
+      val offset          = 0
+      val limit           = 50
+
+      (mockAgreementManagementService
+        .getAgreements(_: Seq[UUID], _: Seq[UUID], _: Seq[UUID], _: Seq[PersistentAgreementState])(
+          _: ExecutionContext,
+          _: ReadModelService
+        ))
+        .expects(eServicesIds, Seq(requesterId), producersIds, Seq(Active), *, *)
+        .once()
+        .returns(Future.successful(Seq.empty))
+
+      Get() ~> service.getEServices(
+        name,
+        eServicesIds.mkString(","),
+        producersIds.mkString(","),
+        states.mkString(","),
+        agreementStates.mkString(","),
+        offset,
+        limit
+      ) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+  }
+
+  "Consumers retrieve" should {
+
+    "succeed" in {
+
+      val eServiceId  = UUID.randomUUID()
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val offset = 0
+      val limit  = 50
+
+      (mockCatalogManagementService
+        .getConsumers(_: UUID, _: Int, _: Int)(_: ExecutionContext, _: ReadModelService))
+        .expects(eServiceId, offset, limit, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            PaginatedResult(
+              results = Seq(
+                Consumers(
+                  descriptorVersion = SpecData.catalogDescriptor.version,
+                  descriptorState = SpecData.catalogDescriptor.state,
+                  agreementState = SpecData.agreement.state,
+                  consumerName = "name",
+                  consumerExternalId = "extId"
+                )
+              ),
+              1
+            )
+          )
+        )
+
+      Get() ~> service.getEServiceConsumers(offset, limit, eServiceId.toString) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+  }
 
   "EService creation" should {
 
@@ -100,19 +281,19 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         )
       )
 
-      // Data retrieve
-      (mockReadModel
-        .aggregate(_: String, _: Seq[Bson], _: Int, _: Int)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, 0, 1, *, *)
+      (mockCatalogManagementService
+        .getEServices(
+          _: Option[String],
+          _: Seq[UUID],
+          _: Seq[UUID],
+          _: Seq[CatalogDescriptorState],
+          _: Int,
+          _: Int,
+          _: Boolean
+        )(_: ExecutionContext, _: ReadModelService))
+        .expects(Some(seed.name), Seq.empty, Seq(seed.producerId), Seq.empty, 0, 1, true, *, *)
         .once()
-        .returns(Future.successful(catalogItems))
-
-      // Total count
-      (mockReadModel
-        .aggregate(_: String, _: Seq[Bson], _: Int, _: Int)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, 0, Int.MaxValue, *, *)
-        .once()
-        .returns(Future.successful(Seq(TotalCountResult(0))))
+        .returns(Future.successful(PaginatedResult(results = catalogItems, catalogItems.size)))
 
       (mockCatalogManagementService
         .createEService(_: CatalogManagementDependency.EServiceSeed)(_: Seq[(String, String)]))
@@ -148,19 +329,19 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val apiSeed: EServiceSeed =
         EServiceSeed(name = "MyService", description = "My Service", technology = EServiceTechnology.REST)
 
-      // Data retrieve
-      (mockReadModel
-        .aggregate(_: String, _: Seq[Bson], _: Int, _: Int)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, 0, 1, *, *)
+      (mockCatalogManagementService
+        .getEServices(
+          _: Option[String],
+          _: Seq[UUID],
+          _: Seq[UUID],
+          _: Seq[CatalogDescriptorState],
+          _: Int,
+          _: Int,
+          _: Boolean
+        )(_: ExecutionContext, _: ReadModelService))
+        .expects(Some(apiSeed.name), Seq.empty, Seq(requesterId), Seq.empty, 0, 1, true, *, *)
         .once()
-        .returns(Future.successful(catalogItems))
-
-      // Total count
-      (mockReadModel
-        .aggregate(_: String, _: Seq[Bson], _: Int, _: Int)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, 0, Int.MaxValue, *, *)
-        .once()
-        .returns(Future.successful(Seq(TotalCountResult(1))))
+        .returns(Future.successful(PaginatedResult(results = catalogItems, catalogItems.size)))
 
       Post() ~> service.createEService(apiSeed) ~> check {
         status shouldEqual StatusCodes.Conflict

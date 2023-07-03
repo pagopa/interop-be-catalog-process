@@ -2,6 +2,7 @@ package it.pagopa.interop.catalogprocess
 
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.catalogmanagement.{model => CatalogManagement}
+import it.pagopa.interop.agreementmanagement.model.agreement.{PersistentAgreement, Active, PersistentStamps}
 import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
 
 import java.util.UUID
@@ -10,6 +11,29 @@ object SpecData {
   val eServiceId   = UUID.randomUUID()
   val docId        = UUID.randomUUID()
   val descriptorId = UUID.randomUUID()
+
+  val agreement: PersistentAgreement = PersistentAgreement(
+    id = UUID.randomUUID(),
+    eserviceId = UUID.randomUUID(),
+    descriptorId = UUID.randomUUID(),
+    producerId = UUID.randomUUID(),
+    consumerId = UUID.randomUUID(),
+    state = Active,
+    verifiedAttributes = Seq.empty,
+    certifiedAttributes = Seq.empty,
+    declaredAttributes = Seq.empty,
+    suspendedByConsumer = None,
+    suspendedByProducer = None,
+    suspendedByPlatform = None,
+    consumerDocuments = Seq.empty,
+    createdAt = OffsetDateTimeSupplier.get(),
+    updatedAt = None,
+    consumerNotes = None,
+    contract = None,
+    stamps = PersistentStamps(),
+    rejectionReason = None,
+    suspendedAt = None
+  )
 
   val catalogItem: CatalogManagement.CatalogItem = CatalogManagement.CatalogItem(
     id = eServiceId,

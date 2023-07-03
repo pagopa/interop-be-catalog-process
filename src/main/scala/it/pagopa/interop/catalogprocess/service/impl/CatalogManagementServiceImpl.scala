@@ -3,7 +3,13 @@ package it.pagopa.interop.catalogprocess.service.impl
 import it.pagopa.interop.catalogmanagement.client.api.EServiceApi
 import it.pagopa.interop.catalogprocess.common.readmodel.ReadModelCatalogQueries
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
-import it.pagopa.interop.catalogmanagement.model.{CatalogItem, CatalogDocument, CatalogDescriptor}
+import it.pagopa.interop.catalogmanagement.model.{
+  CatalogItem,
+  CatalogDocument,
+  CatalogDescriptor,
+  CatalogDescriptorState
+}
+import it.pagopa.interop.catalogprocess.common.readmodel.{PaginatedResult, Consumers}
 import it.pagopa.interop.catalogmanagement.client.invoker.{ApiError, BearerToken}
 import it.pagopa.interop.catalogmanagement.client.model._
 import it.pagopa.interop.catalogprocess.service.{CatalogManagementInvoker, CatalogManagementService}
@@ -265,6 +271,22 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
     )
   } yield catalogDocument
 
+  override def getConsumers(eServiceId: UUID, offset: Int, limit: Int)(implicit
+    ec: ExecutionContext,
+    readModel: ReadModelService
+  ): Future[PaginatedResult[Consumers]] = ReadModelCatalogQueries.getConsumers(eServiceId, offset, limit)
+
+  override def getEServices(
+    name: Option[String],
+    eServicesIds: Seq[UUID],
+    producersIds: Seq[UUID],
+    states: Seq[CatalogDescriptorState],
+    offset: Int,
+    limit: Int,
+    exactMatchOnName: Boolean = false
+  )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PaginatedResult[CatalogItem]] =
+    ReadModelCatalogQueries.getEServices(name, eServicesIds, producersIds, states, offset, limit, exactMatchOnName)
+
   private def getDocument(eService: CatalogItem, descriptorId: UUID, documentId: UUID): Option[CatalogDocument] = {
 
     def lookup(catalogDescriptor: CatalogDescriptor): Option[CatalogDocument]               = {
@@ -279,5 +301,4 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       document   <- lookup(descriptor)
     } yield document
   }
-
 }

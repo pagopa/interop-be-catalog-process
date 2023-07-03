@@ -60,7 +60,7 @@ final case class ProcessApiServiceImpl(
     val result: Future[EService] = for {
       organizationId <- getOrganizationIdFutureUUID(contexts)
       clientSeed = eServiceSeed.toDependency(organizationId)
-      maybeEservice <- ReadModelCatalogQueries
+      maybeEservice <- catalogManagementService
         .getEServices(
           eServiceSeed.name.some,
           Seq.empty,
@@ -130,7 +130,7 @@ final case class ProcessApiServiceImpl(
       ): Future[PaginatedResult[CatalogItem]] = {
 
         if (agreementStates.isEmpty)
-          ReadModelCatalogQueries.getEServices(name, eServicesIds, producersIds, states, offset, limit)
+          catalogManagementService.getEServices(name, eServicesIds, producersIds, states, offset, limit)
         else
           for {
             agreementEservicesIds <- agreementManagementService
@@ -145,7 +145,7 @@ final case class ProcessApiServiceImpl(
               if (agreementEservicesIds.isEmpty)
                 Future.successful(ReadModelCatalogQueries.emptyResults[CatalogItem])
               else
-                ReadModelCatalogQueries.getEServices(name, agreementEservicesIds, producersIds, states, offset, limit)
+                catalogManagementService.getEServices(name, agreementEservicesIds, producersIds, states, offset, limit)
           } yield result
       }
 
@@ -604,7 +604,7 @@ final case class ProcessApiServiceImpl(
 
     val result: Future[EServiceConsumers] = for {
       eServiceUuid <- eServiceId.toFutureUUID
-      result       <- ReadModelCatalogQueries.getConsumers(eServiceUuid, offset, limit)
+      result       <- catalogManagementService.getConsumers(eServiceUuid, offset, limit)
     } yield EServiceConsumers(results = result.results.map(_.toApi), totalCount = result.totalCount)
 
     onComplete(result) {

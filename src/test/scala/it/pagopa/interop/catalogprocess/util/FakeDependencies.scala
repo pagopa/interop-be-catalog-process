@@ -2,7 +2,7 @@ package it.pagopa.interop.catalogprocess.util
 
 import it.pagopa.interop.authorizationmanagement.client.model._
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
-import it.pagopa.interop.agreementmanagement.model.agreement.{PersistentAgreement, PersistentAgreementState}
+import it.pagopa.interop.agreementmanagement.model.agreement.{Active, PersistentAgreement, PersistentAgreementState}
 import it.pagopa.interop.catalogmanagement.client.model.{
   AgreementApprovalPolicy,
   Attributes,
@@ -18,7 +18,15 @@ import it.pagopa.interop.catalogmanagement.client.model.{
   UpdateEServiceSeed,
   CreateEServiceDescriptorDocumentSeed
 }
-import it.pagopa.interop.catalogmanagement.model.{CatalogItem, Rest, CatalogAttributes, CatalogDocument}
+import it.pagopa.interop.catalogprocess.common.readmodel.{PaginatedResult, Consumers}
+import it.pagopa.interop.catalogmanagement.model.{
+  CatalogItem,
+  Rest,
+  CatalogAttributes,
+  CatalogDocument,
+  Published,
+  CatalogDescriptorState
+}
 import it.pagopa.interop.catalogprocess.service.{
   AuthorizationManagementService,
   CatalogManagementService,
@@ -218,6 +226,35 @@ object FakeDependencies {
     override def deleteEServiceDocument(eServiceId: String, descriptorId: String, documentId: String)(implicit
       contexts: Seq[(String, String)]
     ): Future[Unit] = Future.successful(())
+
+    override def getConsumers(eServiceId: UUID, offset: Int, limit: Int)(implicit
+      ec: ExecutionContext,
+      readModel: ReadModelService
+    ): Future[PaginatedResult[Consumers]] = Future.successful(
+      PaginatedResult(
+        results = Seq(
+          Consumers(
+            descriptorVersion = "fake",
+            descriptorState = Published,
+            agreementState = Active,
+            consumerName = "fake",
+            consumerExternalId = "fake"
+          )
+        ),
+        totalCount = 1
+      )
+    )
+
+    override def getEServices(
+      name: Option[String],
+      eServicesIds: Seq[UUID],
+      producersIds: Seq[UUID],
+      states: Seq[CatalogDescriptorState],
+      offset: Int,
+      limit: Int,
+      exactMatchOnName: Boolean = false
+    )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PaginatedResult[CatalogItem]] =
+      Future.successful(PaginatedResult(results = Seq.empty, totalCount = 0))
   }
 
   class FakeAuthorizationManagementService extends AuthorizationManagementService {
