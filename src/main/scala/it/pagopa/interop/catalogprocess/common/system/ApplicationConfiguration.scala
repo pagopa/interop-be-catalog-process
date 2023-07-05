@@ -8,12 +8,8 @@ object ApplicationConfiguration {
 
   val serverPort: Int = config.getInt("catalog-process.port")
 
-  val catalogManagementUrl: String           = config.getString("catalog-process.services.catalog-management")
-  val agreementManagementUrl: String         = config.getString("catalog-process.services.agreement-management")
-  val authorizationManagementUrl: String     = config.getString("catalog-process.services.authorization-management")
-  val attributeRegistryManagementUrl: String =
-    config.getString("catalog-process.services.attribute-registry-management")
-  val tenantManagementUrl: String            = config.getString("catalog-process.services.tenant-management")
+  val catalogManagementUrl: String       = config.getString("catalog-process.services.catalog-management")
+  val authorizationManagementUrl: String = config.getString("catalog-process.services.authorization-management")
 
   val jwtAudience: Set[String] = config.getString("catalog-process.jwt.audience").split(",").toSet.filter(_.nonEmpty)
 

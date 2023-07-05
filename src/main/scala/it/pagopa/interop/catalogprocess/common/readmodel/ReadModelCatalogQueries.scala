@@ -1,11 +1,7 @@
 package it.pagopa.interop.catalogprocess.common.readmodel
 
-import it.pagopa.interop.agreementmanagement.model.agreement.PersistentAgreement
-import it.pagopa.interop.agreementmanagement.model.persistence.JsonFormats._
-import it.pagopa.interop.catalogprocess.api.impl.Converter._
-import it.pagopa.interop.catalogprocess.model.{EServiceDescriptorState, AgreementState}
 import it.pagopa.interop.catalogmanagement.model.{CatalogItem, Suspended, Deprecated, Published}
-import it.pagopa.interop.agreementmanagement.model.{agreement => ManagementAgreementState}
+import it.pagopa.interop.agreementmanagement.model.{agreement => PersistentAgreement}
 import it.pagopa.interop.catalogmanagement.model.persistence.JsonFormats._
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import org.mongodb.scala.Document
@@ -16,22 +12,25 @@ import org.mongodb.scala.model.Projections.{computed, fields, include, excludeId
 import org.mongodb.scala.model.Sorts.ascending
 
 import scala.concurrent.{ExecutionContext, Future}
+import java.util.UUID
+import it.pagopa.interop.catalogmanagement.model.CatalogDescriptorState
 
-object ReadModelQueries {
+object ReadModelCatalogQueries extends ReadModelQuery {
 
-  private def listConsumersFilter(eServiceId: String): Bson = {
+  private def listConsumersFilter(eServiceId: UUID): Bson = {
 
-    val idFilter = Filters.eq("data.id", eServiceId)
+    val idFilter = Filters.eq("data.id", eServiceId.toString)
 
     val descriptorsStateFilter =
       Filters.in("data.descriptors.state", Published.toString, Deprecated.toString, Suspended.toString)
 
     mapToVarArgs(Seq(idFilter) ++ Seq(descriptorsStateFilter))(Filters.and).getOrElse(Filters.empty())
-
   }
-  def listConsumers(eServiceId: String, offset: Int, limit: Int)(
+
+  def getConsumers(eServiceId: UUID, offset: Int, limit: Int)(implicit
+    ec: ExecutionContext,
     readModel: ReadModelService
-  )(implicit ec: ExecutionContext): Future[PaginatedResult[Consumers]] = {
+  ): Future[PaginatedResult[Consumers]] = {
     val query: Bson = listConsumersFilter(eServiceId)
 
     val filterPipeline: Seq[Bson] = Seq(
@@ -41,11 +40,7 @@ object ReadModelQueries {
       lookup(from = "tenants", localField = "agreements.data.consumerId", foreignField = "data.id", as = "tenants"),
       unwind("$tenants"),
       `match`(
-        Filters.in(
-          "agreements.data.state",
-          ManagementAgreementState.Active.toString,
-          ManagementAgreementState.Suspended.toString
-        )
+        Filters.in("agreements.data.state", PersistentAgreement.Active.toString, PersistentAgreement.Suspended.toString)
       ),
       addFields(
         Field(
@@ -96,62 +91,36 @@ object ReadModelQueries {
 
   def emptyResults[T] = PaginatedResult[T](results = Nil, totalCount = 0)
 
-  def listAgreements(
-    eServicesIds: Seq[String],
-    consumersIds: Seq[String],
-    producersIds: Seq[String],
-    states: Seq[AgreementState]
-  )(readModel: ReadModelService)(implicit ec: ExecutionContext): Future[Seq[PersistentAgreement]] = {
-
-    val query: Bson =
-      listAgreementsFilters(eServicesIds, consumersIds, producersIds, states)
-
-    for {
-      agreements <- readModel.aggregate[PersistentAgreement](
-        "agreements",
-        Seq(`match`(query), project(fields(include("data"))), sort(ascending("data.id"))),
-        offset = 0,
-        limit = Int.MaxValue
+  def getEServiceDocument(eServiceId: UUID, descriptorId: UUID, documentId: UUID)(implicit
+    ec: ExecutionContext,
+    readModel: ReadModelService
+  ): Future[Option[CatalogItem]] = {
+    val filters = Filters.and(
+      Filters.eq("data.id", eServiceId.toString),
+      Filters.eq("data.descriptors.id", descriptorId.toString),
+      Filters.or(
+        Filters.eq("data.descriptors.docs.id", documentId.toString),
+        Filters.eq("data.descriptors.interface.id", documentId.toString)
       )
-    } yield agreements
-
+    )
+    readModel.findOne[CatalogItem]("eservices", filters)
   }
 
-  private def listAgreementsFilters(
-    eServicesIds: Seq[String],
-    consumersIds: Seq[String],
-    producersIds: Seq[String],
-    states: Seq[AgreementState]
-  ): Bson = {
-
-    val statesFilter = listStatesFilter(states)
-
-    val eServicesIdsFilter = mapToVarArgs(eServicesIds.map(Filters.eq("data.eserviceId", _)))(Filters.or)
-    val consumersIdsFilter = mapToVarArgs(consumersIds.map(Filters.eq("data.consumerId", _)))(Filters.or)
-    val producersIdsFilter = mapToVarArgs(producersIds.map(Filters.eq("data.producerId", _)))(Filters.or)
-
-    mapToVarArgs(
-      eServicesIdsFilter.toList ++ consumersIdsFilter.toList ++ producersIdsFilter.toList ++ statesFilter.toList
-    )(Filters.and).getOrElse(Filters.empty())
+  def getEServiceById(
+    eServiceId: UUID
+  )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[Option[CatalogItem]] = {
+    readModel.findOne[CatalogItem]("eservices", Filters.eq("data.id", eServiceId.toString))
   }
 
-  private def listStatesFilter(states: Seq[AgreementState]): Option[Bson] =
-    mapToVarArgs(
-      states
-        .map(_.toPersistence)
-        .map(_.toString)
-        .map(Filters.eq("data.state", _))
-    )(Filters.or)
-
-  def listEServices(
+  def getEServices(
     name: Option[String],
-    eServicesIds: Seq[String],
-    producersIds: Seq[String],
-    states: Seq[EServiceDescriptorState],
+    eServicesIds: Seq[UUID],
+    producersIds: Seq[UUID],
+    states: Seq[CatalogDescriptorState],
     offset: Int,
     limit: Int,
     exactMatchOnName: Boolean = false
-  )(readModel: ReadModelService)(implicit ec: ExecutionContext): Future[PaginatedResult[CatalogItem]] = {
+  )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PaginatedResult[CatalogItem]] = {
 
     val query = listEServicesFilters(name, eServicesIds, producersIds, states, exactMatchOnName)
 
@@ -186,19 +155,18 @@ object ReadModelQueries {
 
   private def listEServicesFilters(
     name: Option[String],
-    eServicesIds: Seq[String],
-    producersIds: Seq[String],
-    states: Seq[EServiceDescriptorState],
+    eServicesIds: Seq[UUID],
+    producersIds: Seq[UUID],
+    states: Seq[CatalogDescriptorState],
     exactMatchOnName: Boolean
   ): Bson = {
     val statesPartialFilter = states
-      .map(_.toPersistent)
       .map(_.toString)
       .map(Filters.eq("data.descriptors.state", _))
 
     val statesFilter       = mapToVarArgs(statesPartialFilter)(Filters.or)
-    val eServicesIdsFilter = mapToVarArgs(eServicesIds.map(Filters.eq("data.id", _)))(Filters.or)
-    val producersIdsFilter = mapToVarArgs(producersIds.map(Filters.eq("data.producerId", _)))(Filters.or)
+    val eServicesIdsFilter = mapToVarArgs(eServicesIds.map(e => Filters.eq("data.id", e.toString)))(Filters.or)
+    val producersIdsFilter = mapToVarArgs(producersIds.map(p => Filters.eq("data.producerId", p.toString)))(Filters.or)
     val nameFilter         =
       if (exactMatchOnName) name.map(n => Filters.regex("data.name", s"^$n$$", "i"))
       else name.map(Filters.regex("data.name", _, "i"))
@@ -207,6 +175,4 @@ object ReadModelQueries {
     )
       .getOrElse(Filters.empty())
   }
-
-  private def mapToVarArgs[A, B](l: Seq[A])(f: Seq[A] => B): Option[B] = Option.when(l.nonEmpty)(f(l))
 }

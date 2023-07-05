@@ -1,16 +1,23 @@
 package it.pagopa.interop.catalogprocess.service.impl
 
-import it.pagopa.interop.catalogmanagement.client
 import it.pagopa.interop.catalogmanagement.client.api.EServiceApi
+import it.pagopa.interop.catalogprocess.common.readmodel.ReadModelCatalogQueries
+import it.pagopa.interop.commons.cqrs.service.ReadModelService
+import it.pagopa.interop.catalogmanagement.model.{
+  CatalogItem,
+  CatalogDocument,
+  CatalogDescriptor,
+  CatalogDescriptorState
+}
+import it.pagopa.interop.catalogprocess.common.readmodel.{PaginatedResult, Consumers}
 import it.pagopa.interop.catalogmanagement.client.invoker.{ApiError, BearerToken}
 import it.pagopa.interop.catalogmanagement.client.model._
 import it.pagopa.interop.catalogprocess.service.{CatalogManagementInvoker, CatalogManagementService}
-import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils._
+import it.pagopa.interop.commons.utils.TypeConversions._
 import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors.{
   DescriptorDocumentNotFound,
-  DraftDescriptorAlreadyExists,
   EServiceDescriptorNotFound,
   EServiceNotFound
 }
@@ -68,25 +75,6 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       invoker.invoke(request, s"E-Service $eServiceId deleted").recoverWith {
         case err: ApiError[_] if err.code == 404 =>
           Future.failed(EServiceNotFound(eServiceId))
-      }
-    }
-
-  override def listEServices(producerId: Option[String], state: Option[EServiceDescriptorState])(implicit
-    contexts: Seq[(String, String)]
-  ): Future[Seq[EService]] = withHeaders { (bearerToken, correlationId, ip) =>
-    val request =
-      api.getEServices(xCorrelationId = correlationId, producerId = producerId, state = state, xForwardedFor = ip)(
-        BearerToken(bearerToken)
-      )
-    invoker.invoke(request, s"E-Services list retrieved for filters: producerId = $producerId,  status = $state")
-  }
-
-  override def getEService(eServiceId: String)(implicit contexts: Seq[(String, String)]): Future[EService] =
-    withHeaders { (bearerToken, correlationId, ip) =>
-      val request =
-        api.getEService(xCorrelationId = correlationId, eServiceId, xForwardedFor = ip)(BearerToken(bearerToken))
-      invoker.invoke(request, s"E-Service with id $eServiceId retrieved").recoverWith {
-        case err: ApiError[_] if err.code == 404 => Future.failed(EServiceNotFound(eServiceId))
       }
     }
 
@@ -171,15 +159,6 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
     invoker.invoke(request, s"Eservice $eServiceId descriptor $descriptorId has been moved to draft")
   }
 
-  override def hasNotDraftDescriptor(eService: EService)(implicit contexts: Seq[(String, String)]): Future[Boolean] =
-    Either
-      .cond(
-        eService.descriptors.count(_.state == EServiceDescriptorState.DRAFT) < 1,
-        true,
-        DraftDescriptorAlreadyExists(eService.id.toString)
-      )
-      .toFuture
-
   def createDescriptor(eServiceId: String, eServiceDescriptorSeed: EServiceDescriptorSeed)(implicit
     contexts: Seq[(String, String)]
   ): Future[EServiceDescriptor] = withHeaders { (bearerToken, correlationId, ip) =>
@@ -214,21 +193,6 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       .recoverWith {
         case err: ApiError[_] if err.code == 404 =>
           Future.failed(EServiceDescriptorNotFound(eServiceId.toString, descriptorId.toString))
-      }
-  }
-
-  override def getEServiceDocument(eServiceId: String, descriptorId: String, documentId: String)(implicit
-    contexts: Seq[(String, String)]
-  ): Future[client.model.EServiceDoc] = withHeaders { (bearerToken, correlationId, ip) =>
-    val request =
-      api.getEServiceDocument(xCorrelationId = correlationId, eServiceId, descriptorId, documentId, xForwardedFor = ip)(
-        BearerToken(bearerToken)
-      )
-    invoker
-      .invoke(request, s"Document with id $documentId retrieval")
-      .recoverWith {
-        case err: ApiError[_] if err.code == 404 =>
-          Future.failed(DescriptorDocumentNotFound(eServiceId, descriptorId, documentId))
       }
   }
 
@@ -290,4 +254,51 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       }
   }
 
+  override def getEServiceById(
+    eServiceId: UUID
+  )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[CatalogItem] =
+    ReadModelCatalogQueries.getEServiceById(eServiceId).flatMap(_.toFuture(EServiceNotFound(eServiceId.toString)))
+
+  override def getEServiceDocument(eServiceId: UUID, descriptorId: UUID, documentId: UUID)(implicit
+    ec: ExecutionContext,
+    readModel: ReadModelService
+  ): Future[CatalogDocument] = for {
+    catalogItem     <- ReadModelCatalogQueries
+      .getEServiceDocument(eServiceId, descriptorId, documentId)
+      .flatMap(_.toFuture(DescriptorDocumentNotFound(eServiceId.toString, descriptorId.toString, documentId.toString)))
+    catalogDocument <- getDocument(catalogItem, descriptorId, documentId).toFuture(
+      DescriptorDocumentNotFound(eServiceId.toString, descriptorId.toString, documentId.toString)
+    )
+  } yield catalogDocument
+
+  override def getConsumers(eServiceId: UUID, offset: Int, limit: Int)(implicit
+    ec: ExecutionContext,
+    readModel: ReadModelService
+  ): Future[PaginatedResult[Consumers]] = ReadModelCatalogQueries.getConsumers(eServiceId, offset, limit)
+
+  override def getEServices(
+    name: Option[String],
+    eServicesIds: Seq[UUID],
+    producersIds: Seq[UUID],
+    states: Seq[CatalogDescriptorState],
+    offset: Int,
+    limit: Int,
+    exactMatchOnName: Boolean = false
+  )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PaginatedResult[CatalogItem]] =
+    ReadModelCatalogQueries.getEServices(name, eServicesIds, producersIds, states, offset, limit, exactMatchOnName)
+
+  private def getDocument(eService: CatalogItem, descriptorId: UUID, documentId: UUID): Option[CatalogDocument] = {
+
+    def lookup(catalogDescriptor: CatalogDescriptor): Option[CatalogDocument]               = {
+      val interface = catalogDescriptor.interface.fold(Seq.empty[CatalogDocument])(doc => Seq(doc))
+      (interface ++: catalogDescriptor.docs).find(_.id == documentId)
+    }
+    def getDescriptor(eService: CatalogItem, descriptorId: UUID): Option[CatalogDescriptor] =
+      eService.descriptors.find(_.id == descriptorId)
+
+    for {
+      descriptor <- getDescriptor(eService, descriptorId)
+      document   <- lookup(descriptor)
+    } yield document
+  }
 }

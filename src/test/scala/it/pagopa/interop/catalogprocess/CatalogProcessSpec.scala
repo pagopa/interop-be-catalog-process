@@ -1,122 +1,214 @@
 package it.pagopa.interop.catalogprocess
 
-import akka.http.scaladsl.model.{HttpMethods, HttpResponse, StatusCodes}
-import akka.http.scaladsl.unmarshalling.Unmarshal
-import com.nimbusds.jwt.JWTClaimsSet
+import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.testkit.ScalatestRouteTest
+import it.pagopa.interop.agreementmanagement.model.agreement.{PersistentAgreementState, Active}
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
 import it.pagopa.interop.catalogmanagement.client.model.AgreementApprovalPolicy.AUTOMATIC
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
-import it.pagopa.interop.catalogmanagement.model.CatalogItem
-import it.pagopa.interop.catalogprocess.api.impl.Converter.convertToApiTechnology
+import it.pagopa.interop.catalogprocess.api.impl.Converter._
 import it.pagopa.interop.catalogprocess.api.impl._
-import it.pagopa.interop.catalogprocess.api.{HealthApi, ProcessApi}
-import it.pagopa.interop.catalogprocess.common.readmodel.TotalCountResult
-import it.pagopa.interop.catalogprocess.model.EServiceDescriptorState._
-import it.pagopa.interop.catalogprocess.model._
-import it.pagopa.interop.catalogprocess.server.Controller
-import it.pagopa.interop.catalogprocess.service._
+import it.pagopa.interop.commons.utils.{ORGANIZATION_ID_CLAIM, USER_ROLES}
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
-import it.pagopa.interop.commons.files.service.FileManager
-import it.pagopa.interop.commons.jwt.service.JWTReader
-import org.mongodb.scala.bson.conversions.Bson
-import org.scalamock.scalatest.MockFactory
+import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors.{EServiceNotFound, DescriptorDocumentNotFound}
+import it.pagopa.interop.catalogmanagement.model.{
+  CatalogDescriptorState,
+  CatalogItem,
+  Published,
+  Draft,
+  Deprecated,
+  Archived,
+  Suspended
+}
+import it.pagopa.interop.catalogprocess.model._
+import it.pagopa.interop.catalogprocess.common.readmodel.{PaginatedResult, Consumers}
 import org.scalatest.wordspec.AnyWordSpecLike
-import org.scalatest.{Assertion, BeforeAndAfterAll}
-import spray.json._
+import org.scalatest.matchers.should.Matchers._
 
 import java.util.UUID
-import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.Success
+import scala.concurrent.{Future, ExecutionContext}
 
-class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndAfterAll with MockFactory {
+class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestRouteTest {
 
-  import CatalogProcessSpec._
+  "EService retrieve" should {
 
-  var controller: Option[Controller] = None
+    "succeed when Agreement States are empty" in {
 
-  override def beforeAll(): Unit = {
+      val eServiceId  = UUID.randomUUID()
+      val requesterId = UUID.randomUUID()
 
-    val processApi = new ProcessApi(
-      ProcessApiServiceImpl(
-        catalogManagementService = catalogManagementService,
-        attributeRegistryManagementService = attributeRegistryManagementService,
-        agreementManagementService = agreementManagementService,
-        authorizationManagementService = authorizationManagementService,
-        tenantManagementService = tenantManagementService,
-        fileManager = fileManager,
-        readModel = readModel,
-        jwtReader = jwtReader
-      ),
-      ProcessApiMarshallerImpl,
-      wrappingDirective
-    )
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-    controller = Some(new Controller(mockHealthApi, processApi))
+      val name            = None
+      val eServicesIds    = Seq(eServiceId)
+      val producersIds    = Seq.empty
+      val agreementStates = Seq.empty
+      val states          = Seq.empty
+      val offset          = 0
+      val limit           = 50
 
-    controller.foreach(startServer)
-  }
+      (mockCatalogManagementService
+        .getEServices(
+          _: Option[String],
+          _: Seq[UUID],
+          _: Seq[UUID],
+          _: Seq[CatalogDescriptorState],
+          _: Int,
+          _: Int,
+          _: Boolean
+        )(_: ExecutionContext, _: ReadModelService))
+        .expects(name, eServicesIds, producersIds, states, offset, limit, false, *, *)
+        .once()
+        .returns(Future.successful(PaginatedResult(results = Seq(SpecData.catalogItem), 1)))
 
-  override def afterAll(): Unit = {
-    shutDownServer()
-    super.afterAll()
-  }
+      Get() ~> service.getEServices(
+        name,
+        eServicesIds.mkString(","),
+        producersIds.mkString(","),
+        states.mkString(","),
+        agreementStates.mkString(","),
+        offset,
+        limit
+      ) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+    "succeed when Agreement States are not empty and EServices from agreements are not empty" in {
 
-  "flatten e-service filter" must {
-    "filter properly" in {
-      val flattenServices = Seq(
-        FlatEService(
-          id = UUID.randomUUID(),
-          producerId = UUID.randomUUID(),
-          producerName = "test",
-          name = "test",
-          version = None,
-          state = Some(PUBLISHED),
-          descriptorId = Some("1d"),
-          description = "",
-          agreement = None,
-          certifiedAttributes = Seq.empty
-        ),
-        FlatEService(
-          id = UUID.randomUUID(),
-          producerId = UUID.randomUUID(),
-          producerName = "test2",
-          name = "test2",
-          version = None,
-          state = Some(SUSPENDED),
-          descriptorId = Some("2d"),
-          description = "",
-          agreement = None,
-          certifiedAttributes = Seq.empty
-        ),
-        FlatEService(
-          id = UUID.randomUUID(),
-          producerId = UUID.randomUUID(),
-          producerName = "test3",
-          name = "test3",
-          version = None,
-          state = Some(SUSPENDED),
-          descriptorId = Some("3d"),
-          description = "",
-          agreement = None,
-          certifiedAttributes = Seq.empty
-        )
-      )
+      val requesterId = UUID.randomUUID()
+      val eServiceId  = UUID.randomUUID()
 
-      val published = EServiceDescriptorState.fromValue("PUBLISHED").toOption
-      flattenServices.filter(item => published.forall(item.state.contains)) should have size 1
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      val draft = EServiceDescriptorState.fromValue("DRAFT").toOption
-      flattenServices.filter(item => draft.forall(item.state.contains)) should have size 0
+      val name            = None
+      val eServicesIds    = Seq(eServiceId)
+      val producersIds    = Seq.empty
+      val agreementStates = Seq("ACTIVE")
+      val states          = Seq.empty
+      val offset          = 0
+      val limit           = 50
 
-      val suspended = EServiceDescriptorState.fromValue("SUSPENDED").toOption
-      flattenServices.filter(item => suspended.forall(item.state.contains)) should have size 2
+      (mockAgreementManagementService
+        .getAgreements(_: Seq[UUID], _: Seq[UUID], _: Seq[UUID], _: Seq[PersistentAgreementState])(
+          _: ExecutionContext,
+          _: ReadModelService
+        ))
+        .expects(eServicesIds, Seq(requesterId), producersIds, Seq(Active), *, *)
+        .once()
+        .returns(Future.successful(Seq(SpecData.agreement)))
+
+      (mockCatalogManagementService
+        .getEServices(
+          _: Option[String],
+          _: Seq[UUID],
+          _: Seq[UUID],
+          _: Seq[CatalogDescriptorState],
+          _: Int,
+          _: Int,
+          _: Boolean
+        )(_: ExecutionContext, _: ReadModelService))
+        .expects(name, Seq(SpecData.agreement.eserviceId), producersIds, states, offset, limit, false, *, *)
+        .once()
+        .returns(Future.successful(PaginatedResult(results = Seq(SpecData.catalogItem), 1)))
+
+      Get() ~> service.getEServices(
+        name,
+        eServicesIds.mkString(","),
+        producersIds.mkString(","),
+        states.mkString(","),
+        agreementStates.mkString(","),
+        offset,
+        limit
+      ) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+    "succeed when Agreement States are not empty and EServices from agreements are empty" in {
+
+      val requesterId = UUID.randomUUID()
+      val eServiceId  = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val name            = None
+      val eServicesIds    = Seq(eServiceId)
+      val producersIds    = Seq.empty
+      val agreementStates = Seq("ACTIVE")
+      val states          = Seq.empty
+      val offset          = 0
+      val limit           = 50
+
+      (mockAgreementManagementService
+        .getAgreements(_: Seq[UUID], _: Seq[UUID], _: Seq[UUID], _: Seq[PersistentAgreementState])(
+          _: ExecutionContext,
+          _: ReadModelService
+        ))
+        .expects(eServicesIds, Seq(requesterId), producersIds, Seq(Active), *, *)
+        .once()
+        .returns(Future.successful(Seq.empty))
+
+      Get() ~> service.getEServices(
+        name,
+        eServicesIds.mkString(","),
+        producersIds.mkString(","),
+        states.mkString(","),
+        agreementStates.mkString(","),
+        offset,
+        limit
+      ) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
     }
   }
 
-  "EService creation" must {
+  "Consumers retrieve" should {
 
     "succeed" in {
+
+      val eServiceId  = UUID.randomUUID()
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val offset = 0
+      val limit  = 50
+
+      (mockCatalogManagementService
+        .getConsumers(_: UUID, _: Int, _: Int)(_: ExecutionContext, _: ReadModelService))
+        .expects(eServiceId, offset, limit, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            PaginatedResult(
+              results = Seq(
+                Consumers(
+                  descriptorVersion = SpecData.catalogDescriptor.version,
+                  descriptorState = SpecData.catalogDescriptor.state,
+                  agreementState = SpecData.agreement.state,
+                  consumerName = "name",
+                  consumerExternalId = "extId"
+                )
+              ),
+              1
+            )
+          )
+        )
+
+      Get() ~> service.getEServiceConsumers(offset, limit, eServiceId.toString) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+  }
+
+  "EService creation" should {
+
+    "succeed" in {
+
+      val requesterId = UUID.randomUUID()
 
       val attributeId1: UUID = UUID.randomUUID()
       val attributeId2: UUID = UUID.randomUUID()
@@ -124,11 +216,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
 
       val catalogItems: Seq[CatalogItem] = Seq.empty
 
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
       val apiSeed: EServiceSeed =
         EServiceSeed(name = "MyService", description = "My Service", technology = EServiceTechnology.REST)
 
       val seed = CatalogManagementDependency.EServiceSeed(
-        producerId = AdminMockAuthenticator.requesterId,
+        producerId = requesterId,
         name = "MyService",
         description = "My Service",
         technology = CatalogManagementDependency.EServiceTechnology.REST
@@ -186,157 +281,84 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         )
       )
 
-      // Data retrieve
-      (readModel
-        .aggregate(_: String, _: Seq[Bson], _: Int, _: Int)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, 0, 1, *, *)
+      (mockCatalogManagementService
+        .getEServices(
+          _: Option[String],
+          _: Seq[UUID],
+          _: Seq[UUID],
+          _: Seq[CatalogDescriptorState],
+          _: Int,
+          _: Int,
+          _: Boolean
+        )(_: ExecutionContext, _: ReadModelService))
+        .expects(Some(seed.name), Seq.empty, Seq(seed.producerId), Seq.empty, 0, 1, true, *, *)
         .once()
-        .returns(Future.successful(catalogItems))
+        .returns(Future.successful(PaginatedResult(results = catalogItems, catalogItems.size)))
 
-      // Total count
-      (readModel
-        .aggregate(_: String, _: Seq[Bson], _: Int, _: Int)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, 0, Int.MaxValue, *, *)
-        .once()
-        .returns(Future.successful(Seq(TotalCountResult(0))))
-
-      (catalogManagementService
+      (mockCatalogManagementService
         .createEService(_: CatalogManagementDependency.EServiceSeed)(_: Seq[(String, String)]))
         .expects(seed, *)
         .returning(Future.successful(eservice))
         .once()
-
-      val requestData = apiSeed.toJson.toString
-
-      val response = request("eservices", HttpMethods.POST, Some(requestData))
 
       val expected = EService(
         id = eservice.id,
         producerId = eservice.producerId,
         name = seed.name,
         description = seed.description,
-        technology = convertToApiTechnology(seed.technology),
-        descriptors = eservice.descriptors.map(Converter.convertToApiDescriptor)
+        technology = seed.technology.toApi,
+        descriptors = eservice.descriptors.map(_.toApi)
       )
 
-      response.status shouldBe StatusCodes.OK
-
-      val body = Await.result(Unmarshal(response.entity).to[EService], Duration.Inf)
-
-      body shouldBe expected
-
+      Post() ~> service.createEService(apiSeed) ~> check {
+        status shouldEqual StatusCodes.OK
+        val response = responseAs[EService]
+        response shouldEqual expected
+      }
     }
 
     "fail with conflict if an EService with the same name exists" in {
 
-      val attributeId1: UUID = UUID.randomUUID()
-      val attributeId2: UUID = UUID.randomUUID()
-      val attributeId3: UUID = UUID.randomUUID()
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
       val catalogItems: Seq[CatalogItem] = Seq(SpecData.catalogItem)
 
       val apiSeed: EServiceSeed =
         EServiceSeed(name = "MyService", description = "My Service", technology = EServiceTechnology.REST)
 
-      val seed = CatalogManagementDependency.EServiceSeed(
-        producerId = AdminMockAuthenticator.requesterId,
-        name = "MyService",
-        description = "My Service",
-        technology = CatalogManagementDependency.EServiceTechnology.REST
-      )
-
-      val eservice = CatalogManagementDependency.EService(
-        id = UUID.randomUUID(),
-        producerId = seed.producerId,
-        name = seed.name,
-        description = seed.description,
-        technology = seed.technology,
-        descriptors = List(
-          CatalogManagementDependency.EServiceDescriptor(
-            id = UUID.randomUUID(),
-            version = "1",
-            description = None,
-            interface = None,
-            docs = Nil,
-            state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
-            audience = List("aud1"),
-            voucherLifespan = 1000,
-            dailyCallsPerConsumer = 1000,
-            dailyCallsTotal = 0,
-            agreementApprovalPolicy = AUTOMATIC,
-            serverUrls = Nil,
-            attributes = CatalogManagementDependency.Attributes(
-              certified = List(
-                CatalogManagementDependency
-                  .Attribute(
-                    single = Some(
-                      CatalogManagementDependency.AttributeValue(attributeId1, explicitAttributeVerification = false)
-                    ),
-                    group = None
-                  )
-              ),
-              declared = List(
-                CatalogManagementDependency
-                  .Attribute(
-                    single = None,
-                    group = Some(
-                      List(
-                        CatalogManagementDependency.AttributeValue(attributeId2, explicitAttributeVerification = false)
-                      )
-                    )
-                  )
-              ),
-              verified = List(
-                CatalogManagementDependency
-                  .Attribute(
-                    single = Some(
-                      CatalogManagementDependency.AttributeValue(attributeId3, explicitAttributeVerification = true)
-                    ),
-                    group = None
-                  )
-              )
-            )
-          )
-        )
-      )
-
-      // Data retrieve
-      (readModel
-        .aggregate(_: String, _: Seq[Bson], _: Int, _: Int)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, 0, 1, *, *)
+      (mockCatalogManagementService
+        .getEServices(
+          _: Option[String],
+          _: Seq[UUID],
+          _: Seq[UUID],
+          _: Seq[CatalogDescriptorState],
+          _: Int,
+          _: Int,
+          _: Boolean
+        )(_: ExecutionContext, _: ReadModelService))
+        .expects(Some(apiSeed.name), Seq.empty, Seq(requesterId), Seq.empty, 0, 1, true, *, *)
         .once()
-        .returns(Future.successful(catalogItems))
+        .returns(Future.successful(PaginatedResult(results = catalogItems, catalogItems.size)))
 
-      // Total count
-      (readModel
-        .aggregate(_: String, _: Seq[Bson], _: Int, _: Int)(_: JsonReader[_], _: ExecutionContext))
-        .expects("eservices", *, 0, Int.MaxValue, *, *)
-        .once()
-        .returns(Future.successful(Seq(TotalCountResult(1))))
-
-      (catalogManagementService
-        .createEService(_: CatalogManagementDependency.EServiceSeed)(_: Seq[(String, String)]))
-        .expects(seed, *)
-        .returning(Future.successful(eservice))
-        .once()
-
-      val requestData = apiSeed.toJson.toString
-
-      val response = request("eservices", HttpMethods.POST, Some(requestData))
-
-      response.status shouldBe StatusCodes.Conflict
-
+      Post() ~> service.createEService(apiSeed) ~> check {
+        status shouldEqual StatusCodes.Conflict
+      }
     }
-
   }
-
-  "EService update" must {
+  "EService update" should {
     "succeed" in {
-      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
+      val requesterId = UUID.randomUUID()
 
-      val eService = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
-      val eServiceUuid = eService.id
-      val eServiceId   = eServiceUuid.toString
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val descriptor =
+        SpecData.eServiceDescriptor.copy(state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
+
+      val eService = SpecData.eService.copy(descriptors = Seq(descriptor), producerId = requesterId)
 
       val eServiceSeed =
         UpdateEServiceSeed(name = "newName", description = "newDescription", technology = EServiceTechnology.REST)
@@ -348,41 +370,39 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       )
 
       val updatedEService = CatalogManagementDependency.EService(
-        id = eServiceUuid,
-        producerId = AdminMockAuthenticator.requesterId,
+        id = eService.id,
+        producerId = requesterId,
         name = "newName",
         description = "newDescription",
         technology = eService.technology,
         descriptors = Seq(descriptor)
       )
 
-      (jwtReader
-        .getClaims(_: String))
-        .expects(bearerToken)
-        .returning(mockSubject(UUID.randomUUID().toString))
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eService.id, *, *)
         .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
 
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, *)
-        .returning(Future.successful(eService))
-        .once()
-
-      (catalogManagementService
+      (mockCatalogManagementService
         .updateEServiceById(_: String, _: CatalogManagementDependency.UpdateEServiceSeed)(_: Seq[(String, String)]))
-        .expects(eServiceId, updatedEServiceSeed, *)
+        .expects(eService.id.toString, updatedEServiceSeed, *)
         .returning(Future.successful(updatedEService))
         .once()
 
-      val response = request(s"eservices/$eServiceUuid", HttpMethods.PUT, Some(eServiceSeed.toJson.toString))
-      response.status shouldBe StatusCodes.OK
+      Put() ~> service.updateEServiceById(eService.id.toString, eServiceSeed) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
     }
 
     "succeed if no descriptor is present" in {
 
-      val eService     = eServiceStub.copy(descriptors = Seq.empty, producerId = AdminMockAuthenticator.requesterId)
-      val eServiceUuid = eService.id
-      val eServiceId   = eServiceUuid.toString
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val eService = SpecData.eService.copy(descriptors = Seq.empty, producerId = requesterId)
 
       val eServiceSeed =
         UpdateEServiceSeed(name = "newName", description = "newDescription", technology = EServiceTechnology.REST)
@@ -394,144 +414,390 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
       )
 
       val updatedEService = CatalogManagementDependency.EService(
-        id = eServiceUuid,
-        producerId = AdminMockAuthenticator.requesterId,
+        id = eService.id,
+        producerId = requesterId,
         name = "newName",
         description = "newDescription",
         technology = eService.technology,
         descriptors = Seq.empty
       )
 
-      (jwtReader
-        .getClaims(_: String))
-        .expects(bearerToken)
-        .returning(mockSubject(UUID.randomUUID().toString))
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eService.id, *, *)
         .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
 
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, *)
-        .returning(Future.successful(eService))
-        .once()
-
-      (catalogManagementService
+      (mockCatalogManagementService
         .updateEServiceById(_: String, _: CatalogManagementDependency.UpdateEServiceSeed)(_: Seq[(String, String)]))
-        .expects(eServiceId, updatedEServiceSeed, *)
+        .expects(eService.id.toString, updatedEServiceSeed, *)
         .returning(Future.successful(updatedEService))
         .once()
 
-      val response = request(s"eservices/$eServiceUuid", HttpMethods.PUT, Some(eServiceSeed.toJson.toString))
-      response.status shouldBe StatusCodes.OK
+      Put() ~> service.updateEServiceById(eService.id.toString, eServiceSeed) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
     }
 
     "fail if descriptor state is not draft" in {
-      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED)
+      val requesterId = UUID.randomUUID()
 
-      val eService = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
-      val eServiceUuid = eService.id
-      val eServiceId   = eServiceUuid.toString
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val descriptor =
+        SpecData.eServiceDescriptor.copy(state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED)
+
+      val eService = SpecData.eService.copy(descriptors = Seq(descriptor), producerId = requesterId)
 
       val eServiceSeed =
         UpdateEServiceSeed(name = "newName", description = "newDescription", technology = EServiceTechnology.REST)
 
-      val updatedEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
-        name = "newName",
-        description = "newDescription",
-        technology = eService.technology
-      )
-
-      val updatedEService = CatalogManagementDependency.EService(
-        id = eServiceUuid,
-        producerId = AdminMockAuthenticator.requesterId,
-        name = "newName",
-        description = "newDescription",
-        technology = eService.technology,
-        descriptors = Seq(descriptor)
-      )
-
-      (jwtReader
-        .getClaims(_: String))
-        .expects(bearerToken)
-        .returning(mockSubject(UUID.randomUUID().toString))
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eService.id, *, *)
         .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor))
+          )
+        )
 
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, *)
-        .returning(Future.successful(eService))
-        .once()
-
-      (catalogManagementService
-        .updateEServiceById(_: String, _: CatalogManagementDependency.UpdateEServiceSeed)(_: Seq[(String, String)]))
-        .expects(eServiceId, updatedEServiceSeed, *)
-        .returning(Future.successful(updatedEService))
-        .once()
-
-      val response = request(s"eservices/$eServiceUuid", HttpMethods.PUT, Some(eServiceSeed.toJson.toString))
-      response.status shouldBe StatusCodes.BadRequest
+      Put() ~> service.updateEServiceById(eService.id.toString, eServiceSeed) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+      }
     }
 
     "fail if requester is not the Producer" in {
-      val seed =
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      val eServiceSeed =
         UpdateEServiceSeed(name = "newName", description = "newDescription", technology = EServiceTechnology.REST)
 
-      failOnRequesterNotProducer(id => request(s"eservices/$id", HttpMethods.PUT, Some(seed.toJson.toString)))
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem
+              .copy(producerId = UUID.randomUUID(), descriptors = Seq(SpecData.catalogDescriptor))
+          )
+        )
+
+      Put() ~> service.updateEServiceById(SpecData.catalogItem.id.toString, eServiceSeed) ~> check {
+        status shouldEqual StatusCodes.Forbidden
+      }
+    }
+    "fail if EService does not exist" in {
+
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val eServiceSeed =
+        UpdateEServiceSeed(name = "newName", description = "newDescription", technology = EServiceTechnology.REST)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
+
+      Put() ~> service.updateEServiceById(SpecData.catalogItem.id.toString, eServiceSeed) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
     }
   }
 
-  "EService clone" must {
+  "EService clone" should {
 
     "succeed" in {
 
-      val descriptor     = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED)
-      val descriptorUuid = descriptor.id
-      val descriptorId   = descriptorUuid.toString
+      val requesterId = UUID.randomUUID()
 
-      val eService = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
-      val eServiceUuid = eService.id
-      val eServiceId   = eServiceUuid.toString
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      val clonedEService = eService.copy()
+      val descriptor =
+        SpecData.eServiceDescriptor.copy(state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED)
 
-      (jwtReader
-        .getClaims(_: String))
-        .expects(bearerToken)
-        .returning(mockSubject(UUID.randomUUID().toString))
+      val eService = SpecData.eService.copy(descriptors = Seq(descriptor), producerId = requesterId)
+
+      val clonedEService = eService.copy(id = UUID.randomUUID())
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eService.id, *, *)
         .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
 
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, *)
-        .returning(Future.successful(eService))
-        .once()
-
-      (catalogManagementService
+      (mockCatalogManagementService
         .cloneEService(_: UUID, _: UUID)(_: Seq[(String, String)]))
-        .expects(eServiceUuid, descriptorUuid, *)
+        .expects(eService.id, descriptor.id, *)
         .returning(Future.successful(clonedEService))
         .once()
 
-      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/clone", HttpMethods.POST)
-      response.status shouldBe StatusCodes.OK
+      Post() ~> service.cloneEServiceByDescriptor(eService.id.toString, descriptor.id.toString) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
     }
-
     "fail if requester is not the Producer" in {
-      failOnRequesterNotProducer(id =>
-        request(s"eservices/$id/descriptors/${UUID.randomUUID()}/clone", HttpMethods.POST)
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
+
+      Post() ~> service.cloneEServiceByDescriptor(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID().toString
+      ) ~> check {
+        status shouldEqual StatusCodes.Forbidden
+      }
+    }
+    "fail if EService does not exist" in {
+
+      val requesterId                             = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
+
+      Post() ~> service.cloneEServiceByDescriptor(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID().toString
+      ) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
+  }
+  "EService document deletion" should {
+    "succeed" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val eServiceDoc = SpecData.eServiceDoc
+
+      val descriptor =
+        SpecData.eServiceDescriptor.copy(
+          state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED,
+          docs = Seq(eServiceDoc)
+        )
+
+      val eService = SpecData.eService.copy(descriptors = Seq(descriptor), producerId = requesterId)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eService.id, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(id = eService.id, producerId = requesterId)))
+
+      (mockCatalogManagementService
+        .deleteEServiceDocument(_: String, _: String, _: String)(_: Seq[(String, String)]))
+        .expects(eService.id.toString, descriptor.id.toString, eServiceDoc.id.toString, *)
+        .returning(Future.unit)
+        .once()
+
+      Delete() ~> service.deleteEServiceDocumentById(
+        eService.id.toString,
+        descriptor.id.toString,
+        eServiceDoc.id.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.NoContent
+      }
+    }
+    "fail if requester is not the Producer" in {
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
+
+      Delete() ~> service.deleteEServiceDocumentById(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID().toString,
+        UUID.randomUUID().toString
+      ) ~> check {
+        status shouldEqual StatusCodes.Forbidden
+      }
+    }
+    "fail if EService does not exist" in {
+
+      val requesterId                             = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
+
+      Delete() ~> service.deleteEServiceDocumentById(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID().toString,
+        UUID.randomUUID().toString
+      ) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
+  }
+  "Descriptor creation" should {
+    "succeed" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val attributeId1: UUID = UUID.randomUUID()
+      val attributeId2: UUID = UUID.randomUUID()
+      val attributeId3: UUID = UUID.randomUUID()
+
+      val seed = EServiceDescriptorSeed(
+        description = None,
+        audience = Seq("aud"),
+        voucherLifespan = 60,
+        dailyCallsPerConsumer = 0,
+        dailyCallsTotal = 0,
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(
+          certified = List(
+            AttributeSeed(
+              single = Some(AttributeValueSeed(attributeId1, explicitAttributeVerification = false)),
+              group = None
+            )
+          ),
+          declared = List(
+            AttributeSeed(
+              single = None,
+              group = Some(List(AttributeValueSeed(attributeId2, explicitAttributeVerification = false)))
+            )
+          ),
+          verified = List(
+            AttributeSeed(
+              single = Some(AttributeValueSeed(attributeId3, explicitAttributeVerification = true)),
+              group = None
+            )
+          )
+        )
       )
+
+      val eServiceDescriptorSeed = CatalogManagementDependency.EServiceDescriptorSeed(
+        description = None,
+        audience = Seq("aud"),
+        voucherLifespan = 60,
+        dailyCallsPerConsumer = 0,
+        dailyCallsTotal = 0,
+        agreementApprovalPolicy = CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC,
+        attributes = CatalogManagementDependency.Attributes(
+          certified = List(
+            CatalogManagementDependency.Attribute(
+              single =
+                Some(CatalogManagementDependency.AttributeValue(attributeId1, explicitAttributeVerification = false)),
+              group = None
+            )
+          ),
+          declared = List(
+            CatalogManagementDependency.Attribute(
+              single = None,
+              group = Some(
+                List(CatalogManagementDependency.AttributeValue(attributeId2, explicitAttributeVerification = false))
+              )
+            )
+          ),
+          verified = List(
+            CatalogManagementDependency.Attribute(
+              single =
+                Some(CatalogManagementDependency.AttributeValue(attributeId3, explicitAttributeVerification = true)),
+              group = None
+            )
+          )
+        )
+      )
+
+      val eServiceDescriptor = CatalogManagementDependency.EServiceDescriptor(
+        id = UUID.randomUUID(),
+        version = "1",
+        description = None,
+        interface = None,
+        docs = Nil,
+        state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
+        audience = Seq("aud"),
+        voucherLifespan = 60,
+        dailyCallsPerConsumer = 0,
+        dailyCallsTotal = 0,
+        agreementApprovalPolicy = AUTOMATIC,
+        serverUrls = Nil,
+        attributes = CatalogManagementDependency.Attributes(
+          certified = List(
+            CatalogManagementDependency.Attribute(
+              single =
+                Some(CatalogManagementDependency.AttributeValue(attributeId1, explicitAttributeVerification = false)),
+              group = None
+            )
+          ),
+          declared = List(
+            CatalogManagementDependency.Attribute(
+              single = None,
+              group = Some(
+                List(CatalogManagementDependency.AttributeValue(attributeId2, explicitAttributeVerification = false))
+              )
+            )
+          ),
+          verified = List(
+            CatalogManagementDependency.Attribute(
+              single =
+                Some(CatalogManagementDependency.AttributeValue(attributeId3, explicitAttributeVerification = true)),
+              group = None
+            )
+          )
+        )
+      )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
+
+      (mockCatalogManagementService
+        .createDescriptor(_: String, _: CatalogManagementDependency.EServiceDescriptorSeed)(_: Seq[(String, String)]))
+        .expects(SpecData.catalogItem.id.toString, eServiceDescriptorSeed, *)
+        .returning(Future.successful(eServiceDescriptor))
+        .once()
+
+      Post() ~> service.createDescriptor(SpecData.catalogItem.id.toString, seed) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
     }
-  }
-
-  "EService deletion" must {
-
     "fail if requester is not the Producer" in {
-      failOnRequesterNotProducer(id => request(s"eservices/$id", HttpMethods.DELETE))
-    }
-  }
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
 
-  "Descriptor creation" must {
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
 
-    "fail if requester is not the Producer" in {
       val seed = EServiceDescriptorSeed(
         description = None,
         audience = Seq("aud"),
@@ -542,15 +808,54 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
-      failOnRequesterNotProducer(id =>
-        request(s"eservices/$id/descriptors", HttpMethods.POST, Some(seed.toJson.toString))
+      Post() ~> service.createDescriptor(SpecData.catalogItem.id.toString, seed) ~> check {
+        status shouldEqual StatusCodes.Forbidden
+      }
+    }
+    "fail if EService does not exist" in {
+
+      val requesterId                             = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val seed = EServiceDescriptorSeed(
+        description = None,
+        audience = Seq("aud"),
+        voucherLifespan = 60,
+        dailyCallsPerConsumer = 0,
+        dailyCallsTotal = 0,
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(Nil, Nil, Nil)
       )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
+
+      Post() ~> service.createDescriptor(SpecData.catalogItem.id.toString, seed) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
     }
   }
+  "Descriptor draft update" should {
+    "succeed" in {
+      val requesterId = UUID.randomUUID()
 
-  "Descriptor draft update" must {
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-    "fail if requester is not the Producer" in {
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Draft)))
+          )
+        )
 
       val seed = UpdateEServiceDescriptorSeed(
         description = None,
@@ -562,746 +867,1339 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with BeforeAndA
         attributes = AttributesSeed(Nil, Nil, Nil)
       )
 
-      failOnRequesterNotProducer(id =>
-        request(s"eservices/$id/descriptors/${UUID.randomUUID()}", HttpMethods.PUT, Some(seed.toJson.toString))
+      val depSeed = CatalogManagementDependency.UpdateEServiceDescriptorSeed(
+        description = None,
+        audience = Seq("aud"),
+        voucherLifespan = 60,
+        dailyCallsPerConsumer = 0,
+        dailyCallsTotal = 0,
+        agreementApprovalPolicy = CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC,
+        state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
+        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil)
       )
+
+      (mockCatalogManagementService
+        .updateDraftDescriptor(_: String, _: String, _: CatalogManagementDependency.UpdateEServiceDescriptorSeed)(
+          _: Seq[(String, String)]
+        ))
+        .expects(SpecData.catalogItem.id.toString, SpecData.catalogDescriptor.id.toString, depSeed, *)
+        .returning(Future.successful(SpecData.eService))
+        .once()
+
+      Put() ~> service.updateDraftDescriptor(
+        SpecData.catalogItem.id.toString,
+        SpecData.catalogDescriptor.id.toString,
+        seed
+      ) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
     }
-  }
+    "fail if state is not Draft" in {
+      val requesterId = UUID.randomUUID()
 
-  "Descriptor publication" must {
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Published)))
+          )
+        )
+
+      val seed = UpdateEServiceDescriptorSeed(
+        description = None,
+        audience = Seq("aud"),
+        voucherLifespan = 60,
+        dailyCallsPerConsumer = 0,
+        dailyCallsTotal = 0,
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(Nil, Nil, Nil)
+      )
+
+      Put() ~> service.updateDraftDescriptor(
+        SpecData.catalogItem.id.toString,
+        SpecData.catalogDescriptor.id.toString,
+        seed
+      ) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+      }
+    }
+    "fail if EService does not exist" in {
+
+      val requesterId                             = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val seed = UpdateEServiceDescriptorSeed(
+        description = None,
+        audience = Seq("aud"),
+        voucherLifespan = 60,
+        dailyCallsPerConsumer = 0,
+        dailyCallsTotal = 0,
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(Nil, Nil, Nil)
+      )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
+
+      Put() ~> service.updateDraftDescriptor(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID.toString,
+        seed
+      ) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
+    "fail if EService descriptor does not exist" in {
+
+      val requesterId                             = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val seed = UpdateEServiceDescriptorSeed(
+        description = None,
+        audience = Seq("aud"),
+        voucherLifespan = 60,
+        dailyCallsPerConsumer = 0,
+        dailyCallsTotal = 0,
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(Nil, Nil, Nil)
+      )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
+
+      Put() ~> service.updateDraftDescriptor(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID.toString,
+        seed
+      ) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
     "fail if requester is not the Producer" in {
-      failOnRequesterNotProducer(id =>
-        request(s"eservices/$id/descriptors/${UUID.randomUUID()}/publish", HttpMethods.POST)
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
+
+      val seed = UpdateEServiceDescriptorSeed(
+        description = None,
+        audience = Seq("aud"),
+        voucherLifespan = 60,
+        dailyCallsPerConsumer = 0,
+        dailyCallsTotal = 0,
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(Nil, Nil, Nil)
       )
+
+      Put() ~> service.updateDraftDescriptor(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID().toString,
+        seed
+      ) ~> check {
+        status shouldEqual StatusCodes.Forbidden
+      }
     }
   }
+  "Descriptor publication" should {
+    "succeed if descriptor is Draft" in {
+      val requesterId = UUID.randomUUID()
 
-  "Descriptor suspension" must {
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem.copy(
+              producerId = requesterId,
+              descriptors =
+                Seq(SpecData.catalogDescriptor.copy(state = Draft, interface = Option(SpecData.catalogDocument)))
+            )
+          )
+        )
+
+      (mockCatalogManagementService
+        .publishDescriptor(_: String, _: String)(_: Seq[(String, String)]))
+        .expects(SpecData.catalogItem.id.toString, SpecData.catalogDescriptor.id.toString, *)
+        .returning(Future.unit)
+        .once()
+
+      (mockAuthorizationManagementService
+        .updateStateOnClients(
+          _: UUID,
+          _: UUID,
+          _: AuthorizationManagementDependency.ClientComponentState,
+          _: Seq[String],
+          _: Int
+        )(_: Seq[(String, String)]))
+        .expects(
+          SpecData.catalogItem.id,
+          SpecData.catalogDescriptor.id,
+          AuthorizationManagementDependency.ClientComponentState.ACTIVE,
+          SpecData.catalogDescriptor.audience,
+          SpecData.catalogDescriptor.voucherLifespan,
+          *
+        )
+        .returning(Future.unit)
+        .once()
+
+      Post() ~> service.publishDescriptor(
+        SpecData.catalogItem.id.toString,
+        SpecData.catalogDescriptor.id.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.NoContent
+      }
+    }
+    "fail if descriptor has not interface" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Draft)))
+          )
+        )
+
+      Post() ~> service.publishDescriptor(
+        SpecData.catalogItem.id.toString,
+        SpecData.catalogDescriptor.id.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+      }
+    }
+    "fail if descriptor is not Draft" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Published)))
+          )
+        )
+
+      Post() ~> service.publishDescriptor(
+        SpecData.catalogItem.id.toString,
+        SpecData.catalogDescriptor.id.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.InternalServerError
+      }
+    }
+    "fail if EService does not exist" in {
+
+      val requesterId                             = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
+
+      Post() ~> service.publishDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID.toString) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
+    "fail if EService descriptor does not exist" in {
+
+      val requesterId                             = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
+
+      Post() ~> service.publishDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID.toString) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
+    "fail if requester is not the Producer" in {
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
+
+      Post() ~> service.publishDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID.toString) ~> check {
+        status shouldEqual StatusCodes.Forbidden
+      }
+    }
+  }
+  "Descriptor suspension" should {
     "succeed if descriptor is Published" in {
-      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED)
-      val eService   = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
-      val eServiceUuid = eService.id
-      val eServiceId   = eServiceUuid.toString
-      val descriptorId = descriptor.id.toString
 
-      (jwtReader
-        .getClaims(_: String))
-        .expects(bearerToken)
-        .returning(mockSubject(UUID.randomUUID().toString))
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, *)
-        .returning(Future.successful(eService))
-        .once()
-
-      (catalogManagementService
-        .suspendDescriptor(_: String, _: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, descriptorId, *)
-        .returning(Future.successful(()))
-        .once()
-
-      (
-        authorizationManagementService
-          .updateStateOnClients(
-            _: UUID,
-            _: UUID,
-            _: AuthorizationManagementDependency.ClientComponentState,
-            _: Seq[String],
-            _: Int
-          )(_: Seq[(String, String)])
+        .returns(
+          Future.successful(
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Published)))
+          )
         )
+
+      (mockCatalogManagementService
+        .suspendDescriptor(_: String, _: String)(_: Seq[(String, String)]))
+        .expects(SpecData.catalogItem.id.toString, SpecData.catalogDescriptor.id.toString, *)
+        .returning(Future.unit)
+        .once()
+
+      (mockAuthorizationManagementService
+        .updateStateOnClients(
+          _: UUID,
+          _: UUID,
+          _: AuthorizationManagementDependency.ClientComponentState,
+          _: Seq[String],
+          _: Int
+        )(_: Seq[(String, String)]))
         .expects(
-          eServiceUuid,
-          descriptor.id,
+          SpecData.catalogItem.id,
+          SpecData.catalogDescriptor.id,
           AuthorizationManagementDependency.ClientComponentState.INACTIVE,
-          descriptor.audience,
-          descriptor.voucherLifespan,
+          SpecData.catalogDescriptor.audience,
+          SpecData.catalogDescriptor.voucherLifespan,
           *
         )
-        .returning(Future.successful(()))
+        .returning(Future.unit)
         .once()
 
-      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/suspend", HttpMethods.POST)
-
-      response.status shouldBe StatusCodes.NoContent
+      Post() ~> service.suspendDescriptor(
+        SpecData.catalogItem.id.toString,
+        SpecData.catalogDescriptor.id.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.NoContent
+      }
     }
-
     "succeed if descriptor is Deprecated" in {
-      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED)
-      val eService   = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
-      val eServiceUuid = eService.id
-      val eServiceId   = eServiceUuid.toString
-      val descriptorId = descriptor.id.toString
 
-      (jwtReader
-        .getClaims(_: String))
-        .expects(bearerToken)
-        .returning(mockSubject(UUID.randomUUID().toString))
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
-
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, *)
-        .returning(Future.successful(eService))
-        .once()
-
-      (catalogManagementService
-        .suspendDescriptor(_: String, _: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, descriptorId, *)
-        .returning(Future.successful(()))
-        .once()
-
-      (
-        authorizationManagementService
-          .updateStateOnClients(
-            _: UUID,
-            _: UUID,
-            _: AuthorizationManagementDependency.ClientComponentState,
-            _: Seq[String],
-            _: Int
-          )(_: Seq[(String, String)])
+        .returns(
+          Future.successful(
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Deprecated)))
+          )
         )
+
+      (mockCatalogManagementService
+        .suspendDescriptor(_: String, _: String)(_: Seq[(String, String)]))
+        .expects(SpecData.catalogItem.id.toString, SpecData.catalogDescriptor.id.toString, *)
+        .returning(Future.unit)
+        .once()
+
+      (mockAuthorizationManagementService
+        .updateStateOnClients(
+          _: UUID,
+          _: UUID,
+          _: AuthorizationManagementDependency.ClientComponentState,
+          _: Seq[String],
+          _: Int
+        )(_: Seq[(String, String)]))
         .expects(
-          eServiceUuid,
-          descriptor.id,
+          SpecData.catalogItem.id,
+          SpecData.catalogDescriptor.id,
           AuthorizationManagementDependency.ClientComponentState.INACTIVE,
-          descriptor.audience,
-          descriptor.voucherLifespan,
+          SpecData.catalogDescriptor.audience,
+          SpecData.catalogDescriptor.voucherLifespan,
           *
         )
-        .returning(Future.successful(()))
+        .returning(Future.unit)
         .once()
 
-      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/suspend", HttpMethods.POST)
-
-      response.status shouldBe StatusCodes.NoContent
+      Post() ~> service.suspendDescriptor(
+        SpecData.catalogItem.id.toString,
+        SpecData.catalogDescriptor.id.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.NoContent
+      }
     }
-
     "fail if descriptor is Draft" in {
-      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
-      val eService   = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
-      val eServiceId = eService.id.toString
-      val descriptorId = descriptor.id.toString
 
-      (jwtReader
-        .getClaims(_: String))
-        .expects(bearerToken)
-        .returning(mockSubject(UUID.randomUUID().toString))
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Draft)))
+          )
+        )
 
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, *)
-        .returning(Future.successful(eService))
-        .once()
-
-      (catalogManagementService
-        .suspendDescriptor(_: String, _: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, descriptorId, *)
-        .returning(Future.successful(()))
-        .once()
-
-      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/suspend", HttpMethods.POST)
-
-      response.status shouldBe StatusCodes.BadRequest
+      Post() ~> service.suspendDescriptor(
+        SpecData.catalogItem.id.toString,
+        SpecData.catalogDescriptor.id.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+      }
     }
-
     "fail if descriptor is Archived" in {
-      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED)
-      val eService   = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
-      val eServiceId = eService.id.toString
-      val descriptorId = descriptor.id.toString
 
-      (jwtReader
-        .getClaims(_: String))
-        .expects(bearerToken)
-        .returning(mockSubject(UUID.randomUUID().toString))
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Archived)))
+          )
+        )
 
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, *)
-        .returning(Future.successful(eService))
-        .once()
-
-      (catalogManagementService
-        .suspendDescriptor(_: String, _: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, descriptorId, *)
-        .returning(Future.successful(()))
-        .once()
-
-      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/suspend", HttpMethods.POST)
-
-      response.status shouldBe StatusCodes.BadRequest
+      Post() ~> service.suspendDescriptor(
+        SpecData.catalogItem.id.toString,
+        SpecData.catalogDescriptor.id.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+      }
     }
+    "fail if EService does not exist" in {
 
+      val requesterId                             = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
+
+      Post() ~> service.suspendDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID().toString) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
+    "fail if EService descriptor does not exist" in {
+
+      val requesterId                             = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
+
+      Post() ~> service.suspendDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID().toString) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
     "fail if requester is not the Producer" in {
-      failOnRequesterNotProducer(id =>
-        request(s"eservices/$id/descriptors/${UUID.randomUUID()}/suspend", HttpMethods.POST)
-      )
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
+
+      Post() ~> service.suspendDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID.toString) ~> check {
+        status shouldEqual StatusCodes.Forbidden
+      }
     }
-
   }
-
-  "Descriptor activation" must {
-    val eService1 = eServiceStub.copy(
-      descriptors = Seq(
-        descriptorStub.copy(version = "1", state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED),
-        descriptorStub.copy(version = "2", state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED),
-        descriptorStub.copy(version = "3", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED),
-        descriptorStub.copy(version = "4", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED),
-        descriptorStub.copy(version = "5", state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
-      ),
-      producerId = AdminMockAuthenticator.requesterId
-    )
-    val eService2 = eServiceStub.copy(
-      descriptors = Seq(
-        descriptorStub.copy(version = "1", state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED),
-        descriptorStub.copy(version = "2", state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED),
-        descriptorStub.copy(version = "3", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED),
-        descriptorStub.copy(version = "4", state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED),
-        descriptorStub.copy(version = "5", state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
-      ),
-      producerId = AdminMockAuthenticator.requesterId
-    )
-    val eService3 = eServiceStub.copy(
-      descriptors = Seq(
-        descriptorStub.copy(version = "1", state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED),
-        descriptorStub.copy(version = "2", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED),
-        descriptorStub.copy(version = "3", state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED)
-      ),
-      producerId = AdminMockAuthenticator.requesterId
-    )
+  "Descriptor activation" should {
 
     "activate Deprecated descriptor - case 1" in {
-      val eService     = eService1
-      val eServiceUuid = eService.id
-      val eServiceId   = eServiceUuid.toString
-      val descriptor   = eService.descriptors.find(_.version == "3").get
-      val descriptorId = descriptor.id.toString
 
-      (jwtReader
-        .getClaims(_: String))
-        .expects(bearerToken)
-        .returning(mockSubject(UUID.randomUUID().toString))
+      val requesterId                             = UUID.randomUUID()
+      val descriptorId                            = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val descriptor =
+        SpecData.catalogDescriptor.copy(id = descriptorId, version = "3", state = Suspended)
+      val eService   = SpecData.catalogItem.copy(
+        descriptors = Seq(
+          SpecData.catalogDescriptor.copy(version = "1", state = Archived),
+          SpecData.catalogDescriptor.copy(version = "2", state = Deprecated),
+          descriptor,
+          SpecData.catalogDescriptor.copy(version = "4", state = Suspended),
+          SpecData.catalogDescriptor.copy(version = "5", state = Draft)
+        ),
+        producerId = requesterId
+      )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
+        .returns(Future.successful(eService))
 
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, *)
-        .returning(Future.successful(eService))
-        .once()
-
-      (catalogManagementService
+      (mockCatalogManagementService
         .deprecateDescriptor(_: String, _: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, descriptorId, *)
-        .returning(Future.successful(()))
+        .expects(eService.id.toString, descriptor.id.toString, *)
+        .returning(Future.unit)
         .once()
 
-      (
-        authorizationManagementService
-          .updateStateOnClients(
-            _: UUID,
-            _: UUID,
-            _: AuthorizationManagementDependency.ClientComponentState,
-            _: Seq[String],
-            _: Int
-          )(_: Seq[(String, String)])
-        )
+      (mockAuthorizationManagementService
+        .updateStateOnClients(
+          _: UUID,
+          _: UUID,
+          _: AuthorizationManagementDependency.ClientComponentState,
+          _: Seq[String],
+          _: Int
+        )(_: Seq[(String, String)]))
         .expects(
-          eServiceUuid,
+          eService.id,
           descriptor.id,
           AuthorizationManagementDependency.ClientComponentState.ACTIVE,
           descriptor.audience,
           descriptor.voucherLifespan,
           *
         )
-        .returning(Future.successful(()))
+        .returning(Future.unit)
         .once()
 
-      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/activate", HttpMethods.POST)
-
-      response.status shouldBe StatusCodes.NoContent
+      Post() ~> service.activateDescriptor(SpecData.catalogItem.id.toString, descriptorId.toString) ~> check {
+        status shouldEqual StatusCodes.NoContent
+      }
     }
-
     "activate Deprecated descriptor - case 2" in {
-      val eService     = eService2
-      val eServiceUuid = eService.id
-      val eServiceId   = eServiceUuid.toString
-      val descriptor   = eService.descriptors.find(_.version == "3").get
-      val descriptorId = descriptor.id.toString
+      val requesterId                             = UUID.randomUUID()
+      val descriptorId                            = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (jwtReader
-        .getClaims(_: String))
-        .expects(bearerToken)
-        .returning(mockSubject(UUID.randomUUID().toString))
+      val descriptor =
+        SpecData.catalogDescriptor.copy(id = descriptorId, version = "3", state = Suspended)
+      val eService   = SpecData.catalogItem.copy(
+        descriptors = Seq(
+          SpecData.catalogDescriptor.copy(version = "1", state = Archived),
+          SpecData.catalogDescriptor.copy(version = "2", state = Deprecated),
+          descriptor,
+          SpecData.catalogDescriptor.copy(version = "4", state = Published),
+          SpecData.catalogDescriptor.copy(version = "5", state = Draft)
+        ),
+        producerId = requesterId
+      )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
+        .returns(Future.successful(eService))
 
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, *)
-        .returning(Future.successful(eService))
-        .once()
-
-      (catalogManagementService
+      (mockCatalogManagementService
         .deprecateDescriptor(_: String, _: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, descriptorId, *)
-        .returning(Future.successful(()))
+        .expects(eService.id.toString, descriptor.id.toString, *)
+        .returning(Future.unit)
         .once()
 
-      (
-        authorizationManagementService
-          .updateStateOnClients(
-            _: UUID,
-            _: UUID,
-            _: AuthorizationManagementDependency.ClientComponentState,
-            _: Seq[String],
-            _: Int
-          )(_: Seq[(String, String)])
-        )
+      (mockAuthorizationManagementService
+        .updateStateOnClients(
+          _: UUID,
+          _: UUID,
+          _: AuthorizationManagementDependency.ClientComponentState,
+          _: Seq[String],
+          _: Int
+        )(_: Seq[(String, String)]))
         .expects(
-          eServiceUuid,
+          eService.id,
           descriptor.id,
           AuthorizationManagementDependency.ClientComponentState.ACTIVE,
           descriptor.audience,
           descriptor.voucherLifespan,
           *
         )
-        .returning(Future.successful(()))
+        .returning(Future.unit)
         .once()
 
-      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/activate", HttpMethods.POST)
-
-      response.status shouldBe StatusCodes.NoContent
+      Post() ~> service.activateDescriptor(SpecData.catalogItem.id.toString, descriptorId.toString) ~> check {
+        status shouldEqual StatusCodes.NoContent
+      }
     }
-
     "activate Published descriptor - case 1" in {
-      val eService     = eService1
-      val eServiceUuid = eService.id
-      val eServiceId   = eServiceUuid.toString
-      val descriptor   = eService.descriptors.find(_.version == "4").get
-      val descriptorId = descriptor.id.toString
 
-      (jwtReader
-        .getClaims(_: String))
-        .expects(bearerToken)
-        .returning(mockSubject(UUID.randomUUID().toString))
+      val requesterId                             = UUID.randomUUID()
+      val descriptorId                            = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, version = "4", state = Suspended)
+
+      val eService = SpecData.catalogItem.copy(
+        descriptors = Seq(
+          SpecData.catalogDescriptor.copy(version = "1", state = Archived),
+          SpecData.catalogDescriptor.copy(version = "2", state = Deprecated),
+          SpecData.catalogDescriptor.copy(version = "3", state = Suspended),
+          descriptor,
+          SpecData.catalogDescriptor.copy(version = "5", state = Draft)
+        ),
+        producerId = requesterId
+      )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
+        .returns(Future.successful(eService))
 
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, *)
-        .returning(Future.successful(eService))
-        .once()
-
-      (catalogManagementService
+      (mockCatalogManagementService
         .publishDescriptor(_: String, _: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, descriptorId, *)
-        .returning(Future.successful(()))
+        .expects(eService.id.toString, descriptor.id.toString, *)
+        .returning(Future.unit)
         .once()
 
-      (
-        authorizationManagementService
-          .updateStateOnClients(
-            _: UUID,
-            _: UUID,
-            _: AuthorizationManagementDependency.ClientComponentState,
-            _: Seq[String],
-            _: Int
-          )(_: Seq[(String, String)])
-        )
+      (mockAuthorizationManagementService
+        .updateStateOnClients(
+          _: UUID,
+          _: UUID,
+          _: AuthorizationManagementDependency.ClientComponentState,
+          _: Seq[String],
+          _: Int
+        )(_: Seq[(String, String)]))
         .expects(
-          eServiceUuid,
+          eService.id,
           descriptor.id,
           AuthorizationManagementDependency.ClientComponentState.ACTIVE,
           descriptor.audience,
           descriptor.voucherLifespan,
           *
         )
-        .returning(Future.successful(()))
+        .returning(Future.unit)
         .once()
 
-      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/activate", HttpMethods.POST)
+      Post() ~> service.activateDescriptor(SpecData.catalogItem.id.toString, descriptorId.toString) ~> check {
+        status shouldEqual StatusCodes.NoContent
+      }
 
-      response.status shouldBe StatusCodes.NoContent
     }
 
     "activate Published descriptor - case 2" in {
-      val eService     = eService3
-      val eServiceUuid = eService.id
-      val eServiceId   = eServiceUuid.toString
-      val descriptor   = eService.descriptors.find(_.version == "3").get
-      val descriptorId = descriptor.id.toString
+      val requesterId                             = UUID.randomUUID()
+      val descriptorId                            = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (jwtReader
-        .getClaims(_: String))
-        .expects(bearerToken)
-        .returning(mockSubject(UUID.randomUUID().toString))
+      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, version = "4", state = Suspended)
+
+      val eService = SpecData.catalogItem.copy(
+        descriptors = Seq(
+          SpecData.catalogDescriptor.copy(version = "1", state = Archived),
+          SpecData.catalogDescriptor.copy(version = "2", state = Suspended),
+          descriptor
+        ),
+        producerId = requesterId
+      )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
+        .returns(Future.successful(eService))
 
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, *)
-        .returning(Future.successful(eService))
-        .once()
-
-      (catalogManagementService
+      (mockCatalogManagementService
         .publishDescriptor(_: String, _: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, descriptorId, *)
-        .returning(Future.successful(()))
+        .expects(eService.id.toString, descriptor.id.toString, *)
+        .returning(Future.unit)
         .once()
 
-      (
-        authorizationManagementService
-          .updateStateOnClients(
-            _: UUID,
-            _: UUID,
-            _: AuthorizationManagementDependency.ClientComponentState,
-            _: Seq[String],
-            _: Int
-          )(_: Seq[(String, String)])
-        )
+      (mockAuthorizationManagementService
+        .updateStateOnClients(
+          _: UUID,
+          _: UUID,
+          _: AuthorizationManagementDependency.ClientComponentState,
+          _: Seq[String],
+          _: Int
+        )(_: Seq[(String, String)]))
         .expects(
-          eServiceUuid,
+          eService.id,
           descriptor.id,
           AuthorizationManagementDependency.ClientComponentState.ACTIVE,
           descriptor.audience,
           descriptor.voucherLifespan,
           *
         )
-        .returning(Future.successful(()))
+        .returning(Future.unit)
         .once()
 
-      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/activate", HttpMethods.POST)
-
-      response.status shouldBe StatusCodes.NoContent
+      Post() ~> service.activateDescriptor(SpecData.catalogItem.id.toString, descriptorId.toString) ~> check {
+        status shouldEqual StatusCodes.NoContent
+      }
     }
-
     "fail if descriptor is Draft" in {
-      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
-      val eService   = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
-      val eServiceId = eService.id.toString
-      val descriptorId = descriptor.id.toString
+      val requesterId                             = UUID.randomUUID()
+      val descriptorId                            = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (jwtReader
-        .getClaims(_: String))
-        .expects(bearerToken)
-        .returning(mockSubject(UUID.randomUUID().toString))
+      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, state = Draft)
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
+        .returns(Future.successful(eService))
 
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, *)
-        .returning(Future.successful(eService))
-        .once()
-
-      (catalogManagementService
-        .suspendDescriptor(_: String, _: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, descriptorId, *)
-        .returning(Future.successful(()))
-        .once()
-
-      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/activate", HttpMethods.POST)
-
-      response.status shouldBe StatusCodes.BadRequest
+      Post() ~> service.activateDescriptor(SpecData.catalogItem.id.toString, descriptorId.toString) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+      }
     }
-
     "fail if descriptor is Deprecated" in {
-      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED)
-      val eService   = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
-      val eServiceId = eService.id.toString
-      val descriptorId = descriptor.id.toString
+      val requesterId                             = UUID.randomUUID()
+      val descriptorId                            = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (jwtReader
-        .getClaims(_: String))
-        .expects(bearerToken)
-        .returning(mockSubject(UUID.randomUUID().toString))
+      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, state = Deprecated)
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
+        .returns(Future.successful(eService))
 
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, *)
-        .returning(Future.successful(eService))
-        .once()
-
-      (catalogManagementService
-        .suspendDescriptor(_: String, _: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, descriptorId, *)
-        .returning(Future.successful(()))
-        .once()
-
-      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/activate", HttpMethods.POST)
-
-      response.status shouldBe StatusCodes.BadRequest
+      Post() ~> service.activateDescriptor(SpecData.catalogItem.id.toString, descriptorId.toString) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+      }
     }
-
     "fail if descriptor is Published" in {
-      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED)
-      val eService   = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
-      val eServiceId = eService.id.toString
-      val descriptorId = descriptor.id.toString
+      val requesterId                             = UUID.randomUUID()
+      val descriptorId                            = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (jwtReader
-        .getClaims(_: String))
-        .expects(bearerToken)
-        .returning(mockSubject(UUID.randomUUID().toString))
+      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, state = Published)
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
+        .returns(Future.successful(eService))
 
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, *)
-        .returning(Future.successful(eService))
-        .once()
-
-      (catalogManagementService
-        .suspendDescriptor(_: String, _: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, descriptorId, *)
-        .returning(Future.successful(()))
-        .once()
-
-      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/activate", HttpMethods.POST)
-
-      response.status shouldBe StatusCodes.BadRequest
+      Post() ~> service.activateDescriptor(SpecData.catalogItem.id.toString, descriptorId.toString) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+      }
     }
-
     "fail if descriptor is Archived" in {
-      val descriptor = descriptorStub.copy(state = CatalogManagementDependency.EServiceDescriptorState.ARCHIVED)
-      val eService   = eServiceStub.copy(descriptors = Seq(descriptor), producerId = AdminMockAuthenticator.requesterId)
-      val eServiceId = eService.id.toString
-      val descriptorId = descriptor.id.toString
+      val requesterId                             = UUID.randomUUID()
+      val descriptorId                            = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      (jwtReader
-        .getClaims(_: String))
-        .expects(bearerToken)
-        .returning(mockSubject(UUID.randomUUID().toString))
+      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, state = Archived)
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
+        .returns(Future.successful(eService))
 
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, *)
-        .returning(Future.successful(eService))
-        .once()
-
-      (catalogManagementService
-        .suspendDescriptor(_: String, _: String)(_: Seq[(String, String)]))
-        .expects(eServiceId, descriptorId, *)
-        .returning(Future.successful(()))
-        .once()
-
-      val response = request(s"eservices/$eServiceId/descriptors/$descriptorId/activate", HttpMethods.POST)
-
-      response.status shouldBe StatusCodes.BadRequest
+      Post() ~> service.activateDescriptor(SpecData.catalogItem.id.toString, descriptorId.toString) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+      }
     }
+    "fail if EService does not exist" in {
 
+      val requesterId                             = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
+
+      Post() ~> service.activateDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID.toString) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
+    "fail if EService descriptor does not exist" in {
+
+      val requesterId                             = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
+
+      Post() ~> service.activateDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID.toString) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
     "fail if requester is not the Producer" in {
-      failOnRequesterNotProducer(id =>
-        request(s"eservices/$id/descriptors/${UUID.randomUUID()}/activate", HttpMethods.POST)
-      )
-    }
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
 
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
+
+      Post() ~> service.activateDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID.toString) ~> check {
+        status shouldEqual StatusCodes.Forbidden
+      }
+    }
   }
+  "Descriptor deletion" should {
+    "succeed if descriptor is Draft" in {
 
-  "Descriptor deletion" must {
+      val requesterId                             = UUID.randomUUID()
+      val descriptorId                            = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-    "keep EService if other Descriptors exist" in {
+      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, state = Draft)
 
-      val draftDescriptor = CatalogManagementDependency.EServiceDescriptor(
-        id = UUID.randomUUID(),
-        version = "1",
-        description = None,
-        interface = None,
-        docs = Nil,
-        state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
-        audience = List("aud1"),
-        voucherLifespan = 1000,
-        dailyCallsPerConsumer = 1000,
-        dailyCallsTotal = 0,
-        agreementApprovalPolicy = AUTOMATIC,
-        serverUrls = Nil,
-        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil)
-      )
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
 
-      val otherDescriptor = CatalogManagementDependency.EServiceDescriptor(
-        id = UUID.randomUUID(),
-        version = "1",
-        description = None,
-        interface = None,
-        docs = Nil,
-        state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED,
-        audience = List("aud1"),
-        voucherLifespan = 1000,
-        dailyCallsPerConsumer = 1000,
-        dailyCallsTotal = 0,
-        agreementApprovalPolicy = AUTOMATIC,
-        serverUrls = Nil,
-        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil)
-      )
-
-      val eservice = CatalogManagementDependency.EService(
-        id = UUID.randomUUID(),
-        producerId = AdminMockAuthenticator.requesterId,
-        name = "Name",
-        description = "Description",
-        technology = CatalogManagementDependency.EServiceTechnology.REST,
-        descriptors = List(draftDescriptor, otherDescriptor)
-      )
-
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eservice.id.toString, *)
-        .returning(Future.successful(eservice))
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
+        .returns(Future.successful(eService))
 
-      (catalogManagementService
+      (mockCatalogManagementService
         .deleteDraft(_: String, _: String)(_: Seq[(String, String)]))
-        .expects(eservice.id.toString, draftDescriptor.id.toString, *)
-        .returning(Future.successful(()))
+        .expects(eService.id.toString, descriptor.id.toString, *)
+        .returning(Future.unit)
         .once()
 
-      val response = request(s"eservices/${eservice.id}/descriptors/${draftDescriptor.id}", HttpMethods.DELETE)
-
-      response.status shouldBe StatusCodes.NoContent
+      Delete() ~> service.deleteDraft(SpecData.catalogItem.id.toString, descriptor.id.toString) ~> check {
+        status shouldEqual StatusCodes.NoContent
+      }
     }
+    "fail if EService does not exist" in {
 
-    "delete EService if there are no other Descriptors" in {
+      val requesterId                             = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      val draftDescriptor = CatalogManagementDependency.EServiceDescriptor(
-        id = UUID.randomUUID(),
-        version = "1",
-        description = None,
-        interface = None,
-        docs = Nil,
-        state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
-        audience = List("aud1"),
-        voucherLifespan = 1000,
-        dailyCallsPerConsumer = 1000,
-        dailyCallsTotal = 0,
-        agreementApprovalPolicy = AUTOMATIC,
-        serverUrls = Nil,
-        attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil)
-      )
-
-      val eservice = CatalogManagementDependency.EService(
-        id = UUID.randomUUID(),
-        producerId = AdminMockAuthenticator.requesterId,
-        name = "Name",
-        description = "Description",
-        technology = CatalogManagementDependency.EServiceTechnology.REST,
-        descriptors = List(draftDescriptor)
-      )
-
-      (catalogManagementService
-        .getEService(_: String)(_: Seq[(String, String)]))
-        .expects(eservice.id.toString, *)
-        .returning(Future.successful(eservice))
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
 
-      (catalogManagementService
-        .deleteDraft(_: String, _: String)(_: Seq[(String, String)]))
-        .expects(eservice.id.toString, draftDescriptor.id.toString, *)
-        .returning(Future.successful(()))
+      Delete() ~> service.deleteDraft(SpecData.catalogItem.id.toString, UUID.randomUUID.toString) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
+    "fail if requester is not the Producer" in {
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
         .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
 
-      (catalogManagementService
+      Delete() ~> service.deleteDraft(SpecData.catalogItem.id.toString, UUID.randomUUID.toString) ~> check {
+        status shouldEqual StatusCodes.Forbidden
+      }
+    }
+  }
+  "EService deletion" should {
+    "succeed" in {
+
+      val requesterId                             = UUID.randomUUID()
+      val descriptorId                            = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId)
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(eService))
+
+      (mockCatalogManagementService
         .deleteEService(_: String)(_: Seq[(String, String)]))
-        .expects(eservice.id.toString, *)
-        .returning(Future.successful(()))
+        .expects(eService.id.toString, *)
+        .returning(Future.unit)
         .once()
 
-      val response = request(s"eservices/${eservice.id}/descriptors/${draftDescriptor.id}", HttpMethods.DELETE)
-
-      response.status shouldBe StatusCodes.NoContent
+      Delete() ~> service.deleteEService(SpecData.catalogItem.id.toString) ~> check {
+        status shouldEqual StatusCodes.NoContent
+      }
     }
+    "fail if EService does not exist" in {
 
+      val requesterId                             = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
+
+      Delete() ~> service.deleteEService(SpecData.catalogItem.id.toString) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
     "fail if requester is not the Producer" in {
-      failOnRequesterNotProducer(id => request(s"eservices/$id/descriptors/${UUID.randomUUID()}", HttpMethods.DELETE))
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
+
+      Delete() ~> service.deleteEService(SpecData.catalogItem.id.toString) ~> check {
+        status shouldEqual StatusCodes.Forbidden
+      }
     }
   }
+  "Document creation" should {
+    "succeed" in {
+      val requesterId                             = UUID.randomUUID()
+      val descriptorId                            = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-  "Document creation" must {
+      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId)
 
-    "fail if requester is not the Producer" in {
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
+
+      val documentId = UUID.randomUUID()
+
+      val seed = CreateEServiceDescriptorDocumentSeed(
+        documentId = documentId,
+        kind = EServiceDocumentKind.DOCUMENT,
+        prettyName = "prettyName",
+        filePath = "filePath",
+        fileName = "fileName",
+        contentType = "application/pdf",
+        checksum = "checksum",
+        serverUrls = Seq.empty
+      )
+
+      val managementSeed = CatalogManagementDependency.CreateEServiceDescriptorDocumentSeed(
+        documentId = documentId,
+        kind = CatalogManagementDependency.EServiceDocumentKind.DOCUMENT,
+        prettyName = "prettyName",
+        filePath = "filePath",
+        fileName = "fileName",
+        contentType = "application/pdf",
+        checksum = "checksum",
+        serverUrls = Seq.empty
+      )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(eService))
+
+      (mockCatalogManagementService
+        .createEServiceDocument(_: UUID, _: UUID, _: CatalogManagementDependency.CreateEServiceDescriptorDocumentSeed)(
+          _: Seq[(String, String)]
+        ))
+        .expects(eService.id, descriptorId, managementSeed, *)
+        .returning(Future.successful(SpecData.eService))
+        .once()
+
+      Post() ~> service.createEServiceDocument(SpecData.catalogItem.id.toString, descriptorId.toString, seed) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+    "fail if EService does not exist" in {
+
+      val requesterId                             = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
       val seed = CreateEServiceDescriptorDocumentSeed(
         documentId = UUID.randomUUID(),
-        kind = EServiceDocumentKind.INTERFACE,
-        prettyName = "newPrettyName",
-        filePath = "fake",
-        fileName = "fake",
-        contentType = "fake",
-        checksum = "fake",
-        serverUrls = List()
-      )
-      failOnRequesterNotProducer(id =>
-        request(
-          s"eservices/$id/descriptors/${UUID.randomUUID()}/documents",
-          HttpMethods.POST,
-          Some(seed.toJson.toString)
-        )
+        kind = EServiceDocumentKind.DOCUMENT,
+        prettyName = "prettyName",
+        filePath = "filePath",
+        fileName = "fileName",
+        contentType = "application/pdf",
+        checksum = "checksum",
+        serverUrls = Seq.empty
       )
 
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
+
+      Post() ~> service.createEServiceDocument(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID().toString,
+        seed
+      ) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
     }
-  }
+    "fail if EService descriptor does not exist" in {
 
-  "Document update" must {
+      val requesterId                             = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
+      val seed = CreateEServiceDescriptorDocumentSeed(
+        documentId = UUID.randomUUID(),
+        kind = EServiceDocumentKind.DOCUMENT,
+        prettyName = "prettyName",
+        filePath = "filePath",
+        fileName = "fileName",
+        contentType = "application/pdf",
+        checksum = "checksum",
+        serverUrls = Seq.empty
+      )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
+
+      Post() ~> service.createEServiceDocument(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID().toString,
+        seed
+      ) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
     "fail if requester is not the Producer" in {
-      val seed = UpdateEServiceDescriptorDocumentSeed(prettyName = "newPrettyName")
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
 
-      failOnRequesterNotProducer(id =>
-        request(
-          s"eservices/$id/descriptors/${UUID.randomUUID()}/documents/${UUID.randomUUID()}/update",
-          HttpMethods.POST,
-          Some(seed.toJson.toString)
+      val seed = CreateEServiceDescriptorDocumentSeed(
+        documentId = UUID.randomUUID(),
+        kind = EServiceDocumentKind.DOCUMENT,
+        prettyName = "prettyName",
+        filePath = "filePath",
+        fileName = "fileName",
+        contentType = "application/pdf",
+        checksum = "checksum",
+        serverUrls = Seq.empty
+      )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
+
+      Post() ~> service.createEServiceDocument(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID().toString,
+        seed
+      ) ~> check {
+        status shouldEqual StatusCodes.Forbidden
+      }
+    }
+  }
+  "Document retrieve" should {
+    "succeed" in {
+
+      val descriptorId = UUID.randomUUID()
+      val documentId   = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      val descriptor = SpecData.catalogDescriptor.copy(
+        id = descriptorId,
+        interface = Some(SpecData.catalogDocument.copy(id = documentId))
+      )
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor))
+
+      (mockCatalogManagementService
+        .getEServiceDocument(_: UUID, _: UUID, _: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, descriptorId, documentId, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogDocument.copy(id = documentId)))
+
+      Post() ~> service.getEServiceDocumentById(
+        eService.id.toString,
+        descriptorId.toString,
+        documentId.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+    "fail if Document does not exist" in {
+
+      val descriptorId = UUID.randomUUID()
+      val documentId   = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      val descriptor = SpecData.catalogDescriptor.copy(
+        id = descriptorId,
+        interface = Some(SpecData.catalogDocument.copy(id = documentId))
+      )
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor))
+
+      (mockCatalogManagementService
+        .getEServiceDocument(_: UUID, _: UUID, _: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, descriptorId, documentId, *, *)
+        .once()
+        .returns(
+          Future.failed(DescriptorDocumentNotFound(eService.id.toString, descriptorId.toString, documentId.toString))
         )
-      )
+
+      Post() ~> service.getEServiceDocumentById(
+        eService.id.toString,
+        descriptorId.toString,
+        documentId.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
     }
   }
+  "Document update" should {
+    "succeed" in {
+      val requesterId  = UUID.randomUUID()
+      val descriptorId = UUID.randomUUID()
+      val documentId   = UUID.randomUUID()
 
-  "Document deletion" must {
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
+      val descriptor =
+        SpecData.catalogDescriptor.copy(id = descriptorId, docs = Seq(SpecData.catalogDocument.copy(id = documentId)))
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
+
+      val seed = UpdateEServiceDescriptorDocumentSeed(prettyName = "prettyNameUpdated")
+
+      val managementSeed =
+        CatalogManagementDependency.UpdateEServiceDescriptorDocumentSeed(prettyName = "prettyNameUpdated")
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(eService))
+
+      (mockCatalogManagementService
+        .updateEServiceDocument(
+          _: String,
+          _: String,
+          _: String,
+          _: CatalogManagementDependency.UpdateEServiceDescriptorDocumentSeed
+        )(_: Seq[(String, String)]))
+        .expects(eService.id.toString, descriptorId.toString, documentId.toString, managementSeed, *)
+        .returning(Future.successful(SpecData.eServiceDoc))
+        .once()
+
+      Post() ~> service.updateEServiceDocumentById(
+        SpecData.catalogItem.id.toString,
+        descriptorId.toString,
+        documentId.toString,
+        seed
+      ) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+    "fail if EService does not exist" in {
+
+      val requesterId                             = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val seed = UpdateEServiceDescriptorDocumentSeed(prettyName = "prettyNameUpdated")
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
+
+      Post() ~> service.updateEServiceDocumentById(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID().toString,
+        UUID.randomUUID().toString,
+        seed
+      ) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
     "fail if requester is not the Producer" in {
-      failOnRequesterNotProducer(id =>
-        request(s"eservices/$id/descriptors/${UUID.randomUUID()}/documents/${UUID.randomUUID()}", HttpMethods.DELETE)
-      )
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      val seed = UpdateEServiceDescriptorDocumentSeed(prettyName = "prettyNameUpdated")
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
+
+      Post() ~> service.updateEServiceDocumentById(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID().toString,
+        UUID.randomUUID().toString,
+        seed
+      ) ~> check {
+        status shouldEqual StatusCodes.Forbidden
+      }
     }
   }
+  "Document deletion" should {
+    "succeed" in {
+      val requesterId  = UUID.randomUUID()
+      val descriptorId = UUID.randomUUID()
+      val documentId   = UUID.randomUUID()
 
-  def failOnRequesterNotProducer(response: UUID => HttpResponse): Assertion = {
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-    val eServiceId: UUID = UUID.randomUUID()
+      val descriptor =
+        SpecData.catalogDescriptor.copy(id = descriptorId, docs = Seq(SpecData.catalogDocument.copy(id = documentId)))
 
-    val eservice = CatalogManagementDependency.EService(
-      id = eServiceId,
-      producerId = UUID.randomUUID(),
-      name = "name",
-      description = "description",
-      technology = CatalogManagementDependency.EServiceTechnology.REST,
-      descriptors = Nil
-    )
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
 
-    (catalogManagementService
-      .getEService(_: String)(_: Seq[(String, String)]))
-      .expects(eservice.id.toString, *)
-      .returning(Future.successful(eservice))
-      .once()
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(eService))
 
-    response(eServiceId).status shouldBe StatusCodes.Forbidden
+      (mockCatalogManagementService
+        .deleteEServiceDocument(_: String, _: String, _: String)(_: Seq[(String, String)]))
+        .expects(eService.id.toString, descriptorId.toString, documentId.toString, *)
+        .returning(Future.unit)
+        .once()
 
+      Delete() ~> service.deleteEServiceDocumentById(
+        SpecData.catalogItem.id.toString,
+        descriptorId.toString,
+        documentId.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.NoContent
+      }
+    }
+    "fail if EService does not exist" in {
+
+      val requesterId                             = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
+
+      Delete() ~> service.deleteEServiceDocumentById(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID().toString,
+        UUID.randomUUID().toString
+      ) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
+    "fail if requester is not the Producer" in {
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
+
+      Delete() ~> service.deleteEServiceDocumentById(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID().toString,
+        UUID.randomUUID().toString
+      ) ~> check {
+        status shouldEqual StatusCodes.Forbidden
+      }
+    }
   }
-}
-
-object CatalogProcessSpec extends MockFactory {
-  val mockHealthApi: HealthApi                                               = mock[HealthApi]
-  val catalogManagementService: CatalogManagementService                     = mock[CatalogManagementService]
-  val agreementManagementService: AgreementManagementService                 = mock[AgreementManagementService]
-  val authorizationManagementService: AuthorizationManagementService         = mock[AuthorizationManagementService]
-  val attributeRegistryManagementService: AttributeRegistryManagementService = mock[AttributeRegistryManagementService]
-  val tenantManagementService: TenantManagementService                       = mock[TenantManagementService]
-  val fileManager: FileManager                                               = mock[FileManager]
-  val readModel: ReadModelService                                            = mock[ReadModelService]
-  val jwtReader: JWTReader                                                   = mock[JWTReader]
-  def mockSubject(uuid: String): Success[JWTClaimsSet] = Success(new JWTClaimsSet.Builder().subject(uuid).build())
 }
