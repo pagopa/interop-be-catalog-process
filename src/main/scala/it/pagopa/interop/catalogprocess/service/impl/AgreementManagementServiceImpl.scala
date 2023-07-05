@@ -1,36 +1,55 @@
 package it.pagopa.interop.catalogprocess.service.impl
 
-import it.pagopa.interop.agreementmanagement.client.api.AgreementApi
-import it.pagopa.interop.agreementmanagement.client.invoker.BearerToken
-import it.pagopa.interop.agreementmanagement.client.model.{Agreement, AgreementState}
-import it.pagopa.interop.catalogprocess.service.{AgreementManagementInvoker, AgreementManagementService}
-import it.pagopa.interop.commons.utils._
-import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
-import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
-import scala.concurrent.Future
+import it.pagopa.interop.catalogprocess.service.AgreementManagementService
+import it.pagopa.interop.commons.cqrs.service.ReadModelService
+import it.pagopa.interop.catalogprocess.common.readmodel.ReadModelAgreementQueries
+import it.pagopa.interop.agreementmanagement.model.agreement.{PersistentAgreement, PersistentAgreementState}
 
-final case class AgreementManagementServiceImpl(invoker: AgreementManagementInvoker, api: AgreementApi)
-    extends AgreementManagementService {
+import java.util.UUID
+import scala.concurrent.{Future, ExecutionContext}
 
-  implicit val logger: LoggerTakingImplicit[ContextFieldsToLog] =
-    Logger.takingImplicit[ContextFieldsToLog](this.getClass)
+object AgreementManagementServiceImpl extends AgreementManagementService {
 
   override def getAgreements(
-    consumerId: Option[String],
-    producerId: Option[String],
-    states: List[AgreementState],
-    eServiceId: Option[String]
-  )(implicit contexts: Seq[(String, String)]): Future[Seq[Agreement]] = withHeaders {
-    (bearerToken, correlationId, ip) =>
-      val request = api.getAgreements(
-        xCorrelationId = correlationId,
-        xForwardedFor = ip,
-        consumerId = consumerId,
-        producerId = producerId,
-        states = states,
-        eserviceId = eServiceId
-      )(BearerToken(bearerToken))
-      invoker.invoke(request, s"Agreements retrieval for consumer ${consumerId.getOrElse("Unknown")}")
-  }
+    eServicesIds: Seq[UUID],
+    consumersIds: Seq[UUID],
+    producersIds: Seq[UUID],
+    states: Seq[PersistentAgreementState]
+  )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[Seq[PersistentAgreement]] =
+    getAllAgreements(eServicesIds, consumersIds, producersIds, states)
 
+  private def getAgreements(
+    eServicesIds: Seq[UUID],
+    consumersIds: Seq[UUID],
+    producersIds: Seq[UUID],
+    states: Seq[PersistentAgreementState],
+    offset: Int,
+    limit: Int
+  )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[Seq[PersistentAgreement]] =
+    ReadModelAgreementQueries.getAgreements(eServicesIds, consumersIds, producersIds, states, offset, limit)
+
+  private def getAllAgreements(
+    eServicesIds: Seq[UUID],
+    consumersIds: Seq[UUID],
+    producersIds: Seq[UUID],
+    states: Seq[PersistentAgreementState]
+  )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[Seq[PersistentAgreement]] = {
+
+    def getAgreementsFrom(offset: Int): Future[Seq[PersistentAgreement]] =
+      getAgreements(
+        eServicesIds = eServicesIds,
+        consumersIds = consumersIds,
+        producersIds = producersIds,
+        states = states,
+        offset = offset,
+        limit = 50
+      )
+
+    def go(start: Int)(as: Seq[PersistentAgreement]): Future[Seq[PersistentAgreement]] =
+      getAgreementsFrom(start).flatMap(agrs =>
+        if (agrs.size < 50) Future.successful(as ++ agrs) else go(start + 50)(as ++ agrs)
+      )
+
+    go(0)(Nil)
+  }
 }

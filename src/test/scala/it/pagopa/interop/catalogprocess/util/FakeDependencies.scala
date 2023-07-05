@@ -1,9 +1,8 @@
 package it.pagopa.interop.catalogprocess.util
 
-import cats.syntax.all._
-import it.pagopa.interop.agreementmanagement.client.model.{Agreement, AgreementState}
-import it.pagopa.interop.attributeregistrymanagement.client.model.Attribute
 import it.pagopa.interop.authorizationmanagement.client.model._
+import it.pagopa.interop.commons.cqrs.service.ReadModelService
+import it.pagopa.interop.agreementmanagement.model.agreement.{Active, PersistentAgreement, PersistentAgreementState}
 import it.pagopa.interop.catalogmanagement.client.model.{
   AgreementApprovalPolicy,
   Attributes,
@@ -19,58 +18,62 @@ import it.pagopa.interop.catalogmanagement.client.model.{
   UpdateEServiceSeed,
   CreateEServiceDescriptorDocumentSeed
 }
+import it.pagopa.interop.catalogprocess.common.readmodel.{PaginatedResult, Consumers}
+import it.pagopa.interop.catalogmanagement.model.{
+  CatalogItem,
+  Rest,
+  CatalogAttributes,
+  CatalogDocument,
+  Published,
+  CatalogDescriptorState
+}
 import it.pagopa.interop.catalogprocess.service.{
-  AgreementManagementService,
-  AttributeRegistryManagementService,
   AuthorizationManagementService,
   CatalogManagementService,
-  TenantManagementService
+  AgreementManagementService
 }
-import it.pagopa.interop.commons.cqrs.service.ReadModelService
 
 import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
-import it.pagopa.interop.tenantmanagement.client.model.Tenant
-import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
-import org.mongodb.scala.bson.conversions.Bson
-import spray.json.JsonReader
 
 /**
  * Holds fake implementation of dependencies for tests not requiring neither mocks or stubs
  */
 object FakeDependencies {
-  class FakeAttributeRegistryManagementService extends AttributeRegistryManagementService {
-    override def getAttributesBulk(attributeIds: Seq[UUID])(implicit
-      contexts: Seq[(String, String)]
-    ): Future[Seq[Attribute]] = Future.successful(Seq.empty)
-  }
 
-  class FakeAgreementManagementService extends AgreementManagementService {
-    override def getAgreements(
-      consumerId: Option[String],
-      producerId: Option[String],
-      states: List[AgreementState],
-      eServiceId: Option[String]
-    )(implicit contexts: Seq[(String, String)]): Future[Seq[Agreement]] = Future.successful(Seq.empty)
-  }
-  class FakeCatalogManagementService   extends CatalogManagementService   {
+  class FakeCatalogManagementService extends CatalogManagementService {
 
-    override def listEServices(producerId: Option[String], status: Option[EServiceDescriptorState])(implicit
-      contexts: Seq[(String, String)]
-    ): Future[Seq[EService]] = Future.successful(Seq.empty)
-
-    override def getEService(eServiceId: String)(implicit contexts: Seq[(String, String)]): Future[EService] =
+    override def getEServiceById(
+      eServiceId: UUID
+    )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[CatalogItem] =
       Future.successful(
-        EService(
+        CatalogItem(
           id = UUID.randomUUID(),
           producerId = UUID.randomUUID(),
           name = "fake",
           description = "fake",
-          technology = EServiceTechnology.REST,
-          descriptors = Seq.empty
+          technology = Rest,
+          descriptors = Seq.empty,
+          attributes = Some(CatalogAttributes.empty),
+          createdAt = OffsetDateTime.now()
         )
       )
+
+    override def getEServiceDocument(eServiceId: UUID, descriptorId: UUID, documentId: UUID)(implicit
+      ec: ExecutionContext,
+      readModel: ReadModelService
+    ): Future[CatalogDocument] = Future.successful(
+      CatalogDocument(
+        id = UUID.randomUUID(),
+        name = "fake",
+        contentType = "fake",
+        prettyName = "fake",
+        path = "fake",
+        checksum = "fake",
+        uploadDate = OffsetDateTime.now()
+      )
+    )
 
     override def createEService(
       eServiceSeed: EServiceSeed
@@ -158,9 +161,6 @@ object FakeDependencies {
       contexts: Seq[(String, String)]
     ): Future[Unit] = Future.successful(())
 
-    override def hasNotDraftDescriptor(eService: EService)(implicit contexts: Seq[(String, String)]): Future[Boolean] =
-      Future.successful(true)
-
     override def updateDraftDescriptor(eServiceId: String, descriptorId: String, seed: UpdateEServiceDescriptorSeed)(
       implicit contexts: Seq[(String, String)]
     ): Future[EService] = Future.successful(
@@ -205,20 +205,6 @@ object FakeDependencies {
       )
     )
 
-    override def getEServiceDocument(eServiceId: String, descriptorId: String, documentId: String)(implicit
-      contexts: Seq[(String, String)]
-    ): Future[EServiceDoc] = Future.successful(
-      EServiceDoc(
-        id = UUID.randomUUID(),
-        name = "a",
-        contentType = "b",
-        prettyName = "c",
-        path = "d",
-        checksum = "e",
-        uploadDate = OffsetDateTime.now()
-      )
-    )
-
     override def updateEServiceDocument(
       eServiceId: String,
       descriptorId: String,
@@ -240,6 +226,35 @@ object FakeDependencies {
     override def deleteEServiceDocument(eServiceId: String, descriptorId: String, documentId: String)(implicit
       contexts: Seq[(String, String)]
     ): Future[Unit] = Future.successful(())
+
+    override def getConsumers(eServiceId: UUID, offset: Int, limit: Int)(implicit
+      ec: ExecutionContext,
+      readModel: ReadModelService
+    ): Future[PaginatedResult[Consumers]] = Future.successful(
+      PaginatedResult(
+        results = Seq(
+          Consumers(
+            descriptorVersion = "fake",
+            descriptorState = Published,
+            agreementState = Active,
+            consumerName = "fake",
+            consumerExternalId = "fake"
+          )
+        ),
+        totalCount = 1
+      )
+    )
+
+    override def getEServices(
+      name: Option[String],
+      eServicesIds: Seq[UUID],
+      producersIds: Seq[UUID],
+      states: Seq[CatalogDescriptorState],
+      offset: Int,
+      limit: Int,
+      exactMatchOnName: Boolean = false
+    )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PaginatedResult[CatalogItem]] =
+      Future.successful(PaginatedResult(results = Seq.empty, totalCount = 0))
   }
 
   class FakeAuthorizationManagementService extends AuthorizationManagementService {
@@ -252,45 +267,13 @@ object FakeDependencies {
     )(implicit contexts: Seq[(String, String)]): Future[Unit] = Future.successful(())
   }
 
-  class FakeTenantManagementService extends TenantManagementService {
-    override def getTenant(tenantId: UUID)(implicit contexts: Seq[(String, String)]): Future[Tenant] =
-      Future.successful(
-        Tenant(
-          id = UUID.randomUUID(),
-          selfcareId = UUID.randomUUID.toString.some,
-          externalId = null,
-          features = Nil,
-          attributes = Nil,
-          createdAt = OffsetDateTimeSupplier.get(),
-          updatedAt = None,
-          mails = Nil,
-          name = "test_name"
-        )
-      )
+  class FakeAgreementManagementService extends AgreementManagementService {
+    override def getAgreements(
+      eServicesIds: Seq[UUID],
+      consumersIds: Seq[UUID],
+      producersIds: Seq[UUID],
+      states: Seq[PersistentAgreementState]
+    )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[Seq[PersistentAgreement]] =
+      Future.successful(Seq.empty)
   }
-
-  class FakeReadModelService extends ReadModelService {
-    override def findOne[T](collectionName: String, filter: Bson)(implicit
-      evidence$1: JsonReader[T],
-      ec: ExecutionContext
-    ): Future[Option[T]] = Future.successful(None)
-    override def find[T](collectionName: String, filter: Bson, offset: Int, limit: Int)(implicit
-      evidence$2: JsonReader[T],
-      ec: ExecutionContext
-    ): Future[Seq[T]] = Future.successful(Nil)
-    override def find[T](collectionName: String, filter: Bson, projection: Bson, offset: Int, limit: Int)(implicit
-      evidence$3: JsonReader[T],
-      ec: ExecutionContext
-    ): Future[Seq[T]] = Future.successful(Nil)
-    override def aggregate[T](collectionName: String, pipeline: Seq[Bson], offset: Int, limit: Int)(implicit
-      evidence$4: JsonReader[T],
-      ec: ExecutionContext
-    ): Future[Seq[T]] = Future.successful(Nil)
-    override def aggregateRaw[T](collectionName: String, pipeline: Seq[Bson], offset: Int, limit: Int)(implicit
-      evidence$5: JsonReader[T],
-      ec: ExecutionContext
-    ): Future[Seq[T]] = Future.successful(Nil)
-    override def close(): Unit = ()
-  }
-
 }

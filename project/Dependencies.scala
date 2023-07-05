@@ -74,16 +74,8 @@ object Dependencies {
     lazy val catalogManagementModels =
       namespace %% "interop-be-catalog-management-models" % catalogManagementVersion
 
-    lazy val agreementManagementClient =
-      namespace %% "interop-be-agreement-management-client" % agreementManagementVersion
     lazy val agreementManagementModels =
       namespace %% "interop-be-agreement-management-models" % agreementManagementVersion
-
-    lazy val tenantManagementClient =
-      namespace %% "interop-be-tenant-management-client" % tenantManagementVersion
-
-    lazy val attributeRegistryManagementClient =
-      namespace %% "interop-be-attribute-registry-management-client" % attributeRegistryManagementVersion
 
     lazy val authorizationManagementClient =
       namespace %% "interop-be-authorization-management-client" % authorizationManagementVersion
@@ -115,13 +107,10 @@ object Dependencies {
       resilience4j.rateLimiter                 % Compile,
       pagopa.catalogManagementClient           % Compile,
       pagopa.catalogManagementModels           % Compile,
-      pagopa.agreementManagementClient         % Compile,
       pagopa.agreementManagementModels         % Compile,
-      pagopa.attributeRegistryManagementClient % Compile,
       pagopa.authorizationManagementClient     % Compile,
       pagopa.commonsUtils                      % Compile,
       pagopa.fileManager                       % Compile,
-      pagopa.tenantManagementClient            % Compile,
       pagopa.commonsJWT                        % Compile,
       pagopa.commonsCqrs                       % Compile,
       akka.testkit                             % Test,
