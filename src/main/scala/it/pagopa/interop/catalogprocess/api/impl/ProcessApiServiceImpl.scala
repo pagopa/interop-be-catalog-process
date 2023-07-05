@@ -133,15 +133,7 @@ final case class ProcessApiServiceImpl(
       ): Future[PaginatedResult[CatalogItem]] = {
 
         if (agreementStates.isEmpty)
-          catalogManagementService.getEServices(
-            name,
-            eServicesIds,
-            producersIds,
-            attributesIds,
-            states,
-            offset,
-            limit
-          )
+          catalogManagementService.getEServices(name, eServicesIds, producersIds, attributesIds, states, offset, limit)
         else
           for {
             agreementEservicesIds <- agreementManagementService
@@ -156,15 +148,23 @@ final case class ProcessApiServiceImpl(
               if (agreementEservicesIds.isEmpty)
                 Future.successful(ReadModelCatalogQueries.emptyResults[CatalogItem])
               else
-                catalogManagementService.getEServices(name, agreementEservicesIds, producersIds, states, offset, limit)
+                catalogManagementService.getEServices(
+                  name,
+                  agreementEservicesIds,
+                  producersIds,
+                  attributesIds,
+                  states,
+                  offset,
+                  limit
+                )
           } yield result
       }
 
       val result: Future[EServices] = for {
         organizationId  <- getOrganizationIdFutureUUID(contexts)
         states          <- parseArrayParameters(states).traverse(EServiceDescriptorState.fromValue).toFuture
-        producersUuids   <- parseArrayParameters(producersIds).traverse(_.toFutureUUID)
-        eServicesUuids   <- parseArrayParameters(eServicesIds).traverse(_.toFutureUUID)
+        producersUuids  <- parseArrayParameters(producersIds).traverse(_.toFutureUUID)
+        eServicesUuids  <- parseArrayParameters(eServicesIds).traverse(_.toFutureUUID)
         attributesUuids <- parseArrayParameters(attributesIds).traverse(_.toFutureUUID)
         agreementStates <- parseArrayParameters(agreementStates)
           .traverse(AgreementState.fromValue)
