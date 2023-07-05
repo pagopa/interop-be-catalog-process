@@ -43,6 +43,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val name            = None
       val eServicesIds    = Seq(eServiceId)
       val producersIds    = Seq.empty
+      val attributesIds   = Seq.empty
       val agreementStates = Seq.empty
       val states          = Seq.empty
       val offset          = 0
@@ -53,12 +54,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
           _: Option[String],
           _: Seq[UUID],
           _: Seq[UUID],
+          _: Seq[UUID],
           _: Seq[CatalogDescriptorState],
           _: Int,
           _: Int,
           _: Boolean
         )(_: ExecutionContext, _: ReadModelService))
-        .expects(name, eServicesIds, producersIds, states, offset, limit, false, *, *)
+        .expects(name, eServicesIds, producersIds, attributesIds, states, offset, limit, false, *, *)
         .once()
         .returns(Future.successful(PaginatedResult(results = Seq(SpecData.catalogItem), 1)))
 
@@ -66,6 +68,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name,
         eServicesIds.mkString(","),
         producersIds.mkString(","),
+        attributesIds.mkString(","),
         states.mkString(","),
         agreementStates.mkString(","),
         offset,
@@ -85,6 +88,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val name            = None
       val eServicesIds    = Seq(eServiceId)
       val producersIds    = Seq.empty
+      val attributesIds   = Seq.empty
       val agreementStates = Seq("ACTIVE")
       val states          = Seq.empty
       val offset          = 0
@@ -104,12 +108,24 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
           _: Option[String],
           _: Seq[UUID],
           _: Seq[UUID],
+          _: Seq[UUID],
           _: Seq[CatalogDescriptorState],
           _: Int,
           _: Int,
           _: Boolean
         )(_: ExecutionContext, _: ReadModelService))
-        .expects(name, Seq(SpecData.agreement.eserviceId), producersIds, states, offset, limit, false, *, *)
+        .expects(
+          name,
+          Seq(SpecData.agreement.eserviceId),
+          producersIds,
+          attributesIds,
+          states,
+          offset,
+          limit,
+          false,
+          *,
+          *
+        )
         .once()
         .returns(Future.successful(PaginatedResult(results = Seq(SpecData.catalogItem), 1)))
 
@@ -117,6 +133,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name,
         eServicesIds.mkString(","),
         producersIds.mkString(","),
+        attributesIds.mkString(","),
         states.mkString(","),
         agreementStates.mkString(","),
         offset,
@@ -136,6 +153,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val name            = None
       val eServicesIds    = Seq(eServiceId)
       val producersIds    = Seq.empty
+      val attributesIds   = Seq.empty
       val agreementStates = Seq("ACTIVE")
       val states          = Seq.empty
       val offset          = 0
@@ -154,6 +172,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name,
         eServicesIds.mkString(","),
         producersIds.mkString(","),
+        attributesIds.mkString(","),
         states.mkString(","),
         agreementStates.mkString(","),
         offset,
@@ -286,12 +305,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
           _: Option[String],
           _: Seq[UUID],
           _: Seq[UUID],
+          _: Seq[UUID],
           _: Seq[CatalogDescriptorState],
           _: Int,
           _: Int,
           _: Boolean
         )(_: ExecutionContext, _: ReadModelService))
-        .expects(Some(seed.name), Seq.empty, Seq(seed.producerId), Seq.empty, 0, 1, true, *, *)
+        .expects(Some(seed.name), Seq.empty, Seq(seed.producerId), Seq.empty, Seq.empty, 0, 1, true, *, *)
         .once()
         .returns(Future.successful(PaginatedResult(results = catalogItems, catalogItems.size)))
 
@@ -334,12 +354,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
           _: Option[String],
           _: Seq[UUID],
           _: Seq[UUID],
+          _: Seq[UUID],
           _: Seq[CatalogDescriptorState],
           _: Int,
           _: Int,
           _: Boolean
         )(_: ExecutionContext, _: ReadModelService))
-        .expects(Some(apiSeed.name), Seq.empty, Seq(requesterId), Seq.empty, 0, 1, true, *, *)
+        .expects(Some(apiSeed.name), Seq.empty, Seq(requesterId), Seq.empty, Seq.empty, 0, 1, true, *, *)
         .once()
         .returns(Future.successful(PaginatedResult(results = catalogItems, catalogItems.size)))
 

@@ -66,6 +66,7 @@ final case class ProcessApiServiceImpl(
           Seq.empty,
           Seq(clientSeed.producerId),
           Seq.empty,
+          Seq.empty,
           0,
           1,
           exactMatchOnName = true
@@ -108,6 +109,7 @@ final case class ProcessApiServiceImpl(
     name: Option[String],
     eServicesIds: String,
     producersIds: String,
+    attributesIds: String,
     states: String,
     agreementStates: String,
     offset: Int,
@@ -123,6 +125,7 @@ final case class ProcessApiServiceImpl(
         name: Option[String],
         eServicesIds: List[UUID],
         producersIds: List[UUID],
+        attributesIds: List[UUID],
         states: Seq[CatalogDescriptorState],
         agreementStates: Seq[PersistentAgreementState],
         offset: Int,
@@ -130,7 +133,7 @@ final case class ProcessApiServiceImpl(
       ): Future[PaginatedResult[CatalogItem]] = {
 
         if (agreementStates.isEmpty)
-          catalogManagementService.getEServices(name, eServicesIds, producersIds, states, offset, limit)
+          catalogManagementService.getEServices(name, eServicesIds, producersIds, attributesIds, states, offset, limit)
         else
           for {
             agreementEservicesIds <- agreementManagementService
@@ -145,7 +148,15 @@ final case class ProcessApiServiceImpl(
               if (agreementEservicesIds.isEmpty)
                 Future.successful(ReadModelCatalogQueries.emptyResults[CatalogItem])
               else
-                catalogManagementService.getEServices(name, agreementEservicesIds, producersIds, states, offset, limit)
+                catalogManagementService.getEServices(
+                  name,
+                  agreementEservicesIds,
+                  producersIds,
+                  attributesIds,
+                  states,
+                  offset,
+                  limit
+                )
           } yield result
       }
 
@@ -154,6 +165,7 @@ final case class ProcessApiServiceImpl(
         states          <- parseArrayParameters(states).traverse(EServiceDescriptorState.fromValue).toFuture
         producersUuids  <- parseArrayParameters(producersIds).traverse(_.toFutureUUID)
         eServicesUuids  <- parseArrayParameters(eServicesIds).traverse(_.toFutureUUID)
+        attributesUuids <- parseArrayParameters(attributesIds).traverse(_.toFutureUUID)
         agreementStates <- parseArrayParameters(agreementStates)
           .traverse(AgreementState.fromValue)
           .toFuture
@@ -163,6 +175,7 @@ final case class ProcessApiServiceImpl(
             name,
             eServicesUuids,
             producersUuids,
+            attributesUuids,
             states.map(_.toPersistent),
             agreementStates.map(_.toPersistent),
             offset,

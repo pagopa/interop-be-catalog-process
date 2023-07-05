@@ -280,12 +280,22 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
     name: Option[String],
     eServicesIds: Seq[UUID],
     producersIds: Seq[UUID],
+    attributesIds: Seq[UUID],
     states: Seq[CatalogDescriptorState],
     offset: Int,
     limit: Int,
     exactMatchOnName: Boolean = false
   )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PaginatedResult[CatalogItem]] =
-    ReadModelCatalogQueries.getEServices(name, eServicesIds, producersIds, states, offset, limit, exactMatchOnName)
+    ReadModelCatalogQueries.getEServices(
+      name,
+      eServicesIds,
+      producersIds,
+      attributesIds,
+      states,
+      offset,
+      limit,
+      exactMatchOnName
+    )
 
   private def getDocument(eService: CatalogItem, descriptorId: UUID, documentId: UUID): Option[CatalogDocument] = {
 

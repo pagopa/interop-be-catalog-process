@@ -116,13 +116,14 @@ object ReadModelCatalogQueries extends ReadModelQuery {
     name: Option[String],
     eServicesIds: Seq[UUID],
     producersIds: Seq[UUID],
+    attributesIds: Seq[UUID],
     states: Seq[CatalogDescriptorState],
     offset: Int,
     limit: Int,
     exactMatchOnName: Boolean = false
   )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PaginatedResult[CatalogItem]] = {
 
-    val query = listEServicesFilters(name, eServicesIds, producersIds, states, exactMatchOnName)
+    val query = listEServicesFilters(name, eServicesIds, producersIds, attributesIds, states, exactMatchOnName)
 
     for {
       // Using aggregate to perform case insensitive sorting
@@ -157,6 +158,7 @@ object ReadModelCatalogQueries extends ReadModelQuery {
     name: Option[String],
     eServicesIds: Seq[UUID],
     producersIds: Seq[UUID],
+    attributesIds: Seq[UUID],
     states: Seq[CatalogDescriptorState],
     exactMatchOnName: Boolean
   ): Bson = {
@@ -164,15 +166,28 @@ object ReadModelCatalogQueries extends ReadModelQuery {
       .map(_.toString)
       .map(Filters.eq("data.descriptors.state", _))
 
-    val statesFilter       = mapToVarArgs(statesPartialFilter)(Filters.or)
-    val eServicesIdsFilter = mapToVarArgs(eServicesIds.map(e => Filters.eq("data.id", e.toString)))(Filters.or)
-    val producersIdsFilter = mapToVarArgs(producersIds.map(p => Filters.eq("data.producerId", p.toString)))(Filters.or)
-    val nameFilter         =
+    val statesFilter        = mapToVarArgs(statesPartialFilter)(Filters.or)
+    val eServicesIdsFilter  = mapToVarArgs(eServicesIds.map(e => Filters.eq("data.id", e.toString)))(Filters.or)
+    val producersIdsFilter  = mapToVarArgs(producersIds.map(p => Filters.eq("data.producerId", p.toString)))(Filters.or)
+    val attributesIdsFilter = attributesIds match {
+      case Seq()      => None
+      case attributes =>
+        Some(Filters.or {
+          Filters.in("data.descriptors.attributes.certified.id.id", attributes)
+          Filters.in("data.descriptors.attributes.certified.id.ids", attributes)
+          Filters.in("data.descriptors.attributes.declared.id.id", attributes)
+          Filters.in("data.descriptors.attributes.declared.id.ids", attributes)
+          Filters.in("data.descriptors.attributes.verified.id.id", attributes)
+          Filters.in("data.descriptors.attributes.verified.id.ids", attributes)
+        })
+    }
+    val nameFilter          =
       if (exactMatchOnName) name.map(n => Filters.regex("data.name", s"^$n$$", "i"))
       else name.map(Filters.regex("data.name", _, "i"))
-    mapToVarArgs(eServicesIdsFilter.toList ++ producersIdsFilter.toList ++ statesFilter.toList ++ nameFilter.toList)(
-      Filters.and
-    )
+
+    mapToVarArgs(
+      eServicesIdsFilter.toList ++ producersIdsFilter.toList ++ attributesIdsFilter.toList ++ statesFilter.toList ++ nameFilter.toList
+    )(Filters.and)
       .getOrElse(Filters.empty())
   }
 }

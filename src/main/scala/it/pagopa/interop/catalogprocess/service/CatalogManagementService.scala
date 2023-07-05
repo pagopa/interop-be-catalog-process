@@ -66,6 +66,7 @@ trait CatalogManagementService {
     name: Option[String],
     eServicesIds: Seq[UUID],
     producersIds: Seq[UUID],
+    attributesIds: Seq[UUID],
     states: Seq[CatalogDescriptorState],
     offset: Int,
     limit: Int,
