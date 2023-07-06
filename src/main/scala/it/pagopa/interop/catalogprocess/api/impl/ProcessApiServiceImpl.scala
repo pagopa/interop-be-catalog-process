@@ -624,6 +624,27 @@ final case class ProcessApiServiceImpl(
       getEServiceConsumersResponse[EServiceConsumers](operationLabel)(getEServiceConsumers200)
     }
   }
+
+  override def archiveDescriptor(eServiceId: KID, descriptorId: KID)(implicit
+    contexts: Seq[(KID, KID)],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+  ): Route = authorize(INTERNAL_ROLE) {
+    val operationLabel = s"Archiving descriptor $descriptorId of EService $eServiceId"
+    logger.info(operationLabel)
+
+    val result = for {
+      organizationId <- getOrganizationIdFutureUUID(contexts)
+      eServiceUuid   <- eServiceId.toFutureUUID
+      descriptorUuid <- descriptorId.toFutureUUID
+      catalogItem    <- catalogManagementService.getEServiceById(eServiceUuid)
+      _              <- assertDescriptorExists(catalogItem, descriptorUuid)
+      _              <- catalogManagementService.archiveDescriptor(eServiceId, descriptorId)
+    } yield ()
+
+    onComplete(result) {
+      suspendDescriptorResponse[Unit](operationLabel)(_ => suspendDescriptor204)
+    }
+  }
 }
 
 object ProcessApiServiceImpl {

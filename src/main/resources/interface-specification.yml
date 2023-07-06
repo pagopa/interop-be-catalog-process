@@ -533,7 +533,7 @@ paths:
         - bearerAuth: []
       tags:
         - process
-      summary: Suspend the selected descriptor.
+      summary: Activate the selected descriptor.
       operationId: activateDescriptor
       parameters:
         - name: eServiceId
@@ -553,6 +553,47 @@ paths:
       responses:
         '204':
           description: E-Service Descriptor activated
+        '400':
+          description: Invalid input
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /eservices/{eServiceId}/descriptors/{descriptorId}/archive:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/IpAddress'
+    post:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - process
+      summary: Archive the selected descriptor.
+      operationId: archiveDescriptor
+      parameters:
+        - name: eServiceId
+          in: path
+          description: the eservice id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: descriptorId
+          in: path
+          description: the descriptor Id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: E-Service Descriptor archived
         '400':
           description: Invalid input
           content:
