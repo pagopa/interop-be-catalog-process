@@ -39,7 +39,7 @@
       "roles": ["admin", "api"],
       "verb": "DELETE"
     },
-    { "route": "archiveDescriptor", "roles": ["admin", "api"], "verb": "POST" },
+    { "route": "archiveDescriptor", "roles": ["internal"], "verb": "POST" },
     {
       "route": "deprecateDescriptor",
       "roles": ["admin", "api"],

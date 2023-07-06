@@ -198,6 +198,13 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
       val endpoint = AuthorizedRoutes.endpoints("deleteEService")
       validateAuthorization(endpoint, { implicit c: Seq[(String, String)] => service.deleteEService("fake") })
     }
-  }
 
+    "accept authorized roles for archiveDescriptor" in {
+      val endpoint = AuthorizedRoutes.endpoints("archiveDescriptor")
+      validateAuthorization(
+        endpoint,
+        { implicit c: Seq[(String, String)] => service.archiveDescriptor("fake", "fake") }
+      )
+    }
+  }
 }
