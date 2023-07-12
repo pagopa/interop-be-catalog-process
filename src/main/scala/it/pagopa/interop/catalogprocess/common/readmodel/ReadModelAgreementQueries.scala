@@ -45,9 +45,12 @@ object ReadModelAgreementQueries extends ReadModelQuery {
 
     val statesFilter = listStatesFilter(states)
 
-    val eServicesIdsFilter = mapToVarArgs(eServicesIds.map(Filters.eq("data.eserviceId", _)))(Filters.or)
-    val consumersIdsFilter = mapToVarArgs(consumersIds.map(Filters.eq("data.consumerId", _)))(Filters.or)
-    val producersIdsFilter = mapToVarArgs(producersIds.map(Filters.eq("data.producerId", _)))(Filters.or)
+    val eServicesIdsFilter =
+      mapToVarArgs(eServicesIds.map(id => Filters.eq("data.eserviceId", id.toString)))(Filters.or)
+    val consumersIdsFilter =
+      mapToVarArgs(consumersIds.map(id => Filters.eq("data.consumerId", id.toString)))(Filters.or)
+    val producersIdsFilter =
+      mapToVarArgs(producersIds.map(id => Filters.eq("data.producerId", id.toString)))(Filters.or)
 
     mapToVarArgs(
       eServicesIdsFilter.toList ++ consumersIdsFilter.toList ++ producersIdsFilter.toList ++ statesFilter.toList

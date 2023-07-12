@@ -173,12 +173,12 @@ object ReadModelCatalogQueries extends ReadModelQuery {
       case Seq()      => None
       case attributes =>
         Some(Filters.or {
-          Filters.in("data.descriptors.attributes.certified.id.id", attributes)
-          Filters.in("data.descriptors.attributes.certified.id.ids", attributes)
-          Filters.in("data.descriptors.attributes.declared.id.id", attributes)
-          Filters.in("data.descriptors.attributes.declared.id.ids", attributes)
-          Filters.in("data.descriptors.attributes.verified.id.id", attributes)
-          Filters.in("data.descriptors.attributes.verified.id.ids", attributes)
+          Filters.in("data.descriptors.attributes.certified.id.id", attributes.map(_.toString))
+          Filters.in("data.descriptors.attributes.certified.id.ids", attributes.map(_.toString))
+          Filters.in("data.descriptors.attributes.declared.id.id", attributes.map(_.toString))
+          Filters.in("data.descriptors.attributes.declared.id.ids", attributes.map(_.toString))
+          Filters.in("data.descriptors.attributes.verified.id.id", attributes.map(_.toString))
+          Filters.in("data.descriptors.attributes.verified.id.ids", attributes.map(_.toString))
         })
     }
     val nameFilter          =
