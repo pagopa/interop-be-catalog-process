@@ -293,7 +293,7 @@ final case class ProcessApiServiceImpl(
     } yield eServiceDoc.toApi
 
     onComplete(result) {
-      getEServiceByIdResponse[EServiceDoc](operationLabel)(getEServiceDocumentById200)
+      getEServiceDocumentByIdResponse[EServiceDoc](operationLabel)(getEServiceDocumentById200)
     }
   }
 

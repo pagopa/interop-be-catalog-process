@@ -30,7 +30,45 @@ import scala.concurrent.{Future, ExecutionContext}
 
 class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestRouteTest {
 
-  "EService retrieve" should {
+  "Eservice retrieve" should {
+    "succeed when found" in {
+      val eServiceId  = UUID.randomUUID()
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eServiceId, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem))
+
+      Get() ~> service.getEServiceById(eServiceId.toString) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+
+    "fail with 404 when not found" in {
+      val eServiceId  = UUID.randomUUID()
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eServiceId, *, *)
+        .once()
+        .returns(Future.failed(EServiceNotFound(eServiceId.toString)))
+
+      Get() ~> service.getEServiceById(eServiceId.toString) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
+  }
+
+  "EServices retrieve" should {
 
     "succeed when Agreement States are empty" in {
 
