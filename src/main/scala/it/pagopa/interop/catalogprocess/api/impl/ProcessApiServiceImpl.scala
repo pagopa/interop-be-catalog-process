@@ -49,6 +49,8 @@ final case class ProcessApiServiceImpl(
   implicit val logger: LoggerTakingImplicit[ContextFieldsToLog] =
     Logger.takingImplicit[ContextFieldsToLog](this.getClass)
 
+  val IPA = "IPA"
+
   override def createEService(eServiceSeed: EServiceSeed)(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
@@ -59,6 +61,8 @@ final case class ProcessApiServiceImpl(
 
     val result: Future[EService] = for {
       organizationId <- getOrganizationIdFutureUUID(contexts)
+      origin         <- getExternalIdOrigin(contexts)
+      _              <- if (origin.exists(_ == IPA)) Future.unit else Future.failed(OriginIsNotComplaint(IPA))
       clientSeed = eServiceSeed.toDependency(organizationId)
       maybeEservice <- catalogManagementService
         .getEServices(

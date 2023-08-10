@@ -274,7 +274,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val catalogItems: Seq[CatalogItem] = Seq.empty
 
       implicit val context: Seq[(String, String)] =
-        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+        Seq(
+          "bearer"              -> bearerToken,
+          USER_ROLES            -> "admin",
+          ORGANIZATION_ID_CLAIM -> requesterId.toString,
+          ORGANIZATION_EXTERNAL_ID_ORIGIN_CLAIM = "IPA"
+        )
 
       val apiSeed: EServiceSeed =
         EServiceSeed(name = "MyService", description = "My Service", technology = EServiceTechnology.REST)
@@ -380,7 +385,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val requesterId = UUID.randomUUID()
 
       implicit val context: Seq[(String, String)] =
-        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+        Seq(
+          "bearer"              -> bearerToken,
+          USER_ROLES            -> "admin",
+          ORGANIZATION_ID_CLAIM -> requesterId.toString,
+          ORGANIZATION_EXTERNAL_ID_ORIGIN_CLAIM = "IPA"
+        )
 
       val catalogItems: Seq[CatalogItem] = Seq(SpecData.catalogItem)
 
@@ -404,6 +414,25 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       Post() ~> service.createEService(apiSeed) ~> check {
         status shouldEqual StatusCodes.Conflict
+      }
+    }
+    "fail with forbidden requester origin is not IPA" in {
+
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq(
+          "bearer"              -> bearerToken,
+          USER_ROLES            -> "admin",
+          ORGANIZATION_ID_CLAIM -> requesterId.toString,
+          ORGANIZATION_EXTERNAL_ID_ORIGIN_CLAIM = "NOT_IPA"
+        )
+
+      val apiSeed: EServiceSeed =
+        EServiceSeed(name = "MyService", description = "My Service", technology = EServiceTechnology.REST)
+
+      Post() ~> service.createEService(apiSeed) ~> check {
+        status shouldEqual StatusCodes.Forbidden
       }
     }
   }
