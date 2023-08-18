@@ -62,7 +62,7 @@ final case class ProcessApiServiceImpl(
     val result: Future[EService] = for {
       organizationId <- getOrganizationIdFutureUUID(contexts)
       origin         <- getExternalIdOriginFuture(contexts)
-      _              <- if (origin == IPA) Future.unit else Future.failed(OriginIsNotComplaint(IPA))
+      _              <- if (origin == IPA) Future.unit else Future.failed(OriginIsNotCompliant(IPA))
       clientSeed = eServiceSeed.toDependency(organizationId)
       maybeEservice <- catalogManagementService
         .getEServices(
