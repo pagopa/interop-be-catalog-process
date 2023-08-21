@@ -8,7 +8,7 @@ import it.pagopa.interop.catalogmanagement.client.model.AgreementApprovalPolicy.
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.catalogprocess.api.impl.Converter._
 import it.pagopa.interop.catalogprocess.api.impl._
-import it.pagopa.interop.commons.utils.{ORGANIZATION_ID_CLAIM, USER_ROLES}
+import it.pagopa.interop.commons.utils._
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors.{EServiceNotFound, DescriptorDocumentNotFound}
 import it.pagopa.interop.catalogmanagement.model.{
@@ -274,7 +274,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val catalogItems: Seq[CatalogItem] = Seq.empty
 
       implicit val context: Seq[(String, String)] =
-        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+        Seq(
+          "bearer"                        -> bearerToken,
+          USER_ROLES                      -> "admin",
+          ORGANIZATION_ID_CLAIM           -> requesterId.toString,
+          ORGANIZATION_EXTERNAL_ID_ORIGIN -> "IPA",
+          ORGANIZATION_EXTERNAL_ID_VALUE  -> "12345"
+        )
 
       val apiSeed: EServiceSeed =
         EServiceSeed(name = "MyService", description = "My Service", technology = EServiceTechnology.REST)
@@ -380,7 +386,13 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val requesterId = UUID.randomUUID()
 
       implicit val context: Seq[(String, String)] =
-        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+        Seq(
+          "bearer"                        -> bearerToken,
+          USER_ROLES                      -> "admin",
+          ORGANIZATION_ID_CLAIM           -> requesterId.toString,
+          ORGANIZATION_EXTERNAL_ID_ORIGIN -> "IPA",
+          ORGANIZATION_EXTERNAL_ID_VALUE  -> "12345"
+        )
 
       val catalogItems: Seq[CatalogItem] = Seq(SpecData.catalogItem)
 
@@ -404,6 +416,26 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       Post() ~> service.createEService(apiSeed) ~> check {
         status shouldEqual StatusCodes.Conflict
+      }
+    }
+    "fail with forbidden requester origin is not IPA" in {
+
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq(
+          "bearer"                        -> bearerToken,
+          USER_ROLES                      -> "admin",
+          ORGANIZATION_ID_CLAIM           -> requesterId.toString,
+          ORGANIZATION_EXTERNAL_ID_ORIGIN -> "NOT_IPA",
+          ORGANIZATION_EXTERNAL_ID_VALUE  -> "12345"
+        )
+
+      val apiSeed: EServiceSeed =
+        EServiceSeed(name = "MyService", description = "My Service", technology = EServiceTechnology.REST)
+
+      Post() ~> service.createEService(apiSeed) ~> check {
+        status shouldEqual StatusCodes.Forbidden
       }
     }
   }

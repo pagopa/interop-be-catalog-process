@@ -18,7 +18,7 @@ import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt._
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
-import it.pagopa.interop.commons.utils.AkkaUtils.getOrganizationIdFutureUUID
+import it.pagopa.interop.commons.utils.AkkaUtils._
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors
@@ -49,6 +49,8 @@ final case class ProcessApiServiceImpl(
   implicit val logger: LoggerTakingImplicit[ContextFieldsToLog] =
     Logger.takingImplicit[ContextFieldsToLog](this.getClass)
 
+  val IPA = "IPA"
+
   override def createEService(eServiceSeed: EServiceSeed)(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
@@ -59,6 +61,8 @@ final case class ProcessApiServiceImpl(
 
     val result: Future[EService] = for {
       organizationId <- getOrganizationIdFutureUUID(contexts)
+      origin         <- getExternalIdOriginFuture(contexts)
+      _              <- if (origin == IPA) Future.unit else Future.failed(OriginIsNotCompliant(IPA))
       clientSeed = eServiceSeed.toDependency(organizationId)
       maybeEservice <- catalogManagementService
         .getEServices(

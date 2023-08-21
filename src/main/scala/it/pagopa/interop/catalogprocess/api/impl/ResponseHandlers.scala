@@ -43,6 +43,7 @@ object ResponseHandlers extends AkkaResponses {
   )(result: Try[T])(implicit contexts: Seq[(String, String)], logger: LoggerTakingImplicit[ContextFieldsToLog]): Route =
     result match {
       case Success(s)                          => success(s)
+      case Failure(ex: OriginIsNotCompliant)   => forbidden(ex, logMessage)
       case Failure(ex: DuplicatedEServiceName) => conflict(ex, logMessage)
       case Failure(ex)                         => internalServerError(ex, logMessage)
     }
