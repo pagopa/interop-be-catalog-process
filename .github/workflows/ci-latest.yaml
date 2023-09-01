@@ -96,4 +96,5 @@ jobs:
       - name: Build, tag, and push image to Amazon ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          COMMIT_SHA: ${{ github.sha }}
         run: 'sbt ++${{ matrix.scala }} docker:publish'
