@@ -24,6 +24,7 @@ jobs:
       id-token: write
       contents: read
       packages: write
+
     steps:
       - name: Checkout current branch (full)
         uses: actions/checkout@v2
@@ -64,7 +65,7 @@ jobs:
       #   run: sbt ++${{ matrix.scala }} publish
 
       - name: Normalize repo name
-        run:
+        run: |
           # github.reposiory is in the format "owner/repository-name"
           # but we cannot use "/" character in the role session name
           echo "github repository ${{ github.repository }}"
