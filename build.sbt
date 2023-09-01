@@ -107,7 +107,7 @@ lazy val root = (project in file("."))
     Docker / dockerExposedPorts := Seq(8080),
     Docker / dockerAliases      := Seq(
       dockerAlias.value,
-      Option(System.getenv("COMMIT_SHA")).fold(dockerAlias.value)(t => dockerAlias.value.withTag(Some(t)))
+      Option(System.getenv("COMMIT_SHA")).fold(dockerAlias.value)(t => dockerAlias.value.withTag(Some(s"commit-$t")))
     ).distinct,
     libraryDependencies         := Dependencies.Jars.`server`,
     Docker / maintainer         := "https://pagopa.it",
