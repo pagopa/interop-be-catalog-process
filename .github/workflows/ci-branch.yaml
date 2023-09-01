@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - '!1.0.x' # remove once default branch renamed
-    paths: ['src/**']
+    # paths: ['src/**']
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
