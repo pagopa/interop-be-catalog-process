@@ -69,6 +69,7 @@ jobs:
           # but we cannot use "/" character in the role session name
           echo "github repository ${{ github.repository }}"
           NORM_REPO="$(echo "${{ github.repository }}" | cut -d"/" -f2)"
+          echo "NORM_REPO=$NORM_REPO"
           echo "NORM_REPO=$NORM_REPO" >> "$GITHUB_ENV"
 
       - name: Configure AWS Credentials
