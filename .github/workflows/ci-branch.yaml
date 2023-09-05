@@ -64,6 +64,9 @@ jobs:
       - name: Publish project
         run: sbt ++${{ matrix.scala }} publish
 
+      - name: Generate target
+        run: sbt ++${{ matrix.scala }} docker:stage
+
       - name: Normalize repo name
         run: |
           # github.reposiory is in the format "owner/repository-name"
@@ -82,8 +85,18 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build, tag, and push image to Amazon ECR
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          COMMIT_SHA: ${{ github.sha }}
-        run: 'sbt ++${{ matrix.scala }} docker:publish'
+      - name: Build and push on GitHub packages
+        uses: docker/build-push-action@v2
+        with:
+          context: ./target/docker/stage
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ env.NORM_REPO }}:${{ github.ref_name }}
+            ${{ env.NORM_REPO }}:commit-${{ github.sha }}
+
+      # - name: Build, tag, and push image to Amazon ECR
+      #   env:
+      #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      #     COMMIT_SHA: ${{ github.sha }}
+      #   run: 'sbt ++${{ matrix.scala }} docker:publish'

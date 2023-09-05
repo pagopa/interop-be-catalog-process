@@ -105,11 +105,6 @@ lazy val root = (project in file("."))
     Docker / version            := (ThisBuild / version).value.replaceAll("-SNAPSHOT", "-latest").toLowerCase,
     Docker / packageName        := s"${name.value}",
     Docker / dockerExposedPorts := Seq(8080),
-    Docker / dockerAlias        := DockerAlias(None, None, name.value, Some(s"commit-${System.getenv("COMMIT_SHA")}")),
-    /* Docker / dockerAliases      := Seq( */
-    /*   dockerAlias.value, */
-    /*   Option(System.getenv("COMMIT_SHA")).fold(dockerAlias.value)(t => dockerAlias.value.withTag(Some(s"commit-$t"))) */
-    /* ).distinct, */
     libraryDependencies         := Dependencies.Jars.`server`,
     Docker / maintainer         := "https://pagopa.it",
     dockerCommands += Cmd("LABEL", s"org.opencontainers.image.source https://github.com/pagopa/${name.value}")
