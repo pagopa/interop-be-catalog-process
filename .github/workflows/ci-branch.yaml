@@ -91,8 +91,8 @@ jobs:
           file: ./target/docker/stage/Dockerfile
           push: true
           tags: |
-            ${{ env.NORM_REPO }}:${{ github.ref_name }}
-            ${{ env.NORM_REPO }}:commit-${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.NORM_REPO }}:${{ github.ref_name }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.NORM_REPO }}:commit-${{ github.sha }}
 
       # - name: Build, tag, and push image to Amazon ECR
       #   env:
