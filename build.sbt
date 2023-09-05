@@ -105,7 +105,7 @@ lazy val root = (project in file("."))
     Docker / version            := (ThisBuild / version).value.replaceAll("-SNAPSHOT", "-latest").toLowerCase,
     Docker / packageName        := s"${name.value}",
     Docker / dockerExposedPorts := Seq(8080),
-    Docker / dockerAlias        := s"commit-${System.getenv("COMMIT_SHA")}"
+    Docker / dockerAlias        := s"commit-${System.getenv("COMMIT_SHA")}",
     /* Docker / dockerAliases      := Seq( */
     /*   dockerAlias.value, */
     /*   Option(System.getenv("COMMIT_SHA")).fold(dockerAlias.value)(t => dockerAlias.value.withTag(Some(s"commit-$t"))) */
