@@ -69,10 +69,12 @@ jobs:
 
       - name: Normalize repo name
         run: |
-          # github.reposiory is in the format "owner/repository-name"
-          # but we cannot use "/" character in the role session name
+          # github.reposiory is in the format "owner/repository-name", we need only the repo name
           NORM_REPO="$(echo "${{ github.repository }}" | cut -d"/" -f2)"
           echo "NORM_REPO=$NORM_REPO" >> "$GITHUB_ENV"
+
+          ls -l
+          tree -L 3 ./target
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
