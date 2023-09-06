@@ -1,6 +1,5 @@
 package it.pagopa.interop.catalogprocess.api.impl
 
-import cats.implicits.catsSyntaxOptionId
 import it.pagopa.interop.agreementmanagement.model.{agreement => AgreementPersistenceModel}
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
 import it.pagopa.interop.catalogmanagement.{model => readmodel}
@@ -25,25 +24,18 @@ object Converter {
   implicit class attributesSeedWrapper(private val seed: AttributesSeed) extends AnyVal {
     def toDependency: CatalogManagementDependency.Attributes =
       CatalogManagementDependency.Attributes(
-        certified = seed.certified.map(_.toDependency),
-        declared = seed.declared.map(_.toDependency),
-        verified = seed.verified.map(_.toDependency)
+        certified = seed.certified.map(_.map(_.toDependency)),
+        declared = seed.declared.map(_.map(_.toDependency)),
+        verified = seed.verified.map(_.map(_.toDependency))
       )
   }
 
   implicit class attributeSeedWrapper(private val seed: AttributeSeed) extends AnyVal {
     def toDependency: CatalogManagementDependency.Attribute =
       CatalogManagementDependency.Attribute(
-        single = seed.single.map(_.toDependency),
-        group = seed.group.map(_.map(_.toDependency))
+        id = seed.id,
+        explicitAttributeVerification = seed.explicitAttributeVerification
       )
-  }
-
-  implicit class attributeValueSeedWrapper(private val seed: AttributeValueSeed) extends AnyVal {
-    def toDependency: CatalogManagementDependency.AttributeValue = CatalogManagementDependency.AttributeValue(
-      id = seed.id,
-      explicitAttributeVerification = seed.explicitAttributeVerification
-    )
   }
 
   implicit class createEServiceDescriptorDocumentSeedWrapper(private val seed: CreateEServiceDescriptorDocumentSeed)
@@ -173,9 +165,9 @@ object Converter {
   implicit class ManagementAttributesWrapper(private val attributes: CatalogManagementDependency.Attributes)
       extends AnyVal {
     def toApi: Attributes = Attributes(
-      certified = attributes.certified.map(_.toApi),
-      declared = attributes.declared.map(_.toApi),
-      verified = attributes.verified.map(_.toApi)
+      certified = attributes.certified.map(_.map(_.toApi)),
+      declared = attributes.declared.map(_.map(_.toApi)),
+      verified = attributes.verified.map(_.map(_.toApi))
     )
   }
 
@@ -193,11 +185,7 @@ object Converter {
 
   implicit class ManagementAttributeWrapper(private val attribute: CatalogManagementDependency.Attribute)
       extends AnyVal {
-    def toApi: Attribute = Attribute(
-      single = attribute.single.map(attr => AttributeValue(attr.id, attr.explicitAttributeVerification)),
-      group =
-        attribute.group.map(attrs => attrs.map(attr => AttributeValue(attr.id, attr.explicitAttributeVerification)))
-    )
+    def toApi: Attribute = Attribute(attribute.id, attribute.explicitAttributeVerification)
   }
 
   implicit class ManagementAgreementApprovalPolicyWrapper(
@@ -275,19 +263,14 @@ object Converter {
   implicit class ReadModelAttributesWrapper(private val attributes: readmodel.CatalogAttributes) extends AnyVal {
     def toApi: Attributes =
       Attributes(
-        certified = attributes.certified.map(_.toApi),
-        declared = attributes.declared.map(_.toApi),
-        verified = attributes.verified.map(_.toApi)
+        certified = attributes.certified.map(_.map(_.toApi)),
+        declared = attributes.declared.map(_.map(_.toApi)),
+        verified = attributes.verified.map(_.map(_.toApi))
       )
   }
 
   implicit class ReadModelAttributeWrapper(private val attribute: readmodel.CatalogAttribute) extends AnyVal {
-    def toApi: Attribute = attribute match {
-      case a: readmodel.SingleAttribute =>
-        Attribute(single = AttributeValue(a.id.id, a.id.explicitAttributeVerification).some)
-      case a: readmodel.GroupAttribute  =>
-        Attribute(group = a.ids.map(attr => AttributeValue(attr.id, attr.explicitAttributeVerification)).some)
-    }
+    def toApi: Attribute = Attribute(attribute.id, attribute.explicitAttributeVerification)
   }
 
   implicit class ReadModelTechnologyWrapper(private val technology: readmodel.CatalogItemTechnology) extends AnyVal {
