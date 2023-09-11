@@ -46,13 +46,10 @@ jobs:
       - name: Installing openapi-generator-cli
         run: npm install -g @openapitools/openapi-generator-cli
 
-      - name: Build project
+      - name: Build and test project
         run: sbt ++${{ matrix.scala }} test
 
-      - name: Publish project
-        run: sbt ++${{ matrix.scala }} publish
-
-      - name: Generate target
+      - name: Generate Docker target
         run: sbt ++${{ matrix.scala }} docker:stage
 
       - name: Normalize repo name
@@ -61,23 +58,12 @@ jobs:
           NORM_REPO="$(echo "${{ github.repository }}" | cut -d"/" -f2)"
           echo "NORM_REPO=$NORM_REPO" >> "$GITHUB_ENV"
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-region: ${{ vars.AWS_REGION }}
-          role-to-assume: ${{ vars.IAM_ROLE_ARN }}
-          role-session-name: ${{ env.NORM_REPO }}-${{ github.run_number }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Build and push on GitHub packages
+      - name: Test Docker build
         uses: docker/build-push-action@v2
         with:
           context: ./target/docker/stage
           file: ./target/docker/stage/Dockerfile
-          push: true
+          push: false # just testing the build
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/${{ env.NORM_REPO }}:${{ github.ref_name }}-latest
             ${{ steps.login-ecr.outputs.registry }}/${{ env.NORM_REPO }}:commit-${{ github.sha }}
