@@ -65,5 +65,5 @@ jobs:
           file: ./target/docker/stage/Dockerfile
           push: false # just testing the build
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.NORM_REPO }}:${{ github.ref_name }}-latest
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.NORM_REPO }}:commit-${{ github.sha }}
+            ${{ env.NORM_REPO }}:${{ github.ref_name }}-latest
+            ${{ env.NORM_REPO }}:commit-${{ github.sha }}
