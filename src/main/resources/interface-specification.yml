@@ -1050,29 +1050,26 @@ components:
         certified:
           type: array
           items:
-            $ref: '#/components/schemas/AttributeSeed'
+            type: array
+            items:
+              $ref: '#/components/schemas/AttributeSeed'
         declared:
           type: array
           items:
-            $ref: '#/components/schemas/AttributeSeed'
+            type: array
+            items:
+              $ref: '#/components/schemas/AttributeSeed'
         verified:
           type: array
           items:
-            $ref: '#/components/schemas/AttributeSeed'
+            type: array
+            items:
+              $ref: '#/components/schemas/AttributeSeed'
       required:
         - certified
         - declared
         - verified
     AttributeSeed:
-      type: object
-      properties:
-        single:
-          $ref: '#/components/schemas/AttributeValueSeed'
-        group:
-          type: array
-          items:
-            $ref: '#/components/schemas/AttributeValueSeed'
-    AttributeValueSeed:
       type: object
       properties:
         id:
@@ -1263,7 +1260,7 @@ components:
           format: date-time
         attributes:
           $ref: '#/components/schemas/Attributes'
-    AttributeValue:
+    Attribute:
       type: object
       properties:
         id:
@@ -1274,29 +1271,26 @@ components:
       required:
         - id
         - explicitAttributeVerification
-    Attribute:
-      type: object
-      properties:
-        single:
-          $ref: '#/components/schemas/AttributeValue'
-        group:
-          type: array
-          items:
-            $ref: '#/components/schemas/AttributeValue'
     Attributes:
       properties:
         certified:
           type: array
           items:
-            $ref: '#/components/schemas/Attribute'
+            type: array
+            items:
+              $ref: '#/components/schemas/Attribute'
         declared:
           type: array
           items:
-            $ref: '#/components/schemas/Attribute'
+            type: array
+            items:
+              $ref: '#/components/schemas/Attribute'
         verified:
           type: array
           items:
-            $ref: '#/components/schemas/Attribute'
+            type: array
+            items:
+              $ref: '#/components/schemas/Attribute'
       required:
         - certified
         - declared
@@ -1335,7 +1329,7 @@ components:
           description: 'contains a flat version of the certified attribute identifiers of this e-service'
           type: array
           items:
-            $ref: '#/components/schemas/FlatAttribute'
+            $ref: '#/components/schemas/FlatAttributes'
     EServiceTechnology:
       type: string
       description: API Technology
@@ -1372,16 +1366,18 @@ components:
       required:
         - id
         - state
-    FlatAttribute:
+    FlatAttributes:
       type: object
       properties:
-        single:
-          $ref: '#/components/schemas/FlatAttributeValue'
-        group:
-          type: array
-          items:
-            $ref: '#/components/schemas/FlatAttributeValue'
-    FlatAttributeValue:
+       attributes:
+         type: array
+         items:
+           type: array
+           items:
+             $ref: '#/components/schemas/FlatAttribute'
+      required:
+        - attributes
+    FlatAttribute:
       type: object
       properties:
         id:

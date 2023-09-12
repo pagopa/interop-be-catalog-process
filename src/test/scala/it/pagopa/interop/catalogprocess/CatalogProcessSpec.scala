@@ -313,32 +313,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
             agreementApprovalPolicy = AUTOMATIC,
             serverUrls = Nil,
             attributes = CatalogManagementDependency.Attributes(
-              certified = List(
-                CatalogManagementDependency.Attribute(
-                  single = Some(
-                    CatalogManagementDependency.AttributeValue(attributeId1, explicitAttributeVerification = false)
-                  ),
-                  group = None
-                )
-              ),
-              declared = List(
-                CatalogManagementDependency.Attribute(
-                  single = None,
-                  group = Some(
-                    List(
-                      CatalogManagementDependency.AttributeValue(attributeId2, explicitAttributeVerification = false)
-                    )
-                  )
-                )
-              ),
-              verified = List(
-                CatalogManagementDependency.Attribute(
-                  single = Some(
-                    CatalogManagementDependency.AttributeValue(attributeId3, explicitAttributeVerification = true)
-                  ),
-                  group = None
-                )
-              )
+              certified =
+                List(List(CatalogManagementDependency.Attribute(attributeId1, explicitAttributeVerification = false))),
+              declared =
+                List(List(CatalogManagementDependency.Attribute(attributeId2, explicitAttributeVerification = false))),
+              verified =
+                List(List(CatalogManagementDependency.Attribute(attributeId3, explicitAttributeVerification = true)))
             )
           )
         )
@@ -770,24 +750,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         dailyCallsTotal = 0,
         agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
         attributes = AttributesSeed(
-          certified = List(
-            AttributeSeed(
-              single = Some(AttributeValueSeed(attributeId1, explicitAttributeVerification = false)),
-              group = None
-            )
-          ),
-          declared = List(
-            AttributeSeed(
-              single = None,
-              group = Some(List(AttributeValueSeed(attributeId2, explicitAttributeVerification = false)))
-            )
-          ),
-          verified = List(
-            AttributeSeed(
-              single = Some(AttributeValueSeed(attributeId3, explicitAttributeVerification = true)),
-              group = None
-            )
-          )
+          certified = List(List(AttributeSeed(attributeId1, explicitAttributeVerification = false))),
+          declared = List(List(AttributeSeed(attributeId2, explicitAttributeVerification = false))),
+          verified = List(List(AttributeSeed(attributeId3, explicitAttributeVerification = true)))
         )
       )
 
@@ -799,28 +764,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         dailyCallsTotal = 0,
         agreementApprovalPolicy = CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC,
         attributes = CatalogManagementDependency.Attributes(
-          certified = List(
-            CatalogManagementDependency.Attribute(
-              single =
-                Some(CatalogManagementDependency.AttributeValue(attributeId1, explicitAttributeVerification = false)),
-              group = None
-            )
-          ),
-          declared = List(
-            CatalogManagementDependency.Attribute(
-              single = None,
-              group = Some(
-                List(CatalogManagementDependency.AttributeValue(attributeId2, explicitAttributeVerification = false))
-              )
-            )
-          ),
-          verified = List(
-            CatalogManagementDependency.Attribute(
-              single =
-                Some(CatalogManagementDependency.AttributeValue(attributeId3, explicitAttributeVerification = true)),
-              group = None
-            )
-          )
+          certified =
+            List(List(CatalogManagementDependency.Attribute(attributeId1, explicitAttributeVerification = false))),
+          declared =
+            List(List(CatalogManagementDependency.Attribute(attributeId2, explicitAttributeVerification = false))),
+          verified =
+            List(List(CatalogManagementDependency.Attribute(attributeId3, explicitAttributeVerification = true)))
         )
       )
 
@@ -838,28 +787,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         agreementApprovalPolicy = AUTOMATIC,
         serverUrls = Nil,
         attributes = CatalogManagementDependency.Attributes(
-          certified = List(
-            CatalogManagementDependency.Attribute(
-              single =
-                Some(CatalogManagementDependency.AttributeValue(attributeId1, explicitAttributeVerification = false)),
-              group = None
-            )
-          ),
-          declared = List(
-            CatalogManagementDependency.Attribute(
-              single = None,
-              group = Some(
-                List(CatalogManagementDependency.AttributeValue(attributeId2, explicitAttributeVerification = false))
-              )
-            )
-          ),
-          verified = List(
-            CatalogManagementDependency.Attribute(
-              single =
-                Some(CatalogManagementDependency.AttributeValue(attributeId3, explicitAttributeVerification = true)),
-              group = None
-            )
-          )
+          certified =
+            List(List(CatalogManagementDependency.Attribute(attributeId1, explicitAttributeVerification = false))),
+          declared =
+            List(List(CatalogManagementDependency.Attribute(attributeId2, explicitAttributeVerification = false))),
+          verified =
+            List(List(CatalogManagementDependency.Attribute(attributeId3, explicitAttributeVerification = true)))
         )
       )
 
