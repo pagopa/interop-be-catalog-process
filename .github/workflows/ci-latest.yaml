@@ -8,6 +8,9 @@ on:
     # paths:
     #   - 'src/**'
 
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 jobs:
   build_publish:
     name: Build and Publish image
