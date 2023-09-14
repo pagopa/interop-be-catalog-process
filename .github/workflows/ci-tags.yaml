@@ -52,17 +52,18 @@ jobs:
           APP_ECR_REPO_DEV="${{ vars.DEV_ECR_URL }}/${{ env.NORM_REPO }}"
           APP_ECR_REPO_TEST="${{ vars.TEST_ECR_URL }}/${{ env.NORM_REPO }}"
 
-          APP_IMAGE_URL_DEV="${APP_ECR_REPO_DEV}:commit-${{ github.sha }}"
-          APP_IMAGE_URL_TEST="${APP_ECR_REPO_TEST}:commit-${{ github.sha }}"
+          APP_IMAGE_COMMIT_DEV="${APP_ECR_REPO_DEV}:commit-${{ github.sha }}"
+          APP_IMAGE_COMMIT_TEST="${APP_ECR_REPO_TEST}:commit-${{ github.sha }}"
 
-          echo "Pulling ${APP_IMAGE_URL_DEV}..."
-          docker pull "${APP_IMAGE_URL_DEV}"
+          echo "Pulling from DEV..."
+          docker pull "${APP_IMAGE_COMMIT_DEV}"
 
           echo "Retagging..."
-          docker tag "${APP_IMAGE_URL_DEV}" "${APP_IMAGE_URL_TEST}"
+          docker tag "${APP_IMAGE_COMMIT_DEV}" "${APP_IMAGE_COMMIT_TEST}"
+          docker tag "${APP_IMAGE_COMMIT_TEST}" "${APP_ECR_REPO_TEST}:${{ github.ref_name }}"
 
-          echo "Pushing ${APP_IMAGE_URL_TEST}..."
-          docker push "${APP_IMAGE_URL_TEST}"
+          echo "Pushing to TEST..."
+          docker push -a "${APP_ECR_REPO_TEST}"
 
 
 
