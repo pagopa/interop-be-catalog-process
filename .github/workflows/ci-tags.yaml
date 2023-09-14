@@ -37,7 +37,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-region: ${{ vars.AWS_REGION }}
-          role-to-assume: ${{ vars.IAM_ROLE_ARN }}
+          role-to-assume: ${{ secrets.IAM_ROLE_ARN }}
           role-session-name: ${{ env.NORM_REPO }}-${{ github.run_number }}
 
       - name: Login to Amazon ECR
@@ -45,12 +45,12 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
         with:
           mask-password: 'true'
-          registries: "${{ vars.DEV_ACCOUNT_ID }},${{ vars.TEST_ACCOUNT_ID }}"
+          registries: "${{ secrets.DEV_ACCOUNT_ID }},${{ secrets.TEST_ACCOUNT_ID }}"
 
       - name: Retag & push from DEV to TEST
         run: |
-          APP_ECR_REPO_DEV="${{ vars.DEV_ECR_URL }}/${{ env.NORM_REPO }}"
-          APP_ECR_REPO_TEST="${{ vars.TEST_ECR_URL }}/${{ env.NORM_REPO }}"
+          APP_ECR_REPO_DEV="${{ secrets.DEV_ECR_URL }}/${{ env.NORM_REPO }}"
+          APP_ECR_REPO_TEST="${{ secrets.TEST_ECR_URL }}/${{ env.NORM_REPO }}"
 
           APP_IMAGE_COMMIT_DEV="${APP_ECR_REPO_DEV}:commit-${{ github.sha }}"
           APP_IMAGE_COMMIT_TEST="${APP_ECR_REPO_TEST}:commit-${{ github.sha }}"
