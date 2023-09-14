@@ -49,17 +49,17 @@ jobs:
       - name: Build and test project
         run: sbt ++${{ matrix.scala }} test
 
-      - name: Get 1.0.x-SNAPSHOTS versionIds
-        id: version
-        uses: castlabs/get-package-version-id-action@v2.0
-        with:
-          version: 1.0.x-SNAPSHOT
-
-      - name: Delete 1.0.x-SNAPSHOTS versions
-        if: ${{ steps.version.outputs.ids != '' }}
-        uses: actions/delete-package-versions@v2
-        with:
-          package-version-ids: ${{ steps.version.outputs.ids }}
+      # - name: Get 1.0.x-SNAPSHOTS versionIds
+      #   id: version
+      #   uses: castlabs/get-package-version-id-action@v2.0
+      #   with:
+      #     version: 1.0.x-SNAPSHOT
+      #
+      # - name: Delete 1.0.x-SNAPSHOTS versions
+      #   if: ${{ steps.version.outputs.ids != '' }}
+      #   uses: actions/delete-package-versions@v2
+      #   with:
+      #     package-version-ids: ${{ steps.version.outputs.ids }}
 
       - name: Publish project
         run: sbt ++${{ matrix.scala }} publish
