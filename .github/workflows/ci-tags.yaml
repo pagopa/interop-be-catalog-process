@@ -27,9 +27,8 @@ jobs:
           fetch-depth: 0
 
       - name: Normalize repo name
-        run:
-          # github.reposiory is in the format "owner/repository-name"
-          # but we cannot use "/" character in the role session name
+        run: |
+          # github.repository is in the format "owner/repository-name", we need only the repo name
           NORM_REPO="$(echo "${{ github.repository }}" | cut -d"/" -f2)"
           echo "NORM_REPO=$NORM_REPO" >> "$GITHUB_ENV"
 
