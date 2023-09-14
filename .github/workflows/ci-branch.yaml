@@ -4,8 +4,9 @@ on:
   push:
     branches:
       - '!1.0.x'
-      - 'ci-refactor'
-    # paths: ['src/**']
+      - '**'
+    paths:
+      - 'src/**'
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
