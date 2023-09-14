@@ -4,7 +4,7 @@ on:
   push:
     tags:
       # - '*-rc[0-9]+$'
-      - 'ci-refactor[0-9]+'
+      - 'ci-refactor*'
 
 jobs:
   retag_dev_to_uat:
