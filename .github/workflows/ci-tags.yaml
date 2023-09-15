@@ -57,12 +57,18 @@ jobs:
           echo "Pulling from DEV..."
           docker pull "${APP_IMAGE_COMMIT_DEV}"
 
-          echo "Retagging..."
+          echo "Adding Git tag to DEV image in ECR DEV..."
+          docker tag "${APP_IMAGE_COMMIT_DEV}" "${APP_ECR_REPO_DEV}:${{ github.ref_name }}"
+          echo "Pushing to ECR DEV..."
+          docker push -a "${APP_ECR_REPO_DEV}"
+
+          echo "Retagging for TEST ECR..."
           docker tag "${APP_IMAGE_COMMIT_DEV}" "${APP_IMAGE_COMMIT_TEST}"
           docker tag "${APP_IMAGE_COMMIT_TEST}" "${APP_ECR_REPO_TEST}:${{ github.ref_name }}"
 
-          echo "Pushing to TEST..."
+          echo "Pushing to ECR TEST..."
           docker push -a "${APP_ECR_REPO_TEST}"
+
 
 
 
