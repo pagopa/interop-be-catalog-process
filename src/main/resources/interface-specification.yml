@@ -893,6 +893,12 @@ paths:
       responses:
         '204':
           description: EService Risk Analysis created.
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'    
         '404':
           description: EService not found
           content:
