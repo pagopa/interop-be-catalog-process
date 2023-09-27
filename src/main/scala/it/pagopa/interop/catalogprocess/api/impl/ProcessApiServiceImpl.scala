@@ -739,22 +739,22 @@ object ProcessApiServiceImpl {
 
   def isRiskAnalysisFormValid(riskAnalysisForm: Commons.RiskAnalysisForm, schemaOnlyValidation: Boolean)(
     kind: Commons.RiskAnalysisTenantKind
-  )(implicit ec: ExecutionContext): Future[Unit] =
-    Future
-      .failed(RiskAnalysisNotValid)
-      .unlessA(
-        RiskAnalysisValidation
-          .validate(riskAnalysisForm, schemaOnlyValidation)(kind)
-          .isValid
-      )
+  ): Future[Unit] =
+    if (
+      RiskAnalysisValidation
+        .validate(riskAnalysisForm, schemaOnlyValidation)(kind)
+        .isValid
+    ) Future.unit
+    else Future.failed(RiskAnalysisNotValid)
 
   def isReceiveEService(eService: CatalogItem)(implicit ec: ExecutionContext): Future[Unit] =
     Future.failed(EServiceNotInReceiveMode(eService.id)).unlessA(eService.mode == Receive)
 
-  def isDraftEService(eService: CatalogItem)(implicit ec: ExecutionContext): Future[Unit] =
-    Future
-      .failed(EServiceNotInDraftState(eService.id))
-      .unlessA(eService.descriptors.map(_.state) == Seq(Draft))
+  def isDraftEService(eService: CatalogItem): Future[Unit] =
+    if (eService.descriptors.map(_.state) == Seq(Draft)) Future.unit
+    else
+      Future
+        .failed(EServiceNotInDraftState(eService.id))
 
   def assertRequesterAllowed(resourceId: UUID)(requesterId: UUID)(implicit ec: ExecutionContext): Future[Unit] =
     Future.failed(GenericComponentErrors.OperationForbidden).unlessA(resourceId == requesterId)
