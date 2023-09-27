@@ -26,7 +26,7 @@ import it.pagopa.interop.catalogmanagement.model.{
   CatalogDocument,
   Published,
   CatalogDescriptorState,
-  DELIVER
+  Deliver
 }
 import it.pagopa.interop.catalogprocess.service.{
   AuthorizationManagementService,
@@ -60,7 +60,7 @@ object FakeDependencies {
           attributes = Some(CatalogAttributes.empty),
           createdAt = OffsetDateTime.now(),
           riskAnalysis = Seq.empty,
-          mode = DELIVER
+          mode = Deliver
         )
       )
 
