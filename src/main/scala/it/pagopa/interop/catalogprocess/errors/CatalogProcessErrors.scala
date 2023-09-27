@@ -60,4 +60,7 @@ object CatalogProcessErrors {
       extends ComponentError("0015", s"Tenant kind for tenant ${tenantId.toString} not found")
 
   final case object RiskAnalysisNotValid extends ComponentError("0016", s"Risk Analysis did not pass validation")
+
+  final case class EServiceRiskAnalysisNotFound(eServiceId: UUID, riskAnalysisId: UUID)
+      extends ComponentError("0017", s"Risk Analysis $riskAnalysisId not found for EService $eServiceId")
 }

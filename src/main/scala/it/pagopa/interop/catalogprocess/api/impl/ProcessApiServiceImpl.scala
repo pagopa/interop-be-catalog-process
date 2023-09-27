@@ -677,6 +677,32 @@ final case class ProcessApiServiceImpl(
       createRiskAnalysisResponse[Unit](operationLabel)(_ => createRiskAnalysis204)
     }
   }
+
+  def updateRiskAnalysis(eServiceId: String, riskAnalysisId: String, seed: EServiceRiskAnalysisSeed)(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+  ): Route = authorize(ADMIN_ROLE, API_ROLE) {
+    val operationLabel = s"Update a Risk Analysis for EService $eServiceId"
+    logger.info(operationLabel)
+
+    val result = for {
+      organizationId   <- getOrganizationIdFutureUUID(contexts)
+      eServiceUuid     <- eServiceId.toFutureUUID
+      riskAnalysisUuid <- riskAnalysisId.toFutureUUID
+      catalogItem      <- catalogManagementService.getEServiceById(eServiceUuid)
+      _                <- isDraftEService(catalogItem)
+      _                <- isReceiveEService(catalogItem)
+      _                <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
+      tenant           <- tenantManagementService.getTenantById(organizationId)
+      tenantKind       <- tenant.kind.toFuture(TenantKindNotFound(tenant.id))
+      _                <- isRiskAnalysisFormValid(seed.riskAnalysisForm.toTemplate, true)(tenantKind.toTemplate)
+      _                <- catalogManagementService.updateRiskAnalysis(eServiceUuid, riskAnalysisUuid, seed.toDependency)
+    } yield ()
+
+    onComplete(result) {
+      updateRiskAnalysisResponse[Unit](operationLabel)(_ => updateRiskAnalysis204)
+    }
+  }
 }
 
 object ProcessApiServiceImpl {

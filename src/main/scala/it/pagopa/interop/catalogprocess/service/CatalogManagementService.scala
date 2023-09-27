@@ -76,4 +76,8 @@ trait CatalogManagementService {
   def createRiskAnalysis(eServiceId: UUID, riskAnalysisSeed: RiskAnalysisSeed)(implicit
     contexts: Seq[(String, String)]
   ): Future[Unit]
+
+  def updateRiskAnalysis(eServiceId: UUID, riskAnalysisId: UUID, riskAnalysisSeed: RiskAnalysisSeed)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[EServiceRiskAnalysis]
 }
