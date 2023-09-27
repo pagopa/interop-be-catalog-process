@@ -7,7 +7,7 @@ import it.pagopa.interop.commons.riskanalysis.{model => Commons}
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.common.readmodel.Consumers
 import it.pagopa.interop.tenantmanagement.model.tenant.PersistentTenantKind
-import it.pagopa.interop.catalogmanagement.model.{DELIVER, RECEIVE}
+import it.pagopa.interop.catalogmanagement.model.{Deliver, Receive}
 
 import java.util.UUID
 
@@ -415,8 +415,8 @@ object Converter {
 
   implicit class ReadModelModeWrapper(private val mode: readmodel.CatalogItemMode) extends AnyVal {
     def toApi: EServiceMode = mode match {
-      case DELIVER => EServiceMode.DELIVER
-      case RECEIVE => EServiceMode.RECEIVE
+      case Deliver => EServiceMode.DELIVER
+      case Receive => EServiceMode.RECEIVE
     }
   }
 

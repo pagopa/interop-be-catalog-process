@@ -36,7 +36,7 @@ import it.pagopa.interop.catalogmanagement.model.{
   Draft,
   Suspended,
   Deprecated,
-  RECEIVE
+  Receive
 }
 
 final case class ProcessApiServiceImpl(
@@ -703,7 +703,7 @@ object ProcessApiServiceImpl {
       )
 
   def isReceiveEService(eService: CatalogItem)(implicit ec: ExecutionContext): Future[Unit] =
-    Future.failed(EServiceNotInReceiveMode(eService.id)).unlessA(eService.mode == RECEIVE)
+    Future.failed(EServiceNotInReceiveMode(eService.id)).unlessA(eService.mode == Receive)
 
   def isDraftEService(eService: CatalogItem)(implicit ec: ExecutionContext): Future[Unit] =
     Future

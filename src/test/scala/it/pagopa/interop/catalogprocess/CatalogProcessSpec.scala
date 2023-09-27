@@ -19,8 +19,8 @@ import it.pagopa.interop.catalogmanagement.model.{
   Deprecated,
   Archived,
   Suspended,
-  RECEIVE,
-  DELIVER
+  Receive,
+  Deliver
 }
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.common.readmodel.{PaginatedResult, Consumers}
@@ -2289,7 +2289,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val descriptor =
         SpecData.catalogDescriptor.copy(state = Draft)
 
-      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId, mode = RECEIVE)
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId, mode = Receive)
 
       val riskAnalysisSeed = EServiceRiskAnalysisSeed(
         name = "newName",
@@ -2346,7 +2346,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val descriptor =
         SpecData.catalogDescriptor.copy(state = Draft)
 
-      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId, mode = DELIVER)
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId, mode = Deliver)
 
       val riskAnalysisSeed = EServiceRiskAnalysisSeed(
         name = "newName",
@@ -2379,7 +2379,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val descriptor =
         SpecData.catalogDescriptor.copy(state = Draft)
 
-      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), mode = RECEIVE)
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), mode = Receive)
 
       val riskAnalysisSeed = EServiceRiskAnalysisSeed(
         name = "newName",
@@ -2412,7 +2412,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val descriptor =
         SpecData.catalogDescriptor.copy(state = Published)
 
-      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId, mode = RECEIVE)
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId, mode = Receive)
 
       val riskAnalysisSeed = EServiceRiskAnalysisSeed(
         name = "newName",
@@ -2445,7 +2445,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val descriptor =
         SpecData.catalogDescriptor.copy(state = Draft)
 
-      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId, mode = RECEIVE)
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId, mode = Receive)
 
       val riskAnalysisSeed = EServiceRiskAnalysisSeed(
         name = "newName",

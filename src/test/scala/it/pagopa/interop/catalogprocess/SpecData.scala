@@ -46,7 +46,7 @@ object SpecData {
     descriptors = Seq.empty,
     createdAt = OffsetDateTimeSupplier.get(),
     riskAnalysis = Seq.empty,
-    mode = CatalogManagement.DELIVER
+    mode = CatalogManagement.Deliver
   )
 
   val catalogDocument: CatalogManagement.CatalogDocument     = CatalogManagement.CatalogDocument(
