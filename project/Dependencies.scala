@@ -71,6 +71,10 @@ object Dependencies {
 
     lazy val catalogManagementClient =
       namespace %% "interop-be-catalog-management-client" % catalogManagementVersion
+    
+    lazy val tenantManagementModels =
+      namespace %% "interop-be-tenant-management-models" % tenantManagementVersion  
+    
     lazy val catalogManagementModels =
       namespace %% "interop-be-catalog-management-models" % catalogManagementVersion
 
@@ -80,10 +84,11 @@ object Dependencies {
     lazy val authorizationManagementClient =
       namespace %% "interop-be-authorization-management-client" % authorizationManagementVersion
 
-    lazy val commonsUtils = namespace %% "interop-commons-utils"        % commonsVersion
-    lazy val fileManager  = namespace %% "interop-commons-file-manager" % commonsVersion
-    lazy val commonsJWT   = namespace %% "interop-commons-jwt"          % commonsVersion
-    lazy val commonsCqrs  = namespace %% "interop-commons-cqrs"         % commonsVersion
+    lazy val commonsUtils = namespace %% "interop-commons-utils"          % commonsVersion
+    lazy val fileManager  = namespace %% "interop-commons-file-manager"   % commonsVersion
+    lazy val commonsJWT   = namespace %% "interop-commons-jwt"            % commonsVersion
+    lazy val commonsCqrs  = namespace %% "interop-commons-cqrs"           % commonsVersion
+    lazy val riskAnalysis = namespace %% "interop-commons-risk-analysis"  % commonsVersion
   }
 
   object Jars {
@@ -109,10 +114,12 @@ object Dependencies {
       pagopa.catalogManagementModels           % Compile,
       pagopa.agreementManagementModels         % Compile,
       pagopa.authorizationManagementClient     % Compile,
+      pagopa.tenantManagementModels            % Compile,
       pagopa.commonsUtils                      % Compile,
       pagopa.fileManager                       % Compile,
       pagopa.commonsJWT                        % Compile,
       pagopa.commonsCqrs                       % Compile,
+      pagopa.riskAnalysis                      % Compile,
       akka.testkit                             % Test,
       akka.httpTestkit                         % Test,
       scalatest.core                           % Test,

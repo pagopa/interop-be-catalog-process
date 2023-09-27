@@ -297,6 +297,23 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       exactMatchOnName
     )
 
+  override def createRiskAnalysis(eServiceId: UUID, riskAnalysisSeed: RiskAnalysisSeed)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[Unit] = withHeaders { (bearerToken, correlationId, ip) =>
+    val request = api.createRiskAnalysis(
+      xCorrelationId = correlationId,
+      eServiceId = eServiceId,
+      riskAnalysisSeed = riskAnalysisSeed,
+      xForwardedFor = ip
+    )(BearerToken(bearerToken))
+    invoker
+      .invoke(request, s"Create Risk Analysis for E-Services $eServiceId")
+      .recoverWith {
+        case err: ApiError[_] if err.code == 404 =>
+          Future.failed(EServiceNotFound(eServiceId.toString))
+      }
+  }
+
   private def getDocument(eService: CatalogItem, descriptorId: UUID, documentId: UUID): Option[CatalogDocument] = {
 
     def lookup(catalogDescriptor: CatalogDescriptor): Option[CatalogDocument]               = {

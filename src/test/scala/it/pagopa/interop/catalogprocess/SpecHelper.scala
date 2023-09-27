@@ -28,11 +28,13 @@ trait SpecHelper extends SprayJsonSupport with DefaultJsonProtocol with MockFact
   val mockAuthorizationManagementService: AuthorizationManagementService = mock[AuthorizationManagementService]
   val mockCatalogManagementService: CatalogManagementService             = mock[CatalogManagementService]
   val mockAgreementManagementService: AgreementManagementService         = mock[AgreementManagementService]
+  val mockTenantManagementService: TenantManagementService               = mock[TenantManagementService]
 
   val service: ProcessApiService = ProcessApiServiceImpl(
     mockCatalogManagementService,
     mockAgreementManagementService,
     mockAuthorizationManagementService,
+    mockTenantManagementService,
     mockfileManager
   )(ExecutionContext.global, mockReadModel)
 

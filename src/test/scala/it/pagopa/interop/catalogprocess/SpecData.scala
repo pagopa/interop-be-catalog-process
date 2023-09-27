@@ -4,6 +4,7 @@ import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDep
 import it.pagopa.interop.catalogmanagement.{model => CatalogManagement}
 import it.pagopa.interop.agreementmanagement.model.agreement.{PersistentAgreement, Active, PersistentStamps}
 import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
+import it.pagopa.interop.tenantmanagement.model.tenant.{PersistentTenant, PersistentTenantKind, PersistentExternalId}
 
 import java.util.UUID
 
@@ -115,5 +116,18 @@ object SpecData {
     descriptors = Seq.empty,
     riskAnalysis = Seq.empty,
     mode = CatalogManagementDependency.EServiceMode.DELIVER
+  )
+
+  val persistentTenant: PersistentTenant = PersistentTenant(
+    id = UUID.randomUUID(),
+    kind = Some(PersistentTenantKind.PA),
+    selfcareId = None,
+    externalId = PersistentExternalId("IPA", "value"),
+    features = Nil,
+    attributes = Nil,
+    createdAt = OffsetDateTimeSupplier.get(),
+    updatedAt = Some(OffsetDateTimeSupplier.get().plusDays(10)),
+    mails = Nil,
+    name = "name"
   )
 }
