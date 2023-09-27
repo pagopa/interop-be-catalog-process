@@ -703,6 +703,26 @@ final case class ProcessApiServiceImpl(
       updateRiskAnalysisResponse[Unit](operationLabel)(_ => updateRiskAnalysis204)
     }
   }
+
+  override def deleteRiskAnalysis(eServiceId: String, riskAnalysisId: String)(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+  ): Route = authorize(ADMIN_ROLE, API_ROLE) {
+    val operationLabel = s"Delete a Risk Analysis $riskAnalysisId for EService $eServiceId"
+    logger.info(operationLabel)
+
+    val result = for {
+      eServiceUuid     <- eServiceId.toFutureUUID
+      riskAnalysisUuid <- riskAnalysisId.toFutureUUID
+      catalogItem      <- catalogManagementService.getEServiceById(eServiceUuid)
+      _                <- isDraftEService(catalogItem)
+      _                <- catalogManagementService.deleteRiskAnalysis(eServiceUuid, riskAnalysisUuid)
+    } yield ()
+
+    onComplete(result) {
+      deleteRiskAnalysisResponse[Unit](operationLabel)(_ => deleteRiskAnalysis204)
+    }
+  }
 }
 
 object ProcessApiServiceImpl {

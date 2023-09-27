@@ -234,5 +234,15 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
         }
       )
     }
+
+    "accept authorized roles for deleteRiskAnalysis" in {
+      val endpoint = AuthorizedRoutes.endpoints("deleteRiskAnalysis")
+      validateAuthorization(
+        endpoint,
+        { implicit c: Seq[(String, String)] =>
+          service.deleteRiskAnalysis(UUID.randomUUID().toString, UUID.randomUUID().toString)
+        }
+      )
+    }
   }
 }
