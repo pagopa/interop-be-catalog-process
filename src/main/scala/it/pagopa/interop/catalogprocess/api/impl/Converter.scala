@@ -5,10 +5,10 @@ import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDep
 import it.pagopa.interop.catalogmanagement.{model => readmodel}
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.common.readmodel.Consumers
-
-import java.util.UUID
 import it.pagopa.interop.catalogmanagement.model.DELIVER
 import it.pagopa.interop.catalogmanagement.model.RECEIVE
+
+import java.util.UUID
 
 object Converter {
 

@@ -33,11 +33,11 @@ import it.pagopa.interop.catalogprocess.service.{
   CatalogManagementService,
   AgreementManagementService
 }
+import it.pagopa.interop.catalogmanagement.client.model.EServiceMode
 
 import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
-import it.pagopa.interop.catalogmanagement.client.model.EServiceMode
 
 /**
  * Holds fake implementation of dependencies for tests not requiring neither mocks or stubs
