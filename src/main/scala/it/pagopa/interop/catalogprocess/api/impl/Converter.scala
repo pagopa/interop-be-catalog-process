@@ -25,7 +25,7 @@ object Converter {
       )
   }
 
-  implicit class attributesSeedWrapper(private val seed: AttributesSeed) extends AnyVal {
+  implicit class AttributesSeedWrapper(private val seed: AttributesSeed) extends AnyVal {
     def toDependency: CatalogManagementDependency.Attributes =
       CatalogManagementDependency.Attributes(
         certified = seed.certified.map(_.map(_.toDependency)),
@@ -34,7 +34,7 @@ object Converter {
       )
   }
 
-  implicit class attributeSeedWrapper(private val seed: AttributeSeed) extends AnyVal {
+  implicit class AttributeSeedWrapper(private val seed: AttributeSeed) extends AnyVal {
     def toDependency: CatalogManagementDependency.Attribute =
       CatalogManagementDependency.Attribute(
         id = seed.id,
@@ -42,7 +42,7 @@ object Converter {
       )
   }
 
-  implicit class createEServiceDescriptorDocumentSeedWrapper(private val seed: CreateEServiceDescriptorDocumentSeed)
+  implicit class CreateEServiceDescriptorDocumentSeedWrapper(private val seed: CreateEServiceDescriptorDocumentSeed)
       extends AnyVal {
     def toDependency: CatalogManagementDependency.CreateEServiceDescriptorDocumentSeed =
       CatalogManagementDependency.CreateEServiceDescriptorDocumentSeed(
@@ -57,7 +57,7 @@ object Converter {
       )
   }
 
-  implicit class eServiceDocumentKindWrapper(private val policy: EServiceDocumentKind) extends AnyVal {
+  implicit class EServiceDocumentKindWrapper(private val policy: EServiceDocumentKind) extends AnyVal {
     def toDependency: CatalogManagementDependency.EServiceDocumentKind =
       policy match {
         case EServiceDocumentKind.INTERFACE => CatalogManagementDependency.EServiceDocumentKind.INTERFACE
@@ -65,7 +65,7 @@ object Converter {
       }
   }
 
-  implicit class eServiceDescriptorSeedWrapper(private val seed: EServiceDescriptorSeed) extends AnyVal {
+  implicit class EServiceDescriptorSeedWrapper(private val seed: EServiceDescriptorSeed) extends AnyVal {
     def toDependency: CatalogManagementDependency.EServiceDescriptorSeed =
       CatalogManagementDependency.EServiceDescriptorSeed(
         description = seed.description,
@@ -78,7 +78,7 @@ object Converter {
       )
   }
 
-  implicit class updateEServiceDescriptorSeedWrapper(private val seed: UpdateEServiceDescriptorSeed) extends AnyVal {
+  implicit class UpdateEServiceDescriptorSeedWrapper(private val seed: UpdateEServiceDescriptorSeed) extends AnyVal {
     def toDependency: CatalogManagementDependency.UpdateEServiceDescriptorSeed =
       CatalogManagementDependency.UpdateEServiceDescriptorSeed(
         description = seed.description,
@@ -92,7 +92,7 @@ object Converter {
       )
   }
 
-  implicit class updateEServiceSeedWrapper(private val seed: UpdateEServiceSeed) extends AnyVal {
+  implicit class UpdateEServiceSeedWrapper(private val seed: UpdateEServiceSeed) extends AnyVal {
     def toDependency: CatalogManagementDependency.UpdateEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
       name = seed.name,
       description = seed.description,
@@ -143,13 +143,13 @@ object Converter {
     def toTemplate: Map[String, Seq[String]]                                  = Map(seed.key -> seed.values)
   }
 
-  implicit class eServiceDescriptorDocumentSeedWrapper(private val seed: UpdateEServiceDescriptorDocumentSeed)
+  implicit class EServiceDescriptorDocumentSeedWrapper(private val seed: UpdateEServiceDescriptorDocumentSeed)
       extends AnyVal {
     def toDependency: CatalogManagementDependency.UpdateEServiceDescriptorDocumentSeed =
       CatalogManagementDependency.UpdateEServiceDescriptorDocumentSeed(prettyName = seed.prettyName)
   }
 
-  implicit class agreementApprovalPolicyWrapper(private val policy: AgreementApprovalPolicy) extends AnyVal {
+  implicit class AgreementApprovalPolicyWrapper(private val policy: AgreementApprovalPolicy) extends AnyVal {
     def toDependency: CatalogManagementDependency.AgreementApprovalPolicy =
       policy match {
         case AgreementApprovalPolicy.AUTOMATIC => CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC
