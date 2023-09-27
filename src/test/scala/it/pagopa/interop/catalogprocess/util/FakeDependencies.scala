@@ -25,7 +25,8 @@ import it.pagopa.interop.catalogmanagement.model.{
   CatalogAttributes,
   CatalogDocument,
   Published,
-  CatalogDescriptorState
+  CatalogDescriptorState,
+  DELIVER
 }
 import it.pagopa.interop.catalogprocess.service.{
   AuthorizationManagementService,
@@ -36,6 +37,7 @@ import it.pagopa.interop.catalogprocess.service.{
 import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
+import it.pagopa.interop.catalogmanagement.client.model.EServiceMode
 
 /**
  * Holds fake implementation of dependencies for tests not requiring neither mocks or stubs
@@ -56,7 +58,9 @@ object FakeDependencies {
           technology = Rest,
           descriptors = Seq.empty,
           attributes = Some(CatalogAttributes.empty),
-          createdAt = OffsetDateTime.now()
+          createdAt = OffsetDateTime.now(),
+          riskAnalysis = Seq.empty,
+          mode = DELIVER
         )
       )
 
@@ -84,7 +88,9 @@ object FakeDependencies {
         name = "fake",
         description = "fake",
         technology = EServiceTechnology.REST,
-        descriptors = Seq.empty
+        descriptors = Seq.empty,
+        riskAnalysis = Seq.empty,
+        mode = EServiceMode.DELIVER
       )
     )
 
@@ -101,7 +107,9 @@ object FakeDependencies {
         name = "fake",
         description = "fake",
         technology = EServiceTechnology.REST,
-        descriptors = Seq.empty
+        descriptors = Seq.empty,
+        riskAnalysis = Seq.empty,
+        mode = EServiceMode.DELIVER
       )
     )
 
@@ -114,7 +122,9 @@ object FakeDependencies {
         name = "fake",
         description = "fake",
         technology = EServiceTechnology.REST,
-        descriptors = Seq.empty
+        descriptors = Seq.empty,
+        riskAnalysis = Seq.empty,
+        mode = EServiceMode.DELIVER
       )
     )
 
@@ -170,7 +180,9 @@ object FakeDependencies {
         name = "fake",
         description = "fake",
         technology = EServiceTechnology.REST,
-        descriptors = Seq.empty
+        descriptors = Seq.empty,
+        riskAnalysis = Seq.empty,
+        mode = EServiceMode.DELIVER
       )
     )
 
@@ -201,7 +213,9 @@ object FakeDependencies {
             serverUrls = Nil,
             attributes = Attributes(Nil, Nil, Nil)
           )
-        )
+        ),
+        riskAnalysis = Seq.empty,
+        mode = EServiceMode.DELIVER
       )
     )
 

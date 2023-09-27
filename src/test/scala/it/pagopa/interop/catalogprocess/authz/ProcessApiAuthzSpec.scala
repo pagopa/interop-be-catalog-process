@@ -47,7 +47,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
     "accept authorized roles for createEService" in {
       val endpoint = AuthorizedRoutes.endpoints("createEService")
       val fakeSeed =
-        EServiceSeed("test", "test", EServiceTechnology.REST)
+        EServiceSeed("test", "test", EServiceTechnology.REST, mode = EServiceMode.DELIVER)
       validateAuthorization(endpoint, { implicit c: Seq[(String, String)] => service.createEService(fakeSeed) })
     }
 
@@ -130,7 +130,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
     "accept authorized roles for updateEServiceById" in {
       val endpoint = AuthorizedRoutes.endpoints("updateEServiceById")
       val fakeSeed =
-        UpdateEServiceSeed("test", "test", EServiceTechnology.REST)
+        UpdateEServiceSeed("test", "test", EServiceTechnology.REST, EServiceMode.DELIVER)
       validateAuthorization(
         endpoint,
         { implicit c: Seq[(String, String)] => service.updateEServiceById("fake", fakeSeed) }

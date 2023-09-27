@@ -43,7 +43,9 @@ object SpecData {
     technology = CatalogManagement.Rest,
     attributes = None,
     descriptors = Seq.empty,
-    createdAt = OffsetDateTimeSupplier.get()
+    createdAt = OffsetDateTimeSupplier.get(),
+    riskAnalysis = Seq.empty,
+    mode = CatalogManagement.DELIVER
   )
 
   val catalogDocument: CatalogManagement.CatalogDocument     = CatalogManagement.CatalogDocument(
@@ -110,6 +112,8 @@ object SpecData {
     name = "EService1",
     description = "description",
     technology = CatalogManagementDependency.EServiceTechnology.REST,
-    descriptors = Seq.empty
+    descriptors = Seq.empty,
+    riskAnalysis = Seq.empty,
+    mode = CatalogManagementDependency.EServiceMode.DELIVER
   )
 }

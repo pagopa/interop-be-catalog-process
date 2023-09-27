@@ -283,13 +283,19 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         )
 
       val apiSeed: EServiceSeed =
-        EServiceSeed(name = "MyService", description = "My Service", technology = EServiceTechnology.REST)
+        EServiceSeed(
+          name = "MyService",
+          description = "My Service",
+          technology = EServiceTechnology.REST,
+          mode = EServiceMode.DELIVER
+        )
 
       val seed = CatalogManagementDependency.EServiceSeed(
         producerId = requesterId,
         name = "MyService",
         description = "My Service",
-        technology = CatalogManagementDependency.EServiceTechnology.REST
+        technology = CatalogManagementDependency.EServiceTechnology.REST,
+        mode = CatalogManagementDependency.EServiceMode.DELIVER
       )
 
       val eservice = CatalogManagementDependency.EService(
@@ -321,7 +327,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
                 List(List(CatalogManagementDependency.Attribute(attributeId3, explicitAttributeVerification = true)))
             )
           )
-        )
+        ),
+        riskAnalysis = Seq.empty,
+        mode = CatalogManagementDependency.EServiceMode.DELIVER
       )
 
       (mockCatalogManagementService
@@ -351,7 +359,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name = seed.name,
         description = seed.description,
         technology = seed.technology.toApi,
-        descriptors = eservice.descriptors.map(_.toApi)
+        descriptors = eservice.descriptors.map(_.toApi),
+        riskAnalysis = Seq.empty,
+        mode = seed.mode.toApi
       )
 
       Post() ~> service.createEService(apiSeed) ~> check {
@@ -377,7 +387,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val catalogItems: Seq[CatalogItem] = Seq(SpecData.catalogItem)
 
       val apiSeed: EServiceSeed =
-        EServiceSeed(name = "MyService", description = "My Service", technology = EServiceTechnology.REST)
+        EServiceSeed(
+          name = "MyService",
+          description = "My Service",
+          technology = EServiceTechnology.REST,
+          mode = EServiceMode.DELIVER
+        )
 
       (mockCatalogManagementService
         .getEServices(
@@ -412,7 +427,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         )
 
       val apiSeed: EServiceSeed =
-        EServiceSeed(name = "MyService", description = "My Service", technology = EServiceTechnology.REST)
+        EServiceSeed(
+          name = "MyService",
+          description = "My Service",
+          technology = EServiceTechnology.REST,
+          mode = EServiceMode.DELIVER
+        )
 
       Post() ~> service.createEService(apiSeed) ~> check {
         status shouldEqual StatusCodes.Forbidden
@@ -432,12 +452,18 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val eService = SpecData.eService.copy(descriptors = Seq(descriptor), producerId = requesterId)
 
       val eServiceSeed =
-        UpdateEServiceSeed(name = "newName", description = "newDescription", technology = EServiceTechnology.REST)
+        UpdateEServiceSeed(
+          name = "newName",
+          description = "newDescription",
+          technology = EServiceTechnology.REST,
+          mode = EServiceMode.DELIVER
+        )
 
       val updatedEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
         name = "newName",
         description = "newDescription",
-        technology = eService.technology
+        technology = eService.technology,
+        mode = CatalogManagementDependency.EServiceMode.DELIVER
       )
 
       val updatedEService = CatalogManagementDependency.EService(
@@ -446,7 +472,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name = "newName",
         description = "newDescription",
         technology = eService.technology,
-        descriptors = Seq(descriptor)
+        descriptors = Seq(descriptor),
+        riskAnalysis = Seq.empty,
+        mode = CatalogManagementDependency.EServiceMode.DELIVER
       )
 
       (mockCatalogManagementService
@@ -476,12 +504,18 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val eService = SpecData.eService.copy(descriptors = Seq.empty, producerId = requesterId)
 
       val eServiceSeed =
-        UpdateEServiceSeed(name = "newName", description = "newDescription", technology = EServiceTechnology.REST)
+        UpdateEServiceSeed(
+          name = "newName",
+          description = "newDescription",
+          technology = EServiceTechnology.REST,
+          mode = EServiceMode.DELIVER
+        )
 
       val updatedEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
         name = "newName",
         description = "newDescription",
-        technology = eService.technology
+        technology = eService.technology,
+        mode = eService.mode
       )
 
       val updatedEService = CatalogManagementDependency.EService(
@@ -490,7 +524,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name = "newName",
         description = "newDescription",
         technology = eService.technology,
-        descriptors = Seq.empty
+        descriptors = Seq.empty,
+        riskAnalysis = Seq.empty,
+        mode = eService.mode
       )
 
       (mockCatalogManagementService
@@ -522,7 +558,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val eService = SpecData.eService.copy(descriptors = Seq(descriptor), producerId = requesterId)
 
       val eServiceSeed =
-        UpdateEServiceSeed(name = "newName", description = "newDescription", technology = EServiceTechnology.REST)
+        UpdateEServiceSeed(
+          name = "newName",
+          description = "newDescription",
+          technology = EServiceTechnology.REST,
+          mode = EServiceMode.DELIVER
+        )
 
       (mockCatalogManagementService
         .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
@@ -546,7 +587,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
 
       val eServiceSeed =
-        UpdateEServiceSeed(name = "newName", description = "newDescription", technology = EServiceTechnology.REST)
+        UpdateEServiceSeed(
+          name = "newName",
+          description = "newDescription",
+          technology = EServiceTechnology.REST,
+          mode = EServiceMode.DELIVER
+        )
 
       (mockCatalogManagementService
         .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
@@ -571,7 +617,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
       val eServiceSeed =
-        UpdateEServiceSeed(name = "newName", description = "newDescription", technology = EServiceTechnology.REST)
+        UpdateEServiceSeed(
+          name = "newName",
+          description = "newDescription",
+          technology = EServiceTechnology.REST,
+          mode = EServiceMode.DELIVER
+        )
 
       (mockCatalogManagementService
         .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))

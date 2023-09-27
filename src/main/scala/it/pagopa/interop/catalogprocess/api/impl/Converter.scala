@@ -7,6 +7,8 @@ import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.common.readmodel.Consumers
 
 import java.util.UUID
+import it.pagopa.interop.catalogmanagement.model.DELIVER
+import it.pagopa.interop.catalogmanagement.model.RECEIVE
 
 object Converter {
 
@@ -17,7 +19,8 @@ object Converter {
         producerId = producerId,
         name = seed.name,
         description = seed.description,
-        technology = seed.technology.toDependency
+        technology = seed.technology.toDependency,
+        mode = seed.mode.toDependency
       )
   }
 
@@ -92,7 +95,8 @@ object Converter {
     def toDependency: CatalogManagementDependency.UpdateEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
       name = seed.name,
       description = seed.description,
-      technology = seed.technology.toDependency
+      technology = seed.technology.toDependency,
+      mode = seed.mode.toDependency
     )
   }
 
@@ -142,8 +146,91 @@ object Converter {
       name = eService.name,
       description = eService.description,
       technology = eService.technology.toApi,
-      descriptors = eService.descriptors.map(_.toApi)
+      descriptors = eService.descriptors.map(_.toApi),
+      riskAnalysis = eService.riskAnalysis.map(_.toApi),
+      mode = eService.mode.toApi
     )
+  }
+
+  implicit class ManagementRiskAnalysisObjectWrapper(private val p: CatalogManagementDependency.EServiceRiskAnalysis)
+      extends AnyVal {
+    def toApi: EServiceRiskAnalysis =
+      EServiceRiskAnalysis(
+        id = p.id,
+        name = p.name,
+        riskAnalysisForm = p.riskAnalysisForm.toApi,
+        createdAt = p.createdAt
+      )
+  }
+
+  implicit class ManagementRiskAnalysisFormObjectWrapper(private val p: CatalogManagementDependency.RiskAnalysisForm)
+      extends AnyVal {
+    def toApi: EServiceRiskAnalysisForm = EServiceRiskAnalysisForm(
+      id = p.id,
+      version = p.version,
+      singleAnswers = p.singleAnswers.map(_.toApi),
+      multiAnswers = p.multiAnswers.map(_.toApi)
+    )
+  }
+
+  implicit class ManagementRiskAnalysisSingleAnswerObjectWrapper(
+    private val p: CatalogManagementDependency.RiskAnalysisSingleAnswer
+  ) extends AnyVal {
+    def toApi: EServiceRiskAnalysisSingleAnswer =
+      EServiceRiskAnalysisSingleAnswer(id = p.id, key = p.key, value = p.value)
+  }
+
+  implicit class ManagementRiskAnalysisMultiAnswerObjectWrapper(
+    private val p: CatalogManagementDependency.RiskAnalysisMultiAnswer
+  ) extends AnyVal {
+    def toApi: EServiceRiskAnalysisMultiAnswer =
+      EServiceRiskAnalysisMultiAnswer(id = p.id, key = p.key, values = p.values)
+  }
+
+  implicit class ManagementItemModeObjectWrapper(private val p: CatalogManagementDependency.EServiceMode)
+      extends AnyVal {
+    def toApi: EServiceMode = p match {
+      case CatalogManagementDependency.EServiceMode.RECEIVE => EServiceMode.RECEIVE
+      case CatalogManagementDependency.EServiceMode.DELIVER => EServiceMode.DELIVER
+    }
+  }
+
+  implicit class EServiceModeObjectWrapper(private val p: EServiceMode) extends AnyVal {
+    def toDependency: CatalogManagementDependency.EServiceMode = p match {
+      case EServiceMode.RECEIVE => CatalogManagementDependency.EServiceMode.RECEIVE
+      case EServiceMode.DELIVER => CatalogManagementDependency.EServiceMode.DELIVER
+    }
+  }
+
+  implicit class EServiceRiskAnalysisObjectWrapper(private val p: EServiceRiskAnalysis) extends AnyVal {
+    def toDependency: CatalogManagementDependency.EServiceRiskAnalysis =
+      CatalogManagementDependency.EServiceRiskAnalysis(
+        id = p.id,
+        name = p.name,
+        riskAnalysisForm = p.riskAnalysisForm.toDependency,
+        createdAt = p.createdAt
+      )
+  }
+
+  implicit class EServiceRiskAnalysisFormObjectWrapper(private val p: EServiceRiskAnalysisForm) extends AnyVal {
+    def toDependency: CatalogManagementDependency.RiskAnalysisForm = CatalogManagementDependency.RiskAnalysisForm(
+      id = p.id,
+      version = p.version,
+      singleAnswers = p.singleAnswers.map(_.toDependency),
+      multiAnswers = p.multiAnswers.map(_.toDependency)
+    )
+  }
+
+  implicit class EServiceRiskAnalysisSingleAnswerObjectWrapper(private val p: EServiceRiskAnalysisSingleAnswer)
+      extends AnyVal {
+    def toDependency: CatalogManagementDependency.RiskAnalysisSingleAnswer =
+      CatalogManagementDependency.RiskAnalysisSingleAnswer(id = p.id, key = p.key, value = p.value)
+  }
+
+  implicit class EServiceRiskAnalysisMultiAnswerObjectWrapper(private val p: EServiceRiskAnalysisMultiAnswer)
+      extends AnyVal {
+    def toDependency: CatalogManagementDependency.RiskAnalysisMultiAnswer =
+      CatalogManagementDependency.RiskAnalysisMultiAnswer(id = p.id, key = p.key, values = p.values)
   }
 
   implicit class EServiceTechnologyWrapper(private val technology: EServiceTechnology) extends AnyVal {
@@ -246,8 +333,48 @@ object Converter {
       name = item.name,
       description = item.description,
       technology = item.technology.toApi,
-      descriptors = item.descriptors.map(_.toApi)
+      descriptors = item.descriptors.map(_.toApi),
+      mode = item.mode.toApi,
+      riskAnalysis = item.riskAnalysis.map(_.toApi)
     )
+  }
+
+  implicit class CatalogRiskAnalysisObjectWrapper(private val p: readmodel.CatalogRiskAnalysis) extends AnyVal {
+    def toApi: EServiceRiskAnalysis =
+      EServiceRiskAnalysis(
+        id = p.id,
+        name = p.name,
+        riskAnalysisForm = p.riskAnalysisForm.toApi,
+        createdAt = p.createdAt
+      )
+  }
+
+  implicit class CatalogRiskAnalysisFormObjectWrapper(private val p: readmodel.CatalogRiskAnalysisForm) extends AnyVal {
+    def toApi: EServiceRiskAnalysisForm = EServiceRiskAnalysisForm(
+      id = p.id,
+      version = p.version,
+      singleAnswers = p.singleAnswers.map(_.toApi),
+      multiAnswers = p.multiAnswers.map(_.toApi)
+    )
+  }
+
+  implicit class CatalogRiskAnalysisSingleAnswerObjectWrapper(private val p: readmodel.CatalogRiskAnalysisSingleAnswer)
+      extends AnyVal {
+    def toApi: EServiceRiskAnalysisSingleAnswer =
+      EServiceRiskAnalysisSingleAnswer(id = p.id, key = p.key, value = p.value)
+  }
+
+  implicit class CatalogRiskAnalysisMultiAnswerObjectWrapper(private val p: readmodel.CatalogRiskAnalysisMultiAnswer)
+      extends AnyVal {
+    def toApi: EServiceRiskAnalysisMultiAnswer =
+      EServiceRiskAnalysisMultiAnswer(id = p.id, key = p.key, values = p.values)
+  }
+
+  implicit class ReadModelModeWrapper(private val mode: readmodel.CatalogItemMode) extends AnyVal {
+    def toApi: EServiceMode = mode match {
+      case DELIVER => EServiceMode.DELIVER
+      case RECEIVE => EServiceMode.RECEIVE
+    }
   }
 
   implicit class ReadModelConsumersWrapper(private val item: Consumers) extends AnyVal {
