@@ -7,10 +7,10 @@ import it.pagopa.interop.commons.riskanalysis.{model => Commons}
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.common.readmodel.Consumers
 import it.pagopa.interop.tenantmanagement.model.tenant.PersistentTenantKind
-
-import java.util.UUID
 import it.pagopa.interop.catalogmanagement.model.DELIVER
 import it.pagopa.interop.catalogmanagement.model.RECEIVE
+
+import java.util.UUID
 
 object Converter {
 
