@@ -63,4 +63,7 @@ object CatalogProcessErrors {
 
   final case class EServiceRiskAnalysisNotFound(eServiceId: UUID, riskAnalysisId: UUID)
       extends ComponentError("0017", s"Risk Analysis $riskAnalysisId not found for EService $eServiceId")
+
+  final case class EServiceRiskAnalysisIsRequired(eServiceId: UUID)
+      extends ComponentError("0018", s"At least one Risk Analysis is required for EService $eServiceId")
 }

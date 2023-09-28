@@ -203,6 +203,23 @@ final case class ProcessApiServiceImpl(
     val operationLabel = s"Publishing descriptor $descriptorId for EService $eServiceId"
     logger.info(operationLabel)
 
+    def verifyRiskAnalysisForPublication(catalogItem: CatalogItem): Future[Unit] = {
+      if (catalogItem.mode == Receive) {
+        for {
+          _          <-
+            if (catalogItem.riskAnalysis.isEmpty) Future.failed(EServiceRiskAnalysisIsRequired(catalogItem.id))
+            else Future.unit
+          tenant     <- tenantManagementService.getTenantById(catalogItem.producerId)
+          tenantKind <- tenant.kind.toFuture(TenantKindNotFound(tenant.id))
+          _          <- catalogItem.riskAnalysis.traverse(risk =>
+            isRiskAnalysisFormValid(riskAnalysisForm = risk.riskAnalysisForm.toTemplate, schemaOnlyValidation = false)(
+              tenantKind.toTemplate
+            )
+          )
+        } yield ()
+      } else Future.unit
+    }
+
     val result: Future[Unit] = for {
       organizationId <- getOrganizationIdFutureUUID(contexts)
       eServiceUuid   <- eServiceId.toFutureUUID
@@ -211,6 +228,7 @@ final case class ProcessApiServiceImpl(
       _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       descriptor     <- assertDescriptorExists(catalogItem, descriptorUuid)
       _              <- verifyPublicationEligibility(descriptor)
+      _              <- verifyRiskAnalysisForPublication(catalogItem)
       currentActiveDescriptor = catalogItem.descriptors.find(d => d.state == Published) // Must be at most one
       _ <- catalogManagementService.publishDescriptor(eServiceId, descriptorId)
       _ <- currentActiveDescriptor
