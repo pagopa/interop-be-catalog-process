@@ -87,6 +87,7 @@ object ResponseHandlers extends AkkaResponses {
       case Failure(ex: EServiceNotFound)             => notFound(ex, logMessage)
       case Failure(ex: EServiceRiskAnalysisNotFound) => notFound(ex, logMessage)
       case Failure(ex: EServiceNotInDraftState)      => badRequest(ex, logMessage)
+      case Failure(ex: EServiceNotInReceiveMode)     => badRequest(ex, logMessage)
       case Failure(ex)                               => internalServerError(ex, logMessage)
     }
 

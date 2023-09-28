@@ -716,6 +716,7 @@ final case class ProcessApiServiceImpl(
       riskAnalysisUuid <- riskAnalysisId.toFutureUUID
       catalogItem      <- catalogManagementService.getEServiceById(eServiceUuid)
       _                <- isDraftEService(catalogItem)
+      _                <- isReceiveEService(catalogItem)
       _                <- catalogManagementService.deleteRiskAnalysis(eServiceUuid, riskAnalysisUuid)
     } yield ()
 
