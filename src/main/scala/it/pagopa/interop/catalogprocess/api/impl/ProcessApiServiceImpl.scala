@@ -36,7 +36,8 @@ import it.pagopa.interop.catalogmanagement.model.{
   Draft,
   Suspended,
   Deprecated,
-  Receive
+  Receive,
+  Deliver
 }
 
 final case class ProcessApiServiceImpl(
@@ -203,8 +204,9 @@ final case class ProcessApiServiceImpl(
     val operationLabel = s"Publishing descriptor $descriptorId for EService $eServiceId"
     logger.info(operationLabel)
 
-    def verifyRiskAnalysisForPublication(catalogItem: CatalogItem): Future[Unit] = {
-      if (catalogItem.mode == Receive) {
+    def verifyRiskAnalysisForPublication(catalogItem: CatalogItem): Future[Unit] = catalogItem.mode match {
+      case Deliver => Future.unit
+      case Receive =>
         for {
           _          <-
             if (catalogItem.riskAnalysis.isEmpty) Future.failed(EServiceRiskAnalysisIsRequired(catalogItem.id))
@@ -217,7 +219,6 @@ final case class ProcessApiServiceImpl(
             )
           )
         } yield ()
-      } else Future.unit
     }
 
     val result: Future[Unit] = for {
