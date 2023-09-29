@@ -13,8 +13,7 @@ import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors.{
   EServiceNotFound,
   DescriptorDocumentNotFound,
-  EServiceRiskAnalysisNotFound,
-  TenantNotFound
+  EServiceRiskAnalysisNotFound
 }
 import it.pagopa.interop.catalogmanagement.model.{
   CatalogDescriptorState,
