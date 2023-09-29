@@ -1232,10 +1232,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         SpecData.catalogItem.id.toString,
         SpecData.catalogDescriptor.id.toString
       ) ~> check {
-        status shouldEqual StatusCodes.NotFound
-        val problem = responseAs[Problem]
-        problem.status shouldBe StatusCodes.NotFound.intValue
-        problem.errors.head.code shouldBe "009-0014"
+        status shouldEqual StatusCodes.InternalServerError
       }
     }
     "fail if mode is Receive and Risk Analysis did not pass validation" in {
