@@ -36,7 +36,7 @@ import it.pagopa.interop.catalogprocess.service.{
   AgreementManagementService,
   TenantManagementService
 }
-import it.pagopa.interop.catalogmanagement.client.model.EServiceMode
+import it.pagopa.interop.catalogmanagement.client.model.{EServiceMode, EServiceRiskAnalysis, RiskAnalysisForm}
 
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -277,8 +277,29 @@ object FakeDependencies {
     override def createRiskAnalysis(eServiceId: UUID, riskAnalysisSeed: RiskAnalysisSeed)(implicit
       contexts: Seq[(String, String)]
     ): Future[Unit] = Future.successful(())
-  }
 
+    override def updateRiskAnalysis(eServiceId: UUID, riskAnalysisId: UUID, riskAnalysisSeed: RiskAnalysisSeed)(implicit
+      contexts: Seq[(String, String)]
+    ): Future[EServiceRiskAnalysis] = Future.successful(
+      (
+        EServiceRiskAnalysis(
+          id = UUID.randomUUID(),
+          name = "name",
+          riskAnalysisForm = RiskAnalysisForm(
+            id = UUID.randomUUID(),
+            version = "version",
+            singleAnswers = Seq.empty,
+            multiAnswers = Seq.empty
+          ),
+          createdAt = OffsetDateTime.now()
+        )
+      )
+    )
+
+    override def deleteRiskAnalysis(eServiceId: UUID, riskAnalysisId: UUID)(implicit
+      contexts: Seq[(String, String)]
+    ): Future[Unit] = Future.successful(())
+  }
   class FakeAuthorizationManagementService extends AuthorizationManagementService {
     override def updateStateOnClients(
       eServiceId: UUID,

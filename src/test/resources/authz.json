@@ -59,6 +59,8 @@
       "verb": "POST"
     },
     { "route": "deleteEService", "roles": ["admin", "api"], "verb": "DELETE" },
-    { "route": "createRiskAnalysis", "roles": ["admin", "api"], "verb": "POST" }
+    { "route": "createRiskAnalysis", "roles": ["admin", "api"], "verb": "POST" },
+    { "route": "updateRiskAnalysis", "roles": ["admin", "api"], "verb": "POST" },
+    { "route": "deleteRiskAnalysis", "roles": ["admin", "api"], "verb": "DELETE" }
   ]
 }
