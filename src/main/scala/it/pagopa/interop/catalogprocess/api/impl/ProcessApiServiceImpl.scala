@@ -696,7 +696,6 @@ final case class ProcessApiServiceImpl(
       tenant           <- tenantManagementService.getTenantById(organizationId)
       tenantKind       <- tenant.kind.toFuture(TenantKindNotFound(tenant.id))
       _ <- isRiskAnalysisFormValid(seed.riskAnalysisForm.toTemplate, schemaOnlyValidation = true)(tenantKind.toTemplate)
-
       _ <- catalogManagementService.updateRiskAnalysis(eServiceUuid, riskAnalysisUuid, seed.toDependency)
     } yield ()
 
