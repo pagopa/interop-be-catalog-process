@@ -49,7 +49,7 @@ object SpecData {
     mode = CatalogManagement.Deliver
   )
 
-  val catalogDocument: CatalogManagement.CatalogDocument     = CatalogManagement.CatalogDocument(
+  val catalogDocument: CatalogManagement.CatalogDocument = CatalogManagement.CatalogDocument(
     id = docId,
     name = "name",
     contentType = "application/pdf",
@@ -58,6 +58,114 @@ object SpecData {
     checksum = "checksum",
     uploadDate = OffsetDateTimeSupplier.get().minusDays(30)
   )
+
+  val catalogRiskAnalysisSchemaOnly = CatalogManagement.CatalogRiskAnalysis(
+    id = UUID.randomUUID(),
+    name = "name",
+    riskAnalysisForm = CatalogManagement.CatalogRiskAnalysisForm(
+      id = UUID.randomUUID(),
+      version = "3.0",
+      singleAnswers = Seq(
+        CatalogManagement
+          .CatalogRiskAnalysisSingleAnswer(id = UUID.randomUUID(), key = "purpose", value = Some("INSTITUTIONAL"))
+      ),
+      multiAnswers = Seq(
+        CatalogManagement
+          .CatalogRiskAnalysisMultiAnswer(id = UUID.randomUUID(), key = "personalDataTypes", values = Seq("OTHER"))
+      )
+    ),
+    createdAt = OffsetDateTimeSupplier.get()
+  )
+
+  val catalogRiskAnalysisFullValid = CatalogManagement.CatalogRiskAnalysis(
+    id = UUID.randomUUID(),
+    name = "name",
+    riskAnalysisForm = CatalogManagement.CatalogRiskAnalysisForm(
+      id = UUID.randomUUID(),
+      version = "3.0",
+      singleAnswers = Seq(
+        CatalogManagement
+          .CatalogRiskAnalysisSingleAnswer(id = UUID.randomUUID(), key = "purpose", value = Some("INSTITUTIONAL")),
+        CatalogManagement.CatalogRiskAnalysisSingleAnswer(
+          id = UUID.randomUUID(),
+          key = "legalObligationReference",
+          value = Some("YES")
+        ),
+        CatalogManagement
+          .CatalogRiskAnalysisSingleAnswer(id = UUID.randomUUID(), key = "dataDownload", value = Some("YES")),
+        CatalogManagement.CatalogRiskAnalysisSingleAnswer(
+          id = UUID.randomUUID(),
+          key = "checkedExistenceMereCorrectnessInteropCatalogue",
+          value = Some("true")
+        ),
+        CatalogManagement
+          .CatalogRiskAnalysisSingleAnswer(id = UUID.randomUUID(), key = "deliveryMethod", value = Some("CLEARTEXT")),
+        CatalogManagement.CatalogRiskAnalysisSingleAnswer(
+          id = UUID.randomUUID(),
+          key = "legalBasisPublicInterest",
+          value = Some("RULE_OF_LAW")
+        ),
+        CatalogManagement.CatalogRiskAnalysisSingleAnswer(
+          id = UUID.randomUUID(),
+          key = "confirmPricipleIntegrityAndDiscretion",
+          value = Some("true")
+        ),
+        CatalogManagement
+          .CatalogRiskAnalysisSingleAnswer(id = UUID.randomUUID(), key = "ruleOfLawText", value = Some("TheLaw")),
+        CatalogManagement
+          .CatalogRiskAnalysisSingleAnswer(
+            id = UUID.randomUUID(),
+            key = "confirmDataRetentionPeriod",
+            value = Some("true")
+          ),
+        CatalogManagement
+          .CatalogRiskAnalysisSingleAnswer(id = UUID.randomUUID(), key = "usesThirdPartyData", value = Some("YES")),
+        CatalogManagement.CatalogRiskAnalysisSingleAnswer(
+          id = UUID.randomUUID(),
+          key = "otherPersonalDataTypes",
+          value = Some("MyThirdPartyData")
+        ),
+        CatalogManagement
+          .CatalogRiskAnalysisSingleAnswer(id = UUID.randomUUID(), key = "doesUseThirdPartyData", value = Some("YES")),
+        CatalogManagement
+          .CatalogRiskAnalysisSingleAnswer(id = UUID.randomUUID(), key = "knowsDataQuantity", value = Some("NO")),
+        CatalogManagement.CatalogRiskAnalysisSingleAnswer(
+          id = UUID.randomUUID(),
+          key = "institutionalPurpose",
+          value = Some("MyPurpose")
+        ),
+        CatalogManagement
+          .CatalogRiskAnalysisSingleAnswer(id = UUID.randomUUID(), key = "policyProvided", value = Some("NO")),
+        CatalogManagement.CatalogRiskAnalysisSingleAnswer(
+          id = UUID.randomUUID(),
+          key = "reasonPolicyNotProvided",
+          value = Some("Because")
+        ),
+        CatalogManagement.CatalogRiskAnalysisSingleAnswer(id = UUID.randomUUID(), key = "doneDpia", value = Some("NO")),
+        CatalogManagement.CatalogRiskAnalysisSingleAnswer(
+          id = UUID.randomUUID(),
+          key = "declarationConfirmGDPR",
+          value = Some("true")
+        ),
+        CatalogManagement.CatalogRiskAnalysisSingleAnswer(
+          id = UUID.randomUUID(),
+          key = "purposePursuit",
+          value = Some("MERE_CORRECTNESS")
+        )
+      ),
+      multiAnswers = Seq(
+        CatalogManagement
+          .CatalogRiskAnalysisMultiAnswer(id = UUID.randomUUID(), key = "personalDataTypes", values = Seq("OTHER")),
+        CatalogManagement.CatalogRiskAnalysisMultiAnswer(
+          id = UUID.randomUUID(),
+          key = "legalBasis",
+          values = Seq("LEGAL_OBLIGATION", "PUBLIC_INTEREST")
+        )
+      )
+    ),
+    createdAt = OffsetDateTimeSupplier.get()
+  )
+
   val catalogDescriptor: CatalogManagement.CatalogDescriptor = CatalogManagement.CatalogDescriptor(
     id = descriptorId,
     version = "1",
