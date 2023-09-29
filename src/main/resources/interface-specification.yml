@@ -911,7 +911,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  /eservices/{eServiceId}/riskanalysis/{riskAnalysisId}:
+  /eservices/{eServiceId}/riskAnalysis/{riskAnalysisId}:
     parameters:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/IpAddress'
