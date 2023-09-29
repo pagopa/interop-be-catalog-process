@@ -688,8 +688,8 @@ final case class ProcessApiServiceImpl(
       _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       tenant         <- tenantManagementService.getTenantById(organizationId)
       tenantKind     <- tenant.kind.toFuture(TenantKindNotFound(tenant.id))
-      _              <- isRiskAnalysisFormValid(seed.riskAnalysisForm.toTemplate, true)(tenantKind.toTemplate)
-      _              <- catalogManagementService.createRiskAnalysis(eServiceUuid, seed.toDependency)
+      _ <- isRiskAnalysisFormValid(seed.riskAnalysisForm.toTemplate, schemaOnlyValidation = true)(tenantKind.toTemplate)
+      _ <- catalogManagementService.createRiskAnalysis(eServiceUuid, seed.toDependency)
     } yield ()
 
     onComplete(result) {
@@ -714,8 +714,9 @@ final case class ProcessApiServiceImpl(
       _                <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       tenant           <- tenantManagementService.getTenantById(organizationId)
       tenantKind       <- tenant.kind.toFuture(TenantKindNotFound(tenant.id))
-      _                <- isRiskAnalysisFormValid(seed.riskAnalysisForm.toTemplate, true)(tenantKind.toTemplate)
-      _                <- catalogManagementService.updateRiskAnalysis(eServiceUuid, riskAnalysisUuid, seed.toDependency)
+      _ <- isRiskAnalysisFormValid(seed.riskAnalysisForm.toTemplate, schemaOnlyValidation = true)(tenantKind.toTemplate)
+
+      _ <- catalogManagementService.updateRiskAnalysis(eServiceUuid, riskAnalysisUuid, seed.toDependency)
     } yield ()
 
     onComplete(result) {
@@ -767,8 +768,8 @@ object ProcessApiServiceImpl {
     ) Future.unit
     else Future.failed(RiskAnalysisNotValid)
 
-  def isReceiveEService(eService: CatalogItem)(implicit ec: ExecutionContext): Future[Unit] =
-    Future.failed(EServiceNotInReceiveMode(eService.id)).unlessA(eService.mode == Receive)
+  def isReceiveEService(eService: CatalogItem): Future[Unit] =
+    if (eService.mode == Receive) Future.unit else Future.failed(EServiceNotInReceiveMode(eService.id))
 
   def isDraftEService(eService: CatalogItem): Future[Unit] =
     if (eService.descriptors.map(_.state) == Seq(Draft)) Future.unit
