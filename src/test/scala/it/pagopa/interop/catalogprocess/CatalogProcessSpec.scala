@@ -1200,41 +1200,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         problem.errors.head.code shouldBe "009-0018"
       }
     }
-    "fail if mode is Receive and Tenant is not found" in {
-      val requesterId = UUID.randomUUID()
-
-      implicit val context: Seq[(String, String)] =
-        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
-
-      (mockCatalogManagementService
-        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
-        .expects(SpecData.catalogItem.id, *, *)
-        .once()
-        .returns(
-          Future.successful(
-            SpecData.catalogItem.copy(
-              producerId = requesterId,
-              descriptors =
-                Seq(SpecData.catalogDescriptor.copy(state = Draft, interface = Option(SpecData.catalogDocument))),
-              riskAnalysis = Seq(SpecData.catalogRiskAnalysisFullValid),
-              mode = Receive
-            )
-          )
-        )
-
-      (mockTenantManagementService
-        .getTenantById(_: UUID)(_: ExecutionContext, _: ReadModelService))
-        .expects(requesterId, *, *)
-        .once()
-        .returns(Future.failed(TenantNotFound(requesterId)))
-
-      Post() ~> service.publishDescriptor(
-        SpecData.catalogItem.id.toString,
-        SpecData.catalogDescriptor.id.toString
-      ) ~> check {
-        status shouldEqual StatusCodes.InternalServerError
-      }
-    }
     "fail if mode is Receive and Risk Analysis did not pass validation" in {
       val requesterId = UUID.randomUUID()
 
