@@ -295,8 +295,11 @@ object FakeDependencies {
         )
       )
     )
-  }
 
+    override def deleteRiskAnalysis(eServiceId: UUID, riskAnalysisId: UUID)(implicit
+      contexts: Seq[(String, String)]
+    ): Future[Unit] = Future.successful(())
+  }
   class FakeAuthorizationManagementService extends AuthorizationManagementService {
     override def updateStateOnClients(
       eServiceId: UUID,

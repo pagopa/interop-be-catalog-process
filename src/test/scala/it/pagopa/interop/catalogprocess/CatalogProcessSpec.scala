@@ -1107,6 +1107,136 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
     }
   }
   "Descriptor publication" should {
+    "succeed if mode is Receive" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem.copy(
+              producerId = requesterId,
+              descriptors =
+                Seq(SpecData.catalogDescriptor.copy(state = Draft, interface = Option(SpecData.catalogDocument))),
+              riskAnalysis = Seq(SpecData.catalogRiskAnalysisFullValid),
+              mode = Receive
+            )
+          )
+        )
+
+      (mockTenantManagementService
+        .getTenantById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(requesterId, *, *)
+        .once()
+        .returns(Future.successful(SpecData.persistentTenant.copy(id = requesterId)))
+
+      (mockCatalogManagementService
+        .publishDescriptor(_: String, _: String)(_: Seq[(String, String)]))
+        .expects(SpecData.catalogItem.id.toString, SpecData.catalogDescriptor.id.toString, *)
+        .returning(Future.unit)
+        .once()
+
+      (mockAuthorizationManagementService
+        .updateStateOnClients(
+          _: UUID,
+          _: UUID,
+          _: AuthorizationManagementDependency.ClientComponentState,
+          _: Seq[String],
+          _: Int
+        )(_: Seq[(String, String)]))
+        .expects(
+          SpecData.catalogItem.id,
+          SpecData.catalogDescriptor.id,
+          AuthorizationManagementDependency.ClientComponentState.ACTIVE,
+          SpecData.catalogDescriptor.audience,
+          SpecData.catalogDescriptor.voucherLifespan,
+          *
+        )
+        .returning(Future.unit)
+        .once()
+
+      Post() ~> service.publishDescriptor(
+        SpecData.catalogItem.id.toString,
+        SpecData.catalogDescriptor.id.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.NoContent
+      }
+    }
+    "fail if mode is Receive and Catalog Item has not at least one Risk Analysis" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem.copy(
+              producerId = requesterId,
+              descriptors =
+                Seq(SpecData.catalogDescriptor.copy(state = Draft, interface = Option(SpecData.catalogDocument))),
+              riskAnalysis = Seq.empty,
+              mode = Receive
+            )
+          )
+        )
+
+      Post() ~> service.publishDescriptor(
+        SpecData.catalogItem.id.toString,
+        SpecData.catalogDescriptor.id.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+        val problem = responseAs[Problem]
+        problem.status shouldBe StatusCodes.BadRequest.intValue
+        problem.errors.head.code shouldBe "009-0018"
+      }
+    }
+    "fail if mode is Receive and Risk Analysis did not pass validation" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem.copy(
+              producerId = requesterId,
+              descriptors =
+                Seq(SpecData.catalogDescriptor.copy(state = Draft, interface = Option(SpecData.catalogDocument))),
+              riskAnalysis = Seq(SpecData.catalogRiskAnalysisSchemaOnly),
+              mode = Receive
+            )
+          )
+        )
+
+      (mockTenantManagementService
+        .getTenantById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(requesterId, *, *)
+        .once()
+        .returns(Future.successful(SpecData.persistentTenant.copy(id = requesterId)))
+
+      Post() ~> service.publishDescriptor(
+        SpecData.catalogItem.id.toString,
+        SpecData.catalogDescriptor.id.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+        val problem = responseAs[Problem]
+        problem.status shouldBe StatusCodes.BadRequest.intValue
+        problem.errors.head.code shouldBe "009-0016"
+      }
+    }
     "succeed if descriptor is Draft" in {
       val requesterId = UUID.randomUUID()
 
@@ -2827,6 +2957,161 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         val problem = responseAs[Problem]
         problem.status shouldBe StatusCodes.BadRequest.intValue
         problem.errors.head.code shouldBe "009-0016"
+      }
+    }
+  }
+  "Risk Analysis delete" should {
+    "succeed" in {
+      val requesterId        = UUID.randomUUID()
+      val riskAnalysisId     = UUID.randomUUID()
+      val riskAnalysisFormId = UUID.randomUUID()
+      val single             = UUID.randomUUID()
+      val multi              = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val createdDate = OffsetDateTimeSupplier.get()
+
+      val descriptor =
+        SpecData.catalogDescriptor.copy(state = Draft)
+
+      val eService = SpecData.catalogItem.copy(
+        descriptors = Seq(descriptor),
+        producerId = requesterId,
+        riskAnalysis = Seq(
+          CatalogRiskAnalysis(
+            id = riskAnalysisId,
+            name = "OldName",
+            riskAnalysisForm = CatalogRiskAnalysisForm(
+              id = riskAnalysisFormId,
+              version = "3.0",
+              singleAnswers =
+                Seq(CatalogRiskAnalysisSingleAnswer(id = single, key = "purpose", value = Some("INSTITUTIONAL"))),
+              multiAnswers =
+                Seq(CatalogRiskAnalysisMultiAnswer(id = multi, key = "personalDataTypes", values = Seq("OTHER")))
+            ),
+            createdAt = createdDate
+          )
+        ),
+        mode = Receive
+      )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eService.id, *, *)
+        .once()
+        .returns(Future.successful(eService))
+
+      (mockCatalogManagementService
+        .deleteRiskAnalysis(_: UUID, _: UUID)(_: Seq[(String, String)]))
+        .expects(eService.id, riskAnalysisId, *)
+        .returning(Future.successful(()))
+        .once()
+
+      Post() ~> service.deleteRiskAnalysis(eService.id.toString, riskAnalysisId.toString) ~> check {
+        status shouldEqual StatusCodes.NoContent
+      }
+    }
+
+    "fail if Risk Analysis does not exists on EService" in {
+      val requesterId        = UUID.randomUUID()
+      val riskAnalysisId     = UUID.randomUUID()
+      val riskAnalysisFormId = UUID.randomUUID()
+      val single             = UUID.randomUUID()
+      val multi              = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val createdDate = OffsetDateTimeSupplier.get()
+
+      val descriptor =
+        SpecData.catalogDescriptor.copy(state = Draft)
+
+      val eService = SpecData.catalogItem.copy(
+        descriptors = Seq(descriptor),
+        producerId = requesterId,
+        riskAnalysis = Seq(
+          CatalogRiskAnalysis(
+            id = UUID.randomUUID(),
+            name = "OldName",
+            riskAnalysisForm = CatalogRiskAnalysisForm(
+              id = riskAnalysisFormId,
+              version = "3.0",
+              singleAnswers =
+                Seq(CatalogRiskAnalysisSingleAnswer(id = single, key = "purpose", value = Some("INSTITUTIONAL"))),
+              multiAnswers =
+                Seq(CatalogRiskAnalysisMultiAnswer(id = multi, key = "personalDataTypes", values = Seq("OTHER")))
+            ),
+            createdAt = createdDate
+          )
+        ),
+        mode = Receive
+      )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eService.id, *, *)
+        .once()
+        .returns(Future.successful(eService))
+
+      (mockCatalogManagementService
+        .deleteRiskAnalysis(_: UUID, _: UUID)(_: Seq[(String, String)]))
+        .expects(eService.id, riskAnalysisId, *)
+        .returning(Future.failed(EServiceRiskAnalysisNotFound(eService.id, riskAnalysisId)))
+        .once()
+
+      Post() ~> service.deleteRiskAnalysis(eService.id.toString, riskAnalysisId.toString) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
+    "fail if descriptor is not DRAFT" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val descriptor =
+        SpecData.catalogDescriptor.copy(state = Published)
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId, mode = Receive)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eService.id, *, *)
+        .once()
+        .returns(Future.successful(eService))
+
+      Post() ~> service.deleteRiskAnalysis(eService.id.toString, UUID.randomUUID().toString) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+        val problem = responseAs[Problem]
+        problem.status shouldBe StatusCodes.BadRequest.intValue
+        problem.errors.head.code shouldBe "009-0012"
+      }
+    }
+    "fail if EService is not Receive" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val descriptor =
+        SpecData.catalogDescriptor.copy(state = Draft)
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId, mode = Deliver)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eService.id, *, *)
+        .once()
+        .returns(Future.successful(eService))
+
+      Post() ~> service.deleteRiskAnalysis(eService.id.toString, UUID.randomUUID().toString) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+        val problem = responseAs[Problem]
+        problem.status shouldBe StatusCodes.BadRequest.intValue
+        problem.errors.head.code shouldBe "009-0013"
       }
     }
   }

@@ -75,6 +75,18 @@ object ResponseHandlers extends AkkaResponses {
       case Failure(ex)                               => internalServerError(ex, logMessage)
     }
 
+  def deleteRiskAnalysisResponse[T](logMessage: String)(
+    success: T => Route
+  )(result: Try[T])(implicit contexts: Seq[(String, String)], logger: LoggerTakingImplicit[ContextFieldsToLog]): Route =
+    result match {
+      case Success(s)                                => success(s)
+      case Failure(ex: EServiceNotFound)             => notFound(ex, logMessage)
+      case Failure(ex: EServiceRiskAnalysisNotFound) => notFound(ex, logMessage)
+      case Failure(ex: EServiceNotInDraftState)      => badRequest(ex, logMessage)
+      case Failure(ex: EServiceNotInReceiveMode)     => badRequest(ex, logMessage)
+      case Failure(ex)                               => internalServerError(ex, logMessage)
+    }
+
   def updateEServiceByIdResponse[T](logMessage: String)(
     success: T => Route
   )(result: Try[T])(implicit contexts: Seq[(String, String)], logger: LoggerTakingImplicit[ContextFieldsToLog]): Route =
@@ -174,6 +186,8 @@ object ResponseHandlers extends AkkaResponses {
       case Failure(ex: EServiceNotFound)                   => notFound(ex, logMessage)
       case Failure(ex: EServiceDescriptorNotFound)         => notFound(ex, logMessage)
       case Failure(ex: EServiceDescriptorWithoutInterface) => badRequest(ex, logMessage)
+      case Failure(ex: EServiceRiskAnalysisIsRequired)     => badRequest(ex, logMessage)
+      case Failure(ex: RiskAnalysisNotValid.type)          => badRequest(ex, logMessage)
       case Failure(ex)                                     => internalServerError(ex, logMessage)
     }
 

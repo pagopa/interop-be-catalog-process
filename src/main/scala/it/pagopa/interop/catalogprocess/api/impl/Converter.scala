@@ -399,18 +399,25 @@ object Converter {
       singleAnswers = p.singleAnswers.map(_.toApi),
       multiAnswers = p.multiAnswers.map(_.toApi)
     )
+
+    def toTemplate: Commons.RiskAnalysisForm = Commons.RiskAnalysisForm(
+      version = p.version,
+      answers = (p.singleAnswers.map(_.toTemplate).flatten ++ p.multiAnswers.map(_.toTemplate).flatten).toMap
+    )
   }
 
   implicit class CatalogRiskAnalysisSingleAnswerObjectWrapper(private val p: readmodel.CatalogRiskAnalysisSingleAnswer)
       extends AnyVal {
     def toApi: EServiceRiskAnalysisSingleAnswer =
       EServiceRiskAnalysisSingleAnswer(id = p.id, key = p.key, value = p.value)
+    def toTemplate: Map[String, Seq[String]]    = Map(p.key -> p.value.toSeq)
   }
 
   implicit class CatalogRiskAnalysisMultiAnswerObjectWrapper(private val p: readmodel.CatalogRiskAnalysisMultiAnswer)
       extends AnyVal {
     def toApi: EServiceRiskAnalysisMultiAnswer =
       EServiceRiskAnalysisMultiAnswer(id = p.id, key = p.key, values = p.values)
+    def toTemplate: Map[String, Seq[String]]   = Map(p.key -> p.values)
   }
 
   implicit class ReadModelModeWrapper(private val mode: readmodel.CatalogItemMode) extends AnyVal {
