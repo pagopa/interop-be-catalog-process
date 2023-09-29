@@ -695,8 +695,9 @@ final case class ProcessApiServiceImpl(
       _                <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       tenant           <- tenantManagementService.getTenantById(organizationId)
       tenantKind       <- tenant.kind.toFuture(TenantKindNotFound(tenant.id))
-      _                <- isRiskAnalysisFormValid(seed.riskAnalysisForm.toTemplate, true)(tenantKind.toTemplate)
-      _                <- catalogManagementService.updateRiskAnalysis(eServiceUuid, riskAnalysisUuid, seed.toDependency)
+      _ <- isRiskAnalysisFormValid(seed.riskAnalysisForm.toTemplate, schemaOnlyValidation = true)(tenantKind.toTemplate)
+
+      _ <- catalogManagementService.updateRiskAnalysis(eServiceUuid, riskAnalysisUuid, seed.toDependency)
     } yield ()
 
     onComplete(result) {
