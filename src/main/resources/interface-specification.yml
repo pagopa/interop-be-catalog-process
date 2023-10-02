@@ -864,6 +864,150 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /eservices/{eServiceId}/riskAnalysis:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/IpAddress'
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - process
+      summary: Create an e-service risk analysis
+      operationId: createRiskAnalysis
+      parameters:
+        - name: eServiceId
+          in: path
+          description: the eservice id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        description: A payload containing the risk analysis
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EServiceRiskAnalysisSeed'
+      responses:
+        '204':
+          description: EService Risk Analysis created.
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'    
+        '404':
+          description: EService not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /eservices/{eServiceId}/riskAnalysis/{riskAnalysisId}:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/IpAddress'
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - process
+      summary: Update an e-service risk analysis
+      operationId: updateRiskAnalysis
+      parameters:
+        - name: eServiceId
+          in: path
+          description: the eservice id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: riskAnalysisId
+          in: path
+          description: the eservice id
+          required: true
+          schema:
+            type: string
+            format: uuid    
+      requestBody:
+        description: A payload containing the risk analysis to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EServiceRiskAnalysisSeed'
+      responses:
+        '204':
+          description: EService Risk Analysis updated.
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'  
+        '404':
+          description: EService not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    delete:
+      security:
+        - bearerAuth: []
+      tags:
+        - process
+      summary: Delete an e-service risk analysis
+      operationId: deleteRiskAnalysis
+      parameters:
+        - name: eServiceId
+          in: path
+          description: the eservice id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: riskAnalysisId
+          in: path
+          description: the eservice id
+          required: true
+          schema:
+            type: string
+            format: uuid    
+      responses:
+        '204':
+          description: EService Risk Analysis deleted.
+        '403':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'                          
+        '404':
+          description: EService not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'                          
   /status:
     get:
       security: []
@@ -899,6 +1043,7 @@ components:
         - name
         - description
         - technology
+        - mode
       properties:
         name:
           type: string
@@ -910,12 +1055,15 @@ components:
           maxLength: 250
         technology:
           $ref: '#/components/schemas/EServiceTechnology'
+        mode:
+          $ref: '#/components/schemas/EServiceMode'  
     UpdateEServiceSeed:
       type: object
       required:
         - name
         - description
         - technology
+        - mode
       properties:
         name:
           type: string
@@ -927,6 +1075,8 @@ components:
           maxLength: 250
         technology:
           $ref: '#/components/schemas/EServiceTechnology'
+        mode:
+          $ref: '#/components/schemas/EServiceMode'  
     EServiceDescriptorSeed:
       required:
         - audience
@@ -1100,6 +1250,54 @@ components:
           format: uuid
         name:
           type: string
+    EServiceRiskAnalysisSeed:
+      type: object
+      required:
+        - name
+        - riskAnalysisForm
+      properties:
+        name:
+          type: string
+        riskAnalysisForm:
+          $ref:  '#/components/schemas/EServiceRiskAnalysisFormSeed'
+    EServiceRiskAnalysisFormSeed:
+      type: object
+      required:
+        - version
+        - singleAnswers
+        - multiAnswers
+      properties:
+        version:
+          type: string
+        singleAnswers:
+          type: array
+          items:
+            $ref: '#/components/schemas/EServiceRiskAnalysisSingleAnswerSeed'
+        multiAnswers:
+          type: array
+          items:
+            $ref: '#/components/schemas/EServiceRiskAnalysisMultiAnswerSeed'    
+    EServiceRiskAnalysisSingleAnswerSeed:
+      type: object
+      required:
+        - key
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+    EServiceRiskAnalysisMultiAnswerSeed:
+      type: object
+      required:
+        - key
+        - values
+      properties:
+        key:
+          type: string
+        values:
+          type: array
+          items:
+            type: string            
     EService:
       type: object
       required:
@@ -1109,6 +1307,8 @@ components:
         - description
         - technology
         - descriptors
+        - riskAnalysis
+        - mode
       properties:
         id:
           type: string
@@ -1126,6 +1326,86 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EServiceDescriptor'
+        riskAnalysis:
+          type: array
+          items:
+            $ref: '#/components/schemas/EServiceRiskAnalysis'
+        mode:
+           $ref: '#/components/schemas/EServiceMode'    
+    EServiceMode:
+      type: string
+      description: Risk Analysis Mode
+      enum:
+        - RECEIVE
+        - DELIVER 
+    EServiceRiskAnalysis:
+      type: object
+      required:
+        - id
+        - name
+        - riskAnalysisForm
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        riskAnalysisForm:
+          $ref: '#/components/schemas/EServiceRiskAnalysisForm'  
+        createdAt:
+          type: string
+          format: date-time
+    EServiceRiskAnalysisForm:
+      type: object
+      required:
+        - id
+        - version
+        - singleAnswers
+        - multiAnswers
+      properties:
+        id:
+          type: string
+          format: uuid
+        version:
+          type: string
+        singleAnswers:
+          type: array
+          items:
+            $ref: '#/components/schemas/EServiceRiskAnalysisSingleAnswer'
+        multiAnswers:
+          type: array
+          items:
+            $ref: '#/components/schemas/EServiceRiskAnalysisMultiAnswer'
+    EServiceRiskAnalysisSingleAnswer:
+      type: object
+      required:
+        - id 
+        - key
+      properties:
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+        value:
+          type: string
+    EServiceRiskAnalysisMultiAnswer:
+      type: object
+      required:
+        - id
+        - key
+        - values
+      properties:
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+        values:
+          type: array
+          items:
+            type: string            
     EServiceConsumers:
       type: object
       properties:

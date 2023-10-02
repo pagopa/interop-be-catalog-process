@@ -16,7 +16,8 @@ import it.pagopa.interop.catalogmanagement.client.model.{
   UpdateEServiceDescriptorDocumentSeed,
   UpdateEServiceDescriptorSeed,
   UpdateEServiceSeed,
-  CreateEServiceDescriptorDocumentSeed
+  CreateEServiceDescriptorDocumentSeed,
+  RiskAnalysisSeed
 }
 import it.pagopa.interop.catalogprocess.common.readmodel.{PaginatedResult, Consumers}
 import it.pagopa.interop.catalogmanagement.model.{
@@ -25,13 +26,17 @@ import it.pagopa.interop.catalogmanagement.model.{
   CatalogAttributes,
   CatalogDocument,
   Published,
-  CatalogDescriptorState
+  CatalogDescriptorState,
+  Deliver
 }
+import it.pagopa.interop.tenantmanagement.model.tenant.{PersistentTenant, PersistentTenantKind, PersistentExternalId}
 import it.pagopa.interop.catalogprocess.service.{
   AuthorizationManagementService,
   CatalogManagementService,
-  AgreementManagementService
+  AgreementManagementService,
+  TenantManagementService
 }
+import it.pagopa.interop.catalogmanagement.client.model.{EServiceMode, EServiceRiskAnalysis, RiskAnalysisForm}
 
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -56,7 +61,9 @@ object FakeDependencies {
           technology = Rest,
           descriptors = Seq.empty,
           attributes = Some(CatalogAttributes.empty),
-          createdAt = OffsetDateTime.now()
+          createdAt = OffsetDateTime.now(),
+          riskAnalysis = Seq.empty,
+          mode = Deliver
         )
       )
 
@@ -84,7 +91,9 @@ object FakeDependencies {
         name = "fake",
         description = "fake",
         technology = EServiceTechnology.REST,
-        descriptors = Seq.empty
+        descriptors = Seq.empty,
+        riskAnalysis = Seq.empty,
+        mode = EServiceMode.DELIVER
       )
     )
 
@@ -101,7 +110,9 @@ object FakeDependencies {
         name = "fake",
         description = "fake",
         technology = EServiceTechnology.REST,
-        descriptors = Seq.empty
+        descriptors = Seq.empty,
+        riskAnalysis = Seq.empty,
+        mode = EServiceMode.DELIVER
       )
     )
 
@@ -114,7 +125,9 @@ object FakeDependencies {
         name = "fake",
         description = "fake",
         technology = EServiceTechnology.REST,
-        descriptors = Seq.empty
+        descriptors = Seq.empty,
+        riskAnalysis = Seq.empty,
+        mode = EServiceMode.DELIVER
       )
     )
 
@@ -170,7 +183,9 @@ object FakeDependencies {
         name = "fake",
         description = "fake",
         technology = EServiceTechnology.REST,
-        descriptors = Seq.empty
+        descriptors = Seq.empty,
+        riskAnalysis = Seq.empty,
+        mode = EServiceMode.DELIVER
       )
     )
 
@@ -201,7 +216,9 @@ object FakeDependencies {
             serverUrls = Nil,
             attributes = Attributes(Nil, Nil, Nil)
           )
-        )
+        ),
+        riskAnalysis = Seq.empty,
+        mode = EServiceMode.DELIVER
       )
     )
 
@@ -256,8 +273,33 @@ object FakeDependencies {
       exactMatchOnName: Boolean = false
     )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PaginatedResult[CatalogItem]] =
       Future.successful(PaginatedResult(results = Seq.empty, totalCount = 0))
-  }
 
+    override def createRiskAnalysis(eServiceId: UUID, riskAnalysisSeed: RiskAnalysisSeed)(implicit
+      contexts: Seq[(String, String)]
+    ): Future[Unit] = Future.successful(())
+
+    override def updateRiskAnalysis(eServiceId: UUID, riskAnalysisId: UUID, riskAnalysisSeed: RiskAnalysisSeed)(implicit
+      contexts: Seq[(String, String)]
+    ): Future[EServiceRiskAnalysis] = Future.successful(
+      (
+        EServiceRiskAnalysis(
+          id = UUID.randomUUID(),
+          name = "name",
+          riskAnalysisForm = RiskAnalysisForm(
+            id = UUID.randomUUID(),
+            version = "version",
+            singleAnswers = Seq.empty,
+            multiAnswers = Seq.empty
+          ),
+          createdAt = OffsetDateTime.now()
+        )
+      )
+    )
+
+    override def deleteRiskAnalysis(eServiceId: UUID, riskAnalysisId: UUID)(implicit
+      contexts: Seq[(String, String)]
+    ): Future[Unit] = Future.successful(())
+  }
   class FakeAuthorizationManagementService extends AuthorizationManagementService {
     override def updateStateOnClients(
       eServiceId: UUID,
@@ -276,5 +318,24 @@ object FakeDependencies {
       states: Seq[PersistentAgreementState]
     )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[Seq[PersistentAgreement]] =
       Future.successful(Seq.empty)
+  }
+
+  class FakeTenantManagementService extends TenantManagementService {
+    override def getTenantById(
+      tenantId: UUID
+    )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PersistentTenant] = Future.successful(
+      PersistentTenant(
+        id = UUID.randomUUID(),
+        kind = Some(PersistentTenantKind.PA),
+        selfcareId = None,
+        externalId = PersistentExternalId("IPA", "value"),
+        features = Nil,
+        attributes = Nil,
+        createdAt = OffsetDateTime.now(),
+        updatedAt = Some(OffsetDateTime.now().plusDays(10)),
+        mails = Nil,
+        name = "name"
+      )
+    )
   }
 }

@@ -70,7 +70,8 @@ trait Dependencies {
         catalogManagementService = catalogManagementService(blockingEc),
         AgreementManagementServiceImpl,
         authorizationManagementService = authorizationManagementService(blockingEc),
-        fileManager = fileManager
+        fileManager = fileManager,
+        tenantManagementService = TenantManagementServiceImpl
       ),
       ProcessApiMarshallerImpl,
       jwtReader.OAuth2JWTValidatorAsContexts

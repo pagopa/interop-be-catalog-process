@@ -19,7 +19,8 @@ import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors.{
   DescriptorDocumentNotFound,
   EServiceDescriptorNotFound,
-  EServiceNotFound
+  EServiceNotFound,
+  EServiceRiskAnalysisNotFound
 }
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 
@@ -296,6 +297,58 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       limit,
       exactMatchOnName
     )
+
+  override def createRiskAnalysis(eServiceId: UUID, riskAnalysisSeed: RiskAnalysisSeed)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[Unit] = withHeaders { (bearerToken, correlationId, ip) =>
+    val request = api.createRiskAnalysis(
+      xCorrelationId = correlationId,
+      eServiceId = eServiceId,
+      riskAnalysisSeed = riskAnalysisSeed,
+      xForwardedFor = ip
+    )(BearerToken(bearerToken))
+    invoker
+      .invoke(request, s"Create Risk Analysis for E-Services $eServiceId")
+      .recoverWith {
+        case err: ApiError[_] if err.code == 404 =>
+          Future.failed(EServiceNotFound(eServiceId.toString))
+      }
+  }
+
+  override def updateRiskAnalysis(eServiceId: UUID, riskAnalysisId: UUID, riskAnalysisSeed: RiskAnalysisSeed)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[EServiceRiskAnalysis] = withHeaders { (bearerToken, correlationId, ip) =>
+    val request = api.updateRiskAnalysis(
+      xCorrelationId = correlationId,
+      eServiceId = eServiceId,
+      riskAnalysisId = riskAnalysisId,
+      riskAnalysisSeed = riskAnalysisSeed,
+      xForwardedFor = ip
+    )(BearerToken(bearerToken))
+    invoker
+      .invoke(request, s"Update Risk Analysis $riskAnalysisId for E-Services $eServiceId")
+      .recoverWith {
+        case err: ApiError[_] if err.code == 404 =>
+          Future.failed(EServiceRiskAnalysisNotFound(eServiceId, riskAnalysisId))
+      }
+  }
+
+  override def deleteRiskAnalysis(eServiceId: UUID, riskAnalysisId: UUID)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[Unit] = withHeaders { (bearerToken, correlationId, ip) =>
+    val request = api.deleteRiskAnalysis(
+      xCorrelationId = correlationId,
+      eServiceId = eServiceId,
+      riskAnalysisId = riskAnalysisId,
+      xForwardedFor = ip
+    )(BearerToken(bearerToken))
+    invoker
+      .invoke(request, s"Delete Risk Analysis $riskAnalysisId for E-Services $eServiceId")
+      .recoverWith {
+        case err: ApiError[_] if err.code == 404 =>
+          Future.failed(EServiceRiskAnalysisNotFound(eServiceId, riskAnalysisId))
+      }
+  }
 
   private def getDocument(eService: CatalogItem, descriptorId: UUID, documentId: UUID): Option[CatalogDocument] = {
 

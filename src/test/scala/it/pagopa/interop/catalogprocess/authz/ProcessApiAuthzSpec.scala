@@ -22,6 +22,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
   val fakeAgreementManagementService: AgreementManagementService         = new FakeAgreementManagementService()
   val fakeCatalogManagementService: CatalogManagementService             = new FakeCatalogManagementService()
   val fakeAuthorizationManagementService: AuthorizationManagementService = new FakeAuthorizationManagementService()
+  val fakeTenantManagementService: TenantManagementService               = new FakeTenantManagementService()
   private val threadPool: ExecutorService                                = Executors.newSingleThreadExecutor()
   private val blockingEc: ExecutionContextExecutor = ExecutionContext.fromExecutorService(threadPool)
   val fakeFileManager: FileManager                 = FileManager.get(FileManager.File)(blockingEc)
@@ -39,6 +40,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
       fakeCatalogManagementService,
       fakeAgreementManagementService,
       fakeAuthorizationManagementService,
+      fakeTenantManagementService,
       fakeFileManager
     )(ExecutionContext.global, fakeReadModel)
 
@@ -47,7 +49,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
     "accept authorized roles for createEService" in {
       val endpoint = AuthorizedRoutes.endpoints("createEService")
       val fakeSeed =
-        EServiceSeed("test", "test", EServiceTechnology.REST)
+        EServiceSeed("test", "test", EServiceTechnology.REST, mode = EServiceMode.DELIVER)
       validateAuthorization(endpoint, { implicit c: Seq[(String, String)] => service.createEService(fakeSeed) })
     }
 
@@ -130,7 +132,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
     "accept authorized roles for updateEServiceById" in {
       val endpoint = AuthorizedRoutes.endpoints("updateEServiceById")
       val fakeSeed =
-        UpdateEServiceSeed("test", "test", EServiceTechnology.REST)
+        UpdateEServiceSeed("test", "test", EServiceTechnology.REST, EServiceMode.DELIVER)
       validateAuthorization(
         endpoint,
         { implicit c: Seq[(String, String)] => service.updateEServiceById("fake", fakeSeed) }
@@ -204,6 +206,42 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
       validateAuthorization(
         endpoint,
         { implicit c: Seq[(String, String)] => service.archiveDescriptor("fake", "fake") }
+      )
+    }
+
+    "accept authorized roles for createRiskAnalysis" in {
+      val endpoint = AuthorizedRoutes.endpoints("createRiskAnalysis")
+      val fakeSeed = EServiceRiskAnalysisSeed(
+        "test",
+        EServiceRiskAnalysisFormSeed(version = "fake", singleAnswers = Seq.empty, multiAnswers = Seq.empty)
+      )
+      validateAuthorization(
+        endpoint,
+        { implicit c: Seq[(String, String)] => service.createRiskAnalysis(UUID.randomUUID().toString, fakeSeed) }
+      )
+    }
+
+    "accept authorized roles for updateRiskAnalysis" in {
+      val endpoint = AuthorizedRoutes.endpoints("updateRiskAnalysis")
+      val fakeSeed = EServiceRiskAnalysisSeed(
+        "test",
+        EServiceRiskAnalysisFormSeed(version = "fake", singleAnswers = Seq.empty, multiAnswers = Seq.empty)
+      )
+      validateAuthorization(
+        endpoint,
+        { implicit c: Seq[(String, String)] =>
+          service.updateRiskAnalysis(UUID.randomUUID().toString, UUID.randomUUID().toString, fakeSeed)
+        }
+      )
+    }
+
+    "accept authorized roles for deleteRiskAnalysis" in {
+      val endpoint = AuthorizedRoutes.endpoints("deleteRiskAnalysis")
+      validateAuthorization(
+        endpoint,
+        { implicit c: Seq[(String, String)] =>
+          service.deleteRiskAnalysis(UUID.randomUUID().toString, UUID.randomUUID().toString)
+        }
       )
     }
   }

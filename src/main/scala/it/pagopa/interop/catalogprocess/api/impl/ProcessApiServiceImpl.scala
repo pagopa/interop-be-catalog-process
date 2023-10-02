@@ -22,6 +22,8 @@ import it.pagopa.interop.commons.utils.AkkaUtils._
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors
+import it.pagopa.interop.commons.riskanalysis.api.impl.RiskAnalysisValidation
+import it.pagopa.interop.commons.riskanalysis.{model => Commons}
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
@@ -33,13 +35,16 @@ import it.pagopa.interop.catalogmanagement.model.{
   Published,
   Draft,
   Suspended,
-  Deprecated
+  Deprecated,
+  Receive,
+  Deliver
 }
 
 final case class ProcessApiServiceImpl(
   catalogManagementService: CatalogManagementService,
   agreementManagementService: AgreementManagementService,
   authorizationManagementService: AuthorizationManagementService,
+  tenantManagementService: TenantManagementService,
   fileManager: FileManager
 )(implicit ec: ExecutionContext, readModel: ReadModelService)
     extends ProcessApiService {
@@ -199,6 +204,23 @@ final case class ProcessApiServiceImpl(
     val operationLabel = s"Publishing descriptor $descriptorId for EService $eServiceId"
     logger.info(operationLabel)
 
+    def verifyRiskAnalysisForPublication(catalogItem: CatalogItem): Future[Unit] = catalogItem.mode match {
+      case Deliver => Future.unit
+      case Receive =>
+        for {
+          _          <-
+            if (catalogItem.riskAnalysis.isEmpty) Future.failed(EServiceRiskAnalysisIsRequired(catalogItem.id))
+            else Future.unit
+          tenant     <- tenantManagementService.getTenantById(catalogItem.producerId)
+          tenantKind <- tenant.kind.toFuture(TenantKindNotFound(tenant.id))
+          _          <- catalogItem.riskAnalysis.traverse(risk =>
+            isRiskAnalysisFormValid(riskAnalysisForm = risk.riskAnalysisForm.toTemplate, schemaOnlyValidation = false)(
+              tenantKind.toTemplate
+            )
+          )
+        } yield ()
+    }
+
     val result: Future[Unit] = for {
       organizationId <- getOrganizationIdFutureUUID(contexts)
       eServiceUuid   <- eServiceId.toFutureUUID
@@ -207,6 +229,7 @@ final case class ProcessApiServiceImpl(
       _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       descriptor     <- assertDescriptorExists(catalogItem, descriptorUuid)
       _              <- verifyPublicationEligibility(descriptor)
+      _              <- verifyRiskAnalysisForPublication(catalogItem)
       currentActiveDescriptor = catalogItem.descriptors.find(d => d.state == Published) // Must be at most one
       _ <- catalogManagementService.publishDescriptor(eServiceId, descriptorId)
       _ <- currentActiveDescriptor
@@ -648,6 +671,78 @@ final case class ProcessApiServiceImpl(
       suspendDescriptorResponse[Unit](operationLabel)(_ => archiveDescriptor204)
     }
   }
+
+  override def createRiskAnalysis(eServiceId: String, seed: EServiceRiskAnalysisSeed)(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+  ): Route = authorize(ADMIN_ROLE, API_ROLE) {
+    val operationLabel = s"Create Risk Analysis for EService $eServiceId"
+    logger.info(operationLabel)
+
+    val result = for {
+      organizationId <- getOrganizationIdFutureUUID(contexts)
+      eServiceUuid   <- eServiceId.toFutureUUID
+      catalogItem    <- catalogManagementService.getEServiceById(eServiceUuid)
+      _              <- isDraftEService(catalogItem)
+      _              <- isReceiveEService(catalogItem)
+      _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
+      tenant         <- tenantManagementService.getTenantById(organizationId)
+      tenantKind     <- tenant.kind.toFuture(TenantKindNotFound(tenant.id))
+      _ <- isRiskAnalysisFormValid(seed.riskAnalysisForm.toTemplate, schemaOnlyValidation = true)(tenantKind.toTemplate)
+      _ <- catalogManagementService.createRiskAnalysis(eServiceUuid, seed.toDependency)
+    } yield ()
+
+    onComplete(result) {
+      createRiskAnalysisResponse[Unit](operationLabel)(_ => createRiskAnalysis204)
+    }
+  }
+
+  def updateRiskAnalysis(eServiceId: String, riskAnalysisId: String, seed: EServiceRiskAnalysisSeed)(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+  ): Route = authorize(ADMIN_ROLE, API_ROLE) {
+    val operationLabel = s"Update a Risk Analysis for EService $eServiceId"
+    logger.info(operationLabel)
+
+    val result = for {
+      organizationId   <- getOrganizationIdFutureUUID(contexts)
+      eServiceUuid     <- eServiceId.toFutureUUID
+      riskAnalysisUuid <- riskAnalysisId.toFutureUUID
+      catalogItem      <- catalogManagementService.getEServiceById(eServiceUuid)
+      _                <- isDraftEService(catalogItem)
+      _                <- isReceiveEService(catalogItem)
+      _                <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
+      tenant           <- tenantManagementService.getTenantById(organizationId)
+      tenantKind       <- tenant.kind.toFuture(TenantKindNotFound(tenant.id))
+      _ <- isRiskAnalysisFormValid(seed.riskAnalysisForm.toTemplate, schemaOnlyValidation = true)(tenantKind.toTemplate)
+      _ <- catalogManagementService.updateRiskAnalysis(eServiceUuid, riskAnalysisUuid, seed.toDependency)
+    } yield ()
+
+    onComplete(result) {
+      updateRiskAnalysisResponse[Unit](operationLabel)(_ => updateRiskAnalysis204)
+    }
+  }
+
+  override def deleteRiskAnalysis(eServiceId: String, riskAnalysisId: String)(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem]
+  ): Route = authorize(ADMIN_ROLE, API_ROLE) {
+    val operationLabel = s"Delete a Risk Analysis $riskAnalysisId for EService $eServiceId"
+    logger.info(operationLabel)
+
+    val result = for {
+      eServiceUuid     <- eServiceId.toFutureUUID
+      riskAnalysisUuid <- riskAnalysisId.toFutureUUID
+      catalogItem      <- catalogManagementService.getEServiceById(eServiceUuid)
+      _                <- isDraftEService(catalogItem)
+      _                <- isReceiveEService(catalogItem)
+      _                <- catalogManagementService.deleteRiskAnalysis(eServiceUuid, riskAnalysisUuid)
+    } yield ()
+
+    onComplete(result) {
+      deleteRiskAnalysisResponse[Unit](operationLabel)(_ => deleteRiskAnalysis204)
+    }
+  }
 }
 
 object ProcessApiServiceImpl {
@@ -661,6 +756,25 @@ object ProcessApiServiceImpl {
       case Draft => Future.successful(descriptor)
       case _     => Future.failed(NotValidDescriptor(descriptor.id.toString, descriptor.state.toString))
     }
+
+  def isRiskAnalysisFormValid(riskAnalysisForm: Commons.RiskAnalysisForm, schemaOnlyValidation: Boolean)(
+    kind: Commons.RiskAnalysisTenantKind
+  ): Future[Unit] =
+    if (
+      RiskAnalysisValidation
+        .validate(riskAnalysisForm, schemaOnlyValidation)(kind)
+        .isValid
+    ) Future.unit
+    else Future.failed(RiskAnalysisNotValid)
+
+  def isReceiveEService(eService: CatalogItem): Future[Unit] =
+    if (eService.mode == Receive) Future.unit else Future.failed(EServiceNotInReceiveMode(eService.id))
+
+  def isDraftEService(eService: CatalogItem): Future[Unit] =
+    if (eService.descriptors.map(_.state) == Seq(Draft)) Future.unit
+    else
+      Future
+        .failed(EServiceNotInDraftState(eService.id))
 
   def assertRequesterAllowed(resourceId: UUID)(requesterId: UUID)(implicit ec: ExecutionContext): Future[Unit] =
     Future.failed(GenericComponentErrors.OperationForbidden).unlessA(resourceId == requesterId)

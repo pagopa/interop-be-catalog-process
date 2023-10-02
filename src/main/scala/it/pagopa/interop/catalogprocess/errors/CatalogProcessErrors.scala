@@ -1,6 +1,7 @@
 package it.pagopa.interop.catalogprocess.errors
 
 import it.pagopa.interop.commons.utils.errors.ComponentError
+import java.util.UUID
 
 object CatalogProcessErrors {
 
@@ -46,4 +47,23 @@ object CatalogProcessErrors {
   final case class OriginIsNotCompliant(origin: String)
       extends ComponentError("0011", s"Requester has not origin: $origin")
 
+  final case class EServiceNotInDraftState(eServiceId: UUID)
+      extends ComponentError("0012", s"EService $eServiceId is not draft")
+
+  final case class EServiceNotInReceiveMode(eServiceId: UUID)
+      extends ComponentError("0013", s"EService $eServiceId is not in receive mode")
+
+  final case class TenantNotFound(tenantId: UUID)
+      extends ComponentError("0014", s"Tenant ${tenantId.toString} not found")
+
+  final case class TenantKindNotFound(tenantId: UUID)
+      extends ComponentError("0015", s"Tenant kind for tenant ${tenantId.toString} not found")
+
+  final case object RiskAnalysisNotValid extends ComponentError("0016", s"Risk Analysis did not pass validation")
+
+  final case class EServiceRiskAnalysisNotFound(eServiceId: UUID, riskAnalysisId: UUID)
+      extends ComponentError("0017", s"Risk Analysis $riskAnalysisId not found for EService $eServiceId")
+
+  final case class EServiceRiskAnalysisIsRequired(eServiceId: UUID)
+      extends ComponentError("0018", s"At least one Risk Analysis is required for EService $eServiceId")
 }
