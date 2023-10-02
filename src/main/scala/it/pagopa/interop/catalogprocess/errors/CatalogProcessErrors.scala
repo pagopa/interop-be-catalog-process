@@ -23,9 +23,6 @@ object CatalogProcessErrors {
         s"Descriptor $descriptorId has a not valid status for this operation $descriptorStatus"
       )
 
-  final case object FlattenedEServicesRetrievalError
-      extends ComponentError("0005", s"Unexpected error while retrieving flattened E-Services")
-
   final case class DescriptorDocumentNotFound(eServiceId: String, descriptorId: String, documentId: String)
       extends ComponentError(
         "0006",
