@@ -1,6 +1,8 @@
 package it.pagopa.interop.catalogprocess.errors
 
+import cats.data.NonEmptyChain
 import it.pagopa.interop.commons.utils.errors.ComponentError
+import it.pagopa.interop.commons.riskanalysis.error
 import java.util.UUID
 
 object CatalogProcessErrors {
@@ -63,4 +65,13 @@ object CatalogProcessErrors {
 
   final case class EServiceRiskAnalysisIsRequired(eServiceId: UUID)
       extends ComponentError("0018", s"At least one Risk Analysis is required for EService $eServiceId")
+
+  final case class RiskAnalysisValidationFailed(reason: String)
+      extends ComponentError("0019", s"Risk analysis validation failed. Reasons: $reason")
+
+  final object RiskAnalysisValidationFailed {
+    def apply(failures: NonEmptyChain[error.RiskAnalysisValidationError]): RiskAnalysisValidationFailed =
+      RiskAnalysisValidationFailed(failures.map(_.message).distinct.iterator.mkString("[", ", ", "]"))
+  }
+
 }

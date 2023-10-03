@@ -8,6 +8,8 @@ import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.common.readmodel.Consumers
 import it.pagopa.interop.tenantmanagement.model.tenant.PersistentTenantKind
 import it.pagopa.interop.catalogmanagement.model.{Deliver, Receive}
+import it.pagopa.interop.commons.riskanalysis.api.impl.RiskAnalysisValidation
+import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors.RiskAnalysisValidationFailed
 
 import java.util.UUID
 
@@ -102,23 +104,44 @@ object Converter {
   }
 
   implicit class EServiceRiskAnalysisSeedWrapper(private val seed: EServiceRiskAnalysisSeed) extends AnyVal {
-    def toDependency: CatalogManagementDependency.RiskAnalysisSeed = CatalogManagementDependency.RiskAnalysisSeed(
-      name = seed.name,
-      riskAnalysisForm = seed.riskAnalysisForm.toDependency
-    )
+    def toDependency(schemaOnlyValidation: Boolean)(
+      kind: PersistentTenantKind
+    ): Either[RiskAnalysisValidationFailed, CatalogManagementDependency.RiskAnalysisSeed] = for {
+      riskAnalysisFormSeed <-
+        RiskAnalysisValidation
+          .validate(seed.riskAnalysisForm.toTemplate, schemaOnlyValidation)(kind.toTemplate)
+          .leftMap(RiskAnalysisValidationFailed(_))
+          .toEither
+          .map(_.toDependency)
+    } yield CatalogManagementDependency.RiskAnalysisSeed(name = seed.name, riskAnalysisForm = riskAnalysisFormSeed)
+  }
+
+  implicit class TemplateRiskAnalysisFormSeedWrapper(private val riskAnalysis: Commons.RiskAnalysisFormSeed)
+      extends AnyVal {
+    def toDependency: CatalogManagementDependency.RiskAnalysisFormSeed =
+      CatalogManagementDependency.RiskAnalysisFormSeed(
+        version = riskAnalysis.version,
+        singleAnswers = riskAnalysis.singleAnswers.map(_.toDependency),
+        multiAnswers = riskAnalysis.multiAnswers.map(_.toDependency)
+      )
+  }
+
+  implicit class RiskAnalysisSingleAnswerValidatedWrapper(
+    private val singleAnswers: Commons.RiskAnalysisSingleAnswerValidated
+  ) extends AnyVal {
+    def toDependency: CatalogManagementDependency.RiskAnalysisSingleAnswerSeed =
+      CatalogManagementDependency.RiskAnalysisSingleAnswerSeed(key = singleAnswers.key, value = singleAnswers.value)
+  }
+
+  implicit class RiskAnalysisMultiAnswerValidatedWrapper(
+    private val multiAnswers: Commons.RiskAnalysisMultiAnswerValidated
+  ) extends AnyVal {
+    def toDependency: CatalogManagementDependency.RiskAnalysisMultiAnswerSeed =
+      CatalogManagementDependency.RiskAnalysisMultiAnswerSeed(key = multiAnswers.key, values = multiAnswers.values)
   }
 
   implicit class EServiceRiskAnalysisFormSeedWrapper(private val seed: EServiceRiskAnalysisFormSeed) extends AnyVal {
-    def toDependency: CatalogManagementDependency.RiskAnalysisFormSeed =
-      CatalogManagementDependency.RiskAnalysisFormSeed(
-        version = seed.version,
-        singleAnswers = seed.singleAnswers.map(_.toDependency),
-        multiAnswers = seed.multiAnswers.map(_.toDependency)
-      )
-    def toTemplate: Commons.RiskAnalysisForm                           = Commons.RiskAnalysisForm(
-      version = seed.version,
-      answers = (seed.singleAnswers.map(_.toTemplate).flatten ++ seed.multiAnswers.map(_.toTemplate).flatten).toMap
-    )
+    def toTemplate: Commons.RiskAnalysisForm = Commons.RiskAnalysisForm(version = seed.version, answers = seed.answers)
   }
 
   implicit class PersistentTenantKindrapper(private val kind: PersistentTenantKind) extends AnyVal {
@@ -127,20 +150,6 @@ object Converter {
       case PersistentTenantKind.GSP     => Commons.RiskAnalysisTenantKind.GSP
       case PersistentTenantKind.PRIVATE => Commons.RiskAnalysisTenantKind.PRIVATE
     }
-  }
-
-  implicit class EServiceRiskAnalysisSingleAnswerSeedWrapper(private val seed: EServiceRiskAnalysisSingleAnswerSeed)
-      extends AnyVal {
-    def toDependency: CatalogManagementDependency.RiskAnalysisSingleAnswerSeed =
-      CatalogManagementDependency.RiskAnalysisSingleAnswerSeed(key = seed.key, value = seed.value)
-    def toTemplate: Map[String, Seq[String]]                                   = Map(seed.key -> seed.value.toSeq)
-  }
-
-  implicit class EServiceRiskAnalysisMultiAnswerSeedWrapper(private val seed: EServiceRiskAnalysisMultiAnswerSeed)
-      extends AnyVal {
-    def toDependency: CatalogManagementDependency.RiskAnalysisMultiAnswerSeed =
-      CatalogManagementDependency.RiskAnalysisMultiAnswerSeed(key = seed.key, values = seed.values)
-    def toTemplate: Map[String, Seq[String]]                                  = Map(seed.key -> seed.values)
   }
 
   implicit class EServiceDescriptorDocumentSeedWrapper(private val seed: UpdateEServiceDescriptorDocumentSeed)

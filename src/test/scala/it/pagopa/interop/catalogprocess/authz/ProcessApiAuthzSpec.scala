@@ -211,10 +211,8 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
 
     "accept authorized roles for createRiskAnalysis" in {
       val endpoint = AuthorizedRoutes.endpoints("createRiskAnalysis")
-      val fakeSeed = EServiceRiskAnalysisSeed(
-        "test",
-        EServiceRiskAnalysisFormSeed(version = "fake", singleAnswers = Seq.empty, multiAnswers = Seq.empty)
-      )
+      val fakeSeed =
+        EServiceRiskAnalysisSeed("test", EServiceRiskAnalysisFormSeed(version = "fake", answers = Map.empty))
       validateAuthorization(
         endpoint,
         { implicit c: Seq[(String, String)] => service.createRiskAnalysis(UUID.randomUUID().toString, fakeSeed) }
@@ -223,10 +221,8 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
 
     "accept authorized roles for updateRiskAnalysis" in {
       val endpoint = AuthorizedRoutes.endpoints("updateRiskAnalysis")
-      val fakeSeed = EServiceRiskAnalysisSeed(
-        "test",
-        EServiceRiskAnalysisFormSeed(version = "fake", singleAnswers = Seq.empty, multiAnswers = Seq.empty)
-      )
+      val fakeSeed =
+        EServiceRiskAnalysisSeed("test", EServiceRiskAnalysisFormSeed(version = "fake", answers = Map.empty))
       validateAuthorization(
         endpoint,
         { implicit c: Seq[(String, String)] =>

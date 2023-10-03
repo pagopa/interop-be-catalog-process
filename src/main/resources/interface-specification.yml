@@ -1262,42 +1262,21 @@ components:
           $ref:  '#/components/schemas/EServiceRiskAnalysisFormSeed'
     EServiceRiskAnalysisFormSeed:
       type: object
-      required:
-        - version
-        - singleAnswers
-        - multiAnswers
       properties:
         version:
           type: string
-        singleAnswers:
-          type: array
-          items:
-            $ref: '#/components/schemas/EServiceRiskAnalysisSingleAnswerSeed'
-        multiAnswers:
-          type: array
-          items:
-            $ref: '#/components/schemas/EServiceRiskAnalysisMultiAnswerSeed'    
-    EServiceRiskAnalysisSingleAnswerSeed:
-      type: object
+          minLength: 1
+          maxLength: 250
+        answers:
+          additionalProperties:
+            type: array
+            items:
+              type: string
+              minLength: 1
+              maxLength: 250
       required:
-        - key
-      properties:
-        key:
-          type: string
-        value:
-          type: string
-    EServiceRiskAnalysisMultiAnswerSeed:
-      type: object
-      required:
-        - key
-        - values
-      properties:
-        key:
-          type: string
-        values:
-          type: array
-          items:
-            type: string            
+        - version
+        - answers    
     EService:
       type: object
       required:
