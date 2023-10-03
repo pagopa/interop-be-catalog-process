@@ -52,13 +52,13 @@ object ResponseHandlers extends AkkaResponses {
     success: T => Route
   )(result: Try[T])(implicit contexts: Seq[(String, String)], logger: LoggerTakingImplicit[ContextFieldsToLog]): Route =
     result match {
-      case Success(s)                             => success(s)
-      case Failure(ex: OperationForbidden.type)   => forbidden(ex, logMessage)
-      case Failure(ex: EServiceNotFound)          => notFound(ex, logMessage)
-      case Failure(ex: EServiceNotInDraftState)   => badRequest(ex, logMessage)
-      case Failure(ex: EServiceNotInReceiveMode)  => badRequest(ex, logMessage)
-      case Failure(ex: RiskAnalysisNotValid.type) => badRequest(ex, logMessage)
-      case Failure(ex)                            => internalServerError(ex, logMessage)
+      case Success(s)                                => success(s)
+      case Failure(ex: OperationForbidden.type)      => forbidden(ex, logMessage)
+      case Failure(ex: EServiceNotFound)             => notFound(ex, logMessage)
+      case Failure(ex: EServiceNotInDraftState)      => badRequest(ex, logMessage)
+      case Failure(ex: EServiceNotInReceiveMode)     => badRequest(ex, logMessage)
+      case Failure(ex: RiskAnalysisValidationFailed) => badRequest(ex, logMessage)
+      case Failure(ex)                               => internalServerError(ex, logMessage)
     }
 
   def updateRiskAnalysisResponse[T](logMessage: String)(
@@ -71,7 +71,7 @@ object ResponseHandlers extends AkkaResponses {
       case Failure(ex: EServiceRiskAnalysisNotFound) => notFound(ex, logMessage)
       case Failure(ex: EServiceNotInDraftState)      => badRequest(ex, logMessage)
       case Failure(ex: EServiceNotInReceiveMode)     => badRequest(ex, logMessage)
-      case Failure(ex: RiskAnalysisNotValid.type)    => badRequest(ex, logMessage)
+      case Failure(ex: RiskAnalysisValidationFailed) => badRequest(ex, logMessage)
       case Failure(ex)                               => internalServerError(ex, logMessage)
     }
 

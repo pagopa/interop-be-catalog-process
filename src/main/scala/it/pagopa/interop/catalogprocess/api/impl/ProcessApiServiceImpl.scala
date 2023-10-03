@@ -688,8 +688,8 @@ final case class ProcessApiServiceImpl(
       _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       tenant         <- tenantManagementService.getTenantById(organizationId)
       tenantKind     <- tenant.kind.toFuture(TenantKindNotFound(tenant.id))
-      _ <- isRiskAnalysisFormValid(seed.riskAnalysisForm.toTemplate, schemaOnlyValidation = true)(tenantKind.toTemplate)
-      _ <- catalogManagementService.createRiskAnalysis(eServiceUuid, seed.toDependency)
+      depSeed        <- seed.toDependency(schemaOnlyValidation = true)(tenantKind).toFuture
+      _              <- catalogManagementService.createRiskAnalysis(eServiceUuid, depSeed)
     } yield ()
 
     onComplete(result) {
@@ -714,8 +714,8 @@ final case class ProcessApiServiceImpl(
       _                <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       tenant           <- tenantManagementService.getTenantById(organizationId)
       tenantKind       <- tenant.kind.toFuture(TenantKindNotFound(tenant.id))
-      _ <- isRiskAnalysisFormValid(seed.riskAnalysisForm.toTemplate, schemaOnlyValidation = true)(tenantKind.toTemplate)
-      _ <- catalogManagementService.updateRiskAnalysis(eServiceUuid, riskAnalysisUuid, seed.toDependency)
+      depSeed          <- seed.toDependency(schemaOnlyValidation = true)(tenantKind).toFuture
+      _                <- catalogManagementService.updateRiskAnalysis(eServiceUuid, riskAnalysisUuid, depSeed)
     } yield ()
 
     onComplete(result) {

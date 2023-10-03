@@ -2435,8 +2435,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name = "newName",
         riskAnalysisForm = EServiceRiskAnalysisFormSeed(
           version = "3.0",
-          singleAnswers = Seq(EServiceRiskAnalysisSingleAnswerSeed(key = "purpose", value = Some("INSTITUTIONAL"))),
-          multiAnswers = Seq(EServiceRiskAnalysisMultiAnswerSeed(key = "personalDataTypes", values = Seq("OTHER")))
+          answers = Map("purpose" -> Seq("INSTITUTIONAL"), "personalDataTypes" -> Seq("OTHER"))
         )
       )
 
@@ -2492,8 +2491,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name = "newName",
         riskAnalysisForm = EServiceRiskAnalysisFormSeed(
           version = "3.0",
-          singleAnswers = Seq(EServiceRiskAnalysisSingleAnswerSeed(key = "purpose", value = Some("INSTITUTIONAL"))),
-          multiAnswers = Seq(EServiceRiskAnalysisMultiAnswerSeed(key = "personalDataTypes", values = Seq("OTHER")))
+          answers = Map("purpose" -> Seq("INSTITUTIONAL"), "personalDataTypes" -> Seq("OTHER"))
         )
       )
 
@@ -2525,8 +2523,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name = "newName",
         riskAnalysisForm = EServiceRiskAnalysisFormSeed(
           version = "3.0",
-          singleAnswers = Seq(EServiceRiskAnalysisSingleAnswerSeed(key = "purpose", value = Some("INSTITUTIONAL"))),
-          multiAnswers = Seq(EServiceRiskAnalysisMultiAnswerSeed(key = "personalDataTypes", values = Seq("OTHER")))
+          answers = Map("purpose" -> Seq("INSTITUTIONAL"), "personalDataTypes" -> Seq("OTHER"))
         )
       )
 
@@ -2558,8 +2555,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name = "newName",
         riskAnalysisForm = EServiceRiskAnalysisFormSeed(
           version = "3.0",
-          singleAnswers = Seq(EServiceRiskAnalysisSingleAnswerSeed(key = "purpose", value = Some("INSTITUTIONAL"))),
-          multiAnswers = Seq(EServiceRiskAnalysisMultiAnswerSeed(key = "personalDataTypes", values = Seq("OTHER")))
+          answers = Map("purpose" -> Seq("INSTITUTIONAL"), "personalDataTypes" -> Seq("OTHER"))
         )
       )
 
@@ -2591,8 +2587,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name = "newName",
         riskAnalysisForm = EServiceRiskAnalysisFormSeed(
           version = "3.0",
-          singleAnswers = Seq(EServiceRiskAnalysisSingleAnswerSeed(key = "key1", value = Some("INSTITUTIONAL"))),
-          multiAnswers = Seq(EServiceRiskAnalysisMultiAnswerSeed(key = "personalDataTypes", values = Seq("OTHER")))
+          answers = Map("purpose1" -> Seq("INSTITUTIONAL"), "personalDataTypes" -> Seq("OTHER"))
         )
       )
 
@@ -2612,7 +2607,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         status shouldEqual StatusCodes.BadRequest
         val problem = responseAs[Problem]
         problem.status shouldBe StatusCodes.BadRequest.intValue
-        problem.errors.head.code shouldBe "009-0016"
+        problem.errors.head.code shouldBe "009-0019"
       }
     }
   }
@@ -2657,8 +2652,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name = "newName",
         riskAnalysisForm = EServiceRiskAnalysisFormSeed(
           version = "3.0",
-          singleAnswers = Seq(EServiceRiskAnalysisSingleAnswerSeed(key = "purpose", value = Some("INSTITUTIONAL"))),
-          multiAnswers = Seq(EServiceRiskAnalysisMultiAnswerSeed(key = "personalDataTypes", values = Seq("OTHER")))
+          answers = Map("purpose" -> Seq("INSTITUTIONAL"), "personalDataTypes" -> Seq("OTHER"))
         )
       )
 
@@ -2760,8 +2754,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name = "newName",
         riskAnalysisForm = EServiceRiskAnalysisFormSeed(
           version = "3.0",
-          singleAnswers = Seq(EServiceRiskAnalysisSingleAnswerSeed(key = "purpose", value = Some("INSTITUTIONAL"))),
-          multiAnswers = Seq(EServiceRiskAnalysisMultiAnswerSeed(key = "personalDataTypes", values = Seq("OTHER")))
+          answers = Map("purpose" -> Seq("INSTITUTIONAL"), "personalDataTypes" -> Seq("OTHER"))
         )
       )
 
@@ -2820,8 +2813,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name = "newName",
         riskAnalysisForm = EServiceRiskAnalysisFormSeed(
           version = "3.0",
-          singleAnswers = Seq(EServiceRiskAnalysisSingleAnswerSeed(key = "purpose", value = Some("INSTITUTIONAL"))),
-          multiAnswers = Seq(EServiceRiskAnalysisMultiAnswerSeed(key = "personalDataTypes", values = Seq("OTHER")))
+          answers = Map("purpose" -> Seq("INSTITUTIONAL"), "personalDataTypes" -> Seq("OTHER"))
         )
       )
 
@@ -2857,8 +2849,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name = "newName",
         riskAnalysisForm = EServiceRiskAnalysisFormSeed(
           version = "3.0",
-          singleAnswers = Seq(EServiceRiskAnalysisSingleAnswerSeed(key = "purpose", value = Some("INSTITUTIONAL"))),
-          multiAnswers = Seq(EServiceRiskAnalysisMultiAnswerSeed(key = "personalDataTypes", values = Seq("OTHER")))
+          answers = Map("purpose" -> Seq("INSTITUTIONAL"), "personalDataTypes" -> Seq("OTHER"))
         )
       )
 
@@ -2894,8 +2885,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name = "newName",
         riskAnalysisForm = EServiceRiskAnalysisFormSeed(
           version = "3.0",
-          singleAnswers = Seq(EServiceRiskAnalysisSingleAnswerSeed(key = "purpose", value = Some("INSTITUTIONAL"))),
-          multiAnswers = Seq(EServiceRiskAnalysisMultiAnswerSeed(key = "personalDataTypes", values = Seq("OTHER")))
+          answers = Map("purpose" -> Seq("INSTITUTIONAL"), "personalDataTypes" -> Seq("OTHER"))
         )
       )
 
@@ -2931,8 +2921,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         name = "newName",
         riskAnalysisForm = EServiceRiskAnalysisFormSeed(
           version = "3.0",
-          singleAnswers = Seq(EServiceRiskAnalysisSingleAnswerSeed(key = "key1", value = Some("INSTITUTIONAL"))),
-          multiAnswers = Seq(EServiceRiskAnalysisMultiAnswerSeed(key = "personalDataTypes", values = Seq("OTHER")))
+          answers = Map("purpose1" -> Seq("INSTITUTIONAL"), "personalDataTypes" -> Seq("OTHER"))
         )
       )
 
@@ -2956,7 +2945,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         status shouldEqual StatusCodes.BadRequest
         val problem = responseAs[Problem]
         problem.status shouldBe StatusCodes.BadRequest.intValue
-        problem.errors.head.code shouldBe "009-0016"
+        problem.errors.head.code shouldBe "009-0019"
       }
     }
   }
