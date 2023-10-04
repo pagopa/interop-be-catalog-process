@@ -771,10 +771,8 @@ object ProcessApiServiceImpl {
     if (eService.mode == Receive) Future.unit else Future.failed(EServiceNotInReceiveMode(eService.id))
 
   def isDraftEService(eService: CatalogItem): Future[Unit] =
-    if (eService.descriptors.map(_.state) == Seq(Draft)) Future.unit
-    else
-      Future
-        .failed(EServiceNotInDraftState(eService.id))
+    if (eService.descriptors.isEmpty || eService.descriptors.map(_.state) == Seq(Draft)) Future.unit
+    else Future.failed(EServiceNotInDraftState(eService.id))
 
   def assertRequesterAllowed(resourceId: UUID)(requesterId: UUID)(implicit ec: ExecutionContext): Future[Unit] =
     Future.failed(GenericComponentErrors.OperationForbidden).unlessA(resourceId == requesterId)
