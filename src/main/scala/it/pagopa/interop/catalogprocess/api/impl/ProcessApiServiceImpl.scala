@@ -697,7 +697,7 @@ final case class ProcessApiServiceImpl(
     }
   }
 
-  def updateRiskAnalysis(eServiceId: String, riskAnalysisId: String, seed: EServiceRiskAnalysisSeed)(implicit
+  override def updateRiskAnalysis(eServiceId: String, riskAnalysisId: String, seed: EServiceRiskAnalysisSeed)(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem]
   ): Route = authorize(ADMIN_ROLE, API_ROLE) {
