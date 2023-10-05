@@ -406,16 +406,15 @@ final case class ProcessApiServiceImpl(
 
   private def deleteRiskAnalysisOnModeUpdate(newMode: EServiceMode, catalogItem: CatalogItem)(implicit
     contexts: Seq[(String, String)]
-  ): Future[Unit] = {
-    val shouldRiskAnalyzesBeDeleted: Boolean = catalogItem.mode == Receive && newMode == EServiceMode.DELIVER
-    if (shouldRiskAnalyzesBeDeleted)
+  ): Future[Unit] = 
+    if (newMode == EServiceMode.DELIVER)
       Future
         .traverse(catalogItem.riskAnalysis)(risk =>
           catalogManagementService.deleteRiskAnalysis(catalogItem.id, risk.id)
         )
         .map(_ => ())
     else Future.unit
-  }
+ 
 
   private def hasNotDraftDescriptor(eService: CatalogItem): Either[Throwable, Boolean] =
     Either
