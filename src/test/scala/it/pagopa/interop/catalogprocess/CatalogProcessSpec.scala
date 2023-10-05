@@ -2,43 +2,28 @@ package it.pagopa.interop.catalogprocess
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import it.pagopa.interop.agreementmanagement.model.agreement.{PersistentAgreementState, Active}
+import it.pagopa.interop.agreementmanagement.model.agreement.{Active, PersistentAgreementState}
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
 import it.pagopa.interop.catalogmanagement.client.model.AgreementApprovalPolicy.AUTOMATIC
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
+import it.pagopa.interop.catalogmanagement.model._
 import it.pagopa.interop.catalogprocess.api.impl.Converter._
 import it.pagopa.interop.catalogprocess.api.impl._
-import it.pagopa.interop.commons.utils._
-import it.pagopa.interop.commons.cqrs.service.ReadModelService
+import it.pagopa.interop.catalogprocess.common.readmodel.{Consumers, PaginatedResult}
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors.{
-  EServiceNotFound,
   DescriptorDocumentNotFound,
+  EServiceNotFound,
   EServiceRiskAnalysisNotFound
 }
-import it.pagopa.interop.catalogmanagement.model.{
-  CatalogDescriptorState,
-  CatalogItem,
-  Published,
-  Draft,
-  Deprecated,
-  Archived,
-  Suspended,
-  Receive,
-  Deliver,
-  CatalogRiskAnalysis,
-  CatalogRiskAnalysisForm,
-  CatalogRiskAnalysisSingleAnswer,
-  CatalogRiskAnalysisMultiAnswer
-}
 import it.pagopa.interop.catalogprocess.model._
-import it.pagopa.interop.catalogprocess.common.readmodel.{PaginatedResult, Consumers}
-
+import it.pagopa.interop.commons.cqrs.service.ReadModelService
+import it.pagopa.interop.commons.utils._
 import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
-import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatest.matchers.should.Matchers._
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import java.util.UUID
-import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.{ExecutionContext, Future}
 
 class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestRouteTest {
 
@@ -494,6 +479,71 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         .expects(eService.id, *, *)
         .once()
         .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
+
+      (mockCatalogManagementService
+        .updateEServiceById(_: String, _: CatalogManagementDependency.UpdateEServiceSeed)(_: Seq[(String, String)]))
+        .expects(eService.id.toString, updatedEServiceSeed, *)
+        .returning(Future.successful(updatedEService))
+        .once()
+
+      Put() ~> service.updateEServiceById(eService.id.toString, eServiceSeed) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+
+    "succeed and delete riskAnalysis when mode move from Receive to Deliver" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val descriptor =
+        SpecData.eServiceDescriptor.copy(state = CatalogManagementDependency.EServiceDescriptorState.DRAFT)
+
+      val eService = SpecData.eService.copy(descriptors = Seq(descriptor), producerId = requesterId)
+
+      val eServiceSeed =
+        UpdateEServiceSeed(
+          name = "newName",
+          description = "newDescription",
+          technology = EServiceTechnology.REST,
+          mode = EServiceMode.DELIVER
+        )
+
+      val updatedEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
+        name = "newName",
+        description = "newDescription",
+        technology = eService.technology,
+        mode = CatalogManagementDependency.EServiceMode.DELIVER
+      )
+
+      val updatedEService = CatalogManagementDependency.EService(
+        id = eService.id,
+        producerId = requesterId,
+        name = "newName",
+        description = "newDescription",
+        technology = eService.technology,
+        descriptors = Seq(descriptor),
+        riskAnalysis = Seq.empty,
+        mode = CatalogManagementDependency.EServiceMode.DELIVER
+      )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eService.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem
+              .copy(producerId = requesterId, mode = Receive, riskAnalysis = Seq(SpecData.catalogRiskAnalysisFullValid))
+          )
+        )
+
+      (mockCatalogManagementService
+        .deleteRiskAnalysis(_: UUID, _: UUID)(_: Seq[(String, String)]))
+        .expects(eService.id, SpecData.catalogRiskAnalysisFullValid.id, *)
+        .returning(Future.unit)
+        .once()
 
       (mockCatalogManagementService
         .updateEServiceById(_: String, _: CatalogManagementDependency.UpdateEServiceSeed)(_: Seq[(String, String)]))

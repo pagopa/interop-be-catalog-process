@@ -5,8 +5,20 @@ import akka.http.scaladsl.server.Directives.onComplete
 import akka.http.scaladsl.server.Route
 import cats.syntax.all._
 import com.typesafe.scalalogging.{Logger, LoggerTakingImplicit}
+import it.pagopa.interop.agreementmanagement.model.agreement.PersistentAgreementState
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
+import it.pagopa.interop.catalogmanagement.model.{
+  CatalogDescriptor,
+  CatalogDescriptorState,
+  CatalogItem,
+  Deliver,
+  Deprecated,
+  Draft,
+  Published,
+  Receive,
+  Suspended
+}
 import it.pagopa.interop.catalogprocess.api.ProcessApiService
 import it.pagopa.interop.catalogprocess.api.impl.Converter._
 import it.pagopa.interop.catalogprocess.api.impl.ResponseHandlers._
@@ -18,27 +30,15 @@ import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt._
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
+import it.pagopa.interop.commons.riskanalysis.api.impl.RiskAnalysisValidation
+import it.pagopa.interop.commons.riskanalysis.{model => Commons}
 import it.pagopa.interop.commons.utils.AkkaUtils._
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors
-import it.pagopa.interop.commons.riskanalysis.api.impl.RiskAnalysisValidation
-import it.pagopa.interop.commons.riskanalysis.{model => Commons}
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
-import it.pagopa.interop.agreementmanagement.model.agreement.PersistentAgreementState
-import it.pagopa.interop.catalogmanagement.model.{
-  CatalogItem,
-  CatalogDescriptorState,
-  CatalogDescriptor,
-  Published,
-  Draft,
-  Suspended,
-  Deprecated,
-  Receive,
-  Deliver
-}
 
 final case class ProcessApiServiceImpl(
   catalogManagementService: CatalogManagementService,
@@ -395,12 +395,26 @@ final case class ProcessApiServiceImpl(
       catalogItem     <- catalogManagementService.getEServiceById(eServiceUuid)
       _               <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       _               <- eServiceCanBeUpdated(catalogItem).toFuture
+      _               <- deleteRiskAnalysisOnModeUpdate(updateEServiceSeed.mode, catalogItem)
       updatedEService <- catalogManagementService.updateEServiceById(eServiceId, updateEServiceSeed.toDependency)
     } yield updatedEService.toApi
 
     onComplete(result) {
       updateEServiceByIdResponse(operationLabel)(updateEServiceById200)
     }
+  }
+
+  private def deleteRiskAnalysisOnModeUpdate(newMode: EServiceMode, catalogItem: CatalogItem)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[Unit] = {
+    val shouldRiskAnalyzesBeDeleted: Boolean = catalogItem.mode == Receive && newMode == EServiceMode.DELIVER
+    if (shouldRiskAnalyzesBeDeleted)
+      Future
+        .traverse(catalogItem.riskAnalysis)(risk =>
+          catalogManagementService.deleteRiskAnalysis(catalogItem.id, risk.id)
+        )
+        .map(_ => ())
+    else Future.unit
   }
 
   private def hasNotDraftDescriptor(eService: CatalogItem): Either[Throwable, Boolean] =
