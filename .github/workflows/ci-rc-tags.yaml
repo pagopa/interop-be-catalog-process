@@ -7,8 +7,8 @@ on:
       - 'ci-refactor*'
 
 jobs:
-  retag_dev_to_uat:
-    name: Retag DEV to UAT
+  retag_dev_to_test:
+    name: Retag DEV to TEST
     permissions:
       id-token: write
       contents: read
@@ -55,19 +55,18 @@ jobs:
           APP_IMAGE_COMMIT_TEST="${APP_ECR_REPO_TEST}:commit-${{ github.sha }}"
 
           echo "Pulling from DEV..."
-          docker pull "${APP_IMAGE_COMMIT_DEV}"
+          docker pull "${APP_IMAGE_COMMIT_DEV}" > /dev/null
 
-          echo "Adding Git tag to DEV image in ECR DEV..."
+          echo "Adding RC Git tag to DEV image in DEV ECR..."
           docker tag "${APP_IMAGE_COMMIT_DEV}" "${APP_ECR_REPO_DEV}:${{ github.ref_name }}"
-          echo "Pushing to ECR DEV..."
-          docker push -a "${APP_ECR_REPO_DEV}"
+          docker push -a "${APP_ECR_REPO_DEV}" > /dev/null
 
           echo "Retagging for TEST ECR..."
           docker tag "${APP_IMAGE_COMMIT_DEV}" "${APP_IMAGE_COMMIT_TEST}"
           docker tag "${APP_IMAGE_COMMIT_TEST}" "${APP_ECR_REPO_TEST}:${{ github.ref_name }}"
 
-          echo "Pushing to ECR TEST..."
-          docker push -a "${APP_ECR_REPO_TEST}"
+          echo "Pushing to TEST ECR..."
+          docker push -a "${APP_ECR_REPO_TEST}" > /dev/null
 
 
 
