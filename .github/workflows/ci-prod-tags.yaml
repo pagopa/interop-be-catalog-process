@@ -1,0 +1,78 @@
+name: CI PROD Tags
+
+on:
+  push:
+    tags:
+      # - '*-rc[0-9]+$'
+      - 'p-ci-refactor*'
+
+jobs:
+  retag_test_to_prod:
+    name: Retag TEST to PROD
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        scala: [2.13.10]
+        java: [temurin@11]
+    environment: prod
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout current branch (full)
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Normalize repo name
+        run: |
+          # github.repository is in the format "owner/repository-name", we need only the repo name
+          NORM_REPO="$(echo "${{ github.repository }}" | cut -d"/" -f2)"
+          echo "NORM_REPO=$NORM_REPO" >> "$GITHUB_ENV"
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.IAM_ROLE_ARN }}
+          role-session-name: ${{ env.NORM_REPO }}-${{ github.run_number }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          mask-password: 'true'
+          registries: "${{ secrets.DEV_ACCOUNT_ID }},${{ secrets.TEST_ACCOUNT_ID }}, ${{ secrets.PROD_ACCOUNT_ID }}"
+
+      - name: Retag & push from TEST to PROD
+        run: |
+          set -euo pipefail
+
+          APP_ECR_REPO_DEV="${{ secrets.DEV_ECR_URL }}/${{ env.NORM_REPO }}"
+          APP_ECR_REPO_TEST="${{ secrets.TEST_ECR_URL }}/${{ env.NORM_REPO }}"
+          APP_ECR_REPO_PROD="${{ secrets.PROD_ECR_URL }}/${{ env.NORM_REPO }}"
+
+          APP_IMAGE_COMMIT_DEV="${APP_ECR_REPO_DEV}:commit-${{ github.sha }}"
+          APP_IMAGE_COMMIT_TEST="${APP_ECR_REPO_TEST}:commit-${{ github.sha }}"
+          APP_IMAGE_COMMIT_PROD="${APP_ECR_REPO_PROD}:commit-${{ github.sha }}"
+
+          echo "Pulling from TEST..."
+          docker pull "${APP_IMAGE_COMMIT_TEST}" > /dev/null
+
+          echo "Adding PROD Git tag to RC image in TEST ECR..."
+          docker tag "${APP_IMAGE_COMMIT_TEST}" "${APP_ECR_REPO_TEST}:${{ github.ref_name }}"
+          docker push -a "${APP_ECR_REPO_TEST}" > /dev/null
+
+          echo "Adding PROD Git tag to RC image in DEV ECR..."
+          docker tag "${APP_IMAGE_COMMIT_TEST}" "${APP_ECR_REPO_DEV}:${{ github.ref_name }}"
+          echo "Pushing to ECR DEV..."
+          docker push -a "${APP_ECR_REPO_DEV}" > /dev/null
+
+          echo "Retagging for PROD ECR..."
+          docker tag "${APP_IMAGE_COMMIT_TEST}" "${APP_IMAGE_COMMIT_PROD}"
+          docker tag "${APP_IMAGE_COMMIT_TEST}" "${APP_ECR_REPO_PROD}:${{ github.ref_name }}"
+
+          echo "Pushing to PROD ECR..."
+          docker push -a "${APP_ECR_REPO_PROD}" > /dev/null
