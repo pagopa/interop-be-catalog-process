@@ -1,19 +1,20 @@
 package it.pagopa.interop.catalogprocess.common.readmodel
 
-import it.pagopa.interop.catalogmanagement.model.{CatalogItem, Suspended, Deprecated, Published}
+import it.pagopa.interop.catalogmanagement.model.{CatalogItem, Deprecated, Published, Suspended}
 import it.pagopa.interop.agreementmanagement.model.{agreement => PersistentAgreement}
 import it.pagopa.interop.catalogmanagement.model.persistence.JsonFormats._
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
 import org.mongodb.scala.Document
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.Aggregates.{`match`, count, project, sort, lookup, unwind, addFields}
-import org.mongodb.scala.model.{Filters, Field}
-import org.mongodb.scala.model.Projections.{computed, fields, include, excludeId}
+import org.mongodb.scala.model.Aggregates.{`match`, addFields, count, lookup, project, sort, unwind}
+import org.mongodb.scala.model.{Field, Filters}
+import org.mongodb.scala.model.Projections.{computed, excludeId, fields, include}
 import org.mongodb.scala.model.Sorts.ascending
 
 import scala.concurrent.{ExecutionContext, Future}
 import java.util.UUID
 import it.pagopa.interop.catalogmanagement.model.CatalogDescriptorState
+import org.mongodb.scala.bson.BsonDocument
 
 object ReadModelCatalogQueries extends ReadModelQuery {
 
@@ -47,7 +48,7 @@ object ReadModelCatalogQueries extends ReadModelQuery {
           "validDescriptor",
           Document("""{ $filter: {
               input: "$data.descriptors",
-              as: "fd",         
+              as: "fd",
               cond: {  $eq: ["$$fd.id" , "$agreements.data.descriptorId"]}}} }""")
         )
       ),
@@ -172,20 +173,17 @@ object ReadModelCatalogQueries extends ReadModelQuery {
     val attributesIdsFilter = attributesIds match {
       case Seq()      => None
       case attributes =>
-        Some(Filters.or {
-          Filters.elemMatch(
-            "data.descriptors.attributes",
-            Filters.elemMatch("certified", Filters.elemMatch("id", Filters.in("id", attributes.map(_.toString))))
-          )
-          Filters.elemMatch(
-            "data.descriptors.attributes",
-            Filters.elemMatch("declared", Filters.elemMatch("id", Filters.in("id", attributes.map(_.toString))))
-          )
-          Filters.elemMatch(
-            "data.descriptors.attributes",
-            Filters.elemMatch("verified", Filters.elemMatch("id", Filters.in("id", attributes.map(_.toString))))
-          )
-        })
+        val attributesInCondition: String = attributes.map(u => s"'${u.toString}'").mkString(",")
+        val certifiedFilter: BsonDocument = BsonDocument(
+          s"""{ 'data.descriptors.attributes.certified' : { $$elemMatch : {$$elemMatch : {'id' : { $$in : [$attributesInCondition]}}}}}"""
+        )
+        val declaredFilter: BsonDocument  = BsonDocument(
+          s"""{ 'data.descriptors.attributes.declared' : { $$elemMatch : {$$elemMatch : {'id' : { $$in : [$attributesInCondition]}}}}}"""
+        )
+        val verifiedFilter: BsonDocument  = BsonDocument(
+          s"""{ 'data.descriptors.attributes.verified' : { $$elemMatch : {$$elemMatch : {'id' : { $$in : [$attributesInCondition]}}}}}"""
+        )
+        Some(Filters.or(certifiedFilter, declaredFilter, verifiedFilter))
     }
     val nameFilter          =
       if (exactMatchOnName) name.map(n => Filters.regex("data.name", s"^$n$$", "i"))
