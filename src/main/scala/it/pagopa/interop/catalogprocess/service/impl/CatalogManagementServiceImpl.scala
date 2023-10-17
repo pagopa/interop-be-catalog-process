@@ -34,20 +34,19 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
     Logger.takingImplicit[ContextFieldsToLog](this.getClass)
 
   override def createEService(eServiceSeed: EServiceSeed)(implicit contexts: Seq[(String, String)]): Future[EService] =
-    withHeaders { (bearerToken, correlationId, ip) =>
+    withHeaders { (bearerToken, correlationId) =>
       val request =
-        api.createEService(xCorrelationId = correlationId, eServiceSeed, xForwardedFor = ip)(BearerToken(bearerToken))
+        api.createEService(xCorrelationId = correlationId, eServiceSeed)(BearerToken(bearerToken))
       invoker.invoke(request, s"E-Service created")
     }
 
   override def cloneEService(eServiceId: UUID, descriptorId: UUID)(implicit
     contexts: Seq[(String, String)]
-  ): Future[EService] = withHeaders { (bearerToken, correlationId, ip) =>
+  ): Future[EService] = withHeaders { (bearerToken, correlationId) =>
     val request = api.cloneEServiceByDescriptor(
       xCorrelationId = correlationId,
       eServiceId = eServiceId,
-      descriptorId = descriptorId,
-      xForwardedFor = ip
+      descriptorId = descriptorId
     )(BearerToken(bearerToken))
 
     invoker.invoke(request, s"E-Service cloned").recoverWith {
@@ -58,10 +57,8 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
 
   override def deleteDraft(eServiceId: String, descriptorId: String)(implicit
     contexts: Seq[(String, String)]
-  ): Future[Unit] = withHeaders { (bearerToken, correlationId, ip) =>
-    val request = api.deleteDraft(xCorrelationId = correlationId, eServiceId, descriptorId, xForwardedFor = ip)(
-      BearerToken(bearerToken)
-    )
+  ): Future[Unit] = withHeaders { (bearerToken, correlationId) =>
+    val request = api.deleteDraft(xCorrelationId = correlationId, eServiceId, descriptorId)(BearerToken(bearerToken))
     invoker
       .invoke(request, s"Draft E-Service deleted. E-Service Id: $eServiceId Descriptor Id: $descriptorId")
       .recoverWith {
@@ -70,9 +67,9 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   }
 
   override def deleteEService(eServiceId: String)(implicit contexts: Seq[(String, String)]): Future[Unit] =
-    withHeaders { (bearerToken, correlationId, ip) =>
+    withHeaders { (bearerToken, correlationId) =>
       val request =
-        api.deleteEService(xCorrelationId = correlationId, eServiceId, xForwardedFor = ip)(BearerToken(bearerToken))
+        api.deleteEService(xCorrelationId = correlationId, eServiceId)(BearerToken(bearerToken))
       invoker.invoke(request, s"E-Service $eServiceId deleted").recoverWith {
         case err: ApiError[_] if err.code == 404 =>
           Future.failed(EServiceNotFound(eServiceId))
@@ -82,11 +79,9 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   override def updateDraftDescriptor(eServiceId: String, descriptorId: String, seed: UpdateEServiceDescriptorSeed)(
     implicit contexts: Seq[(String, String)]
   ): Future[EService] =
-    withHeaders { (bearerToken, correlationId, ip) =>
+    withHeaders { (bearerToken, correlationId) =>
       val request =
-        api.updateDescriptor(xCorrelationId = correlationId, eServiceId, descriptorId, seed, xForwardedFor = ip)(
-          BearerToken(bearerToken)
-        )
+        api.updateDescriptor(xCorrelationId = correlationId, eServiceId, descriptorId, seed)(BearerToken(bearerToken))
       invoker
         .invoke(request, s"Descriptor $descriptorId updated for E-Services $eServiceId")
         .recoverWith {
@@ -97,11 +92,9 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
 
   override def updateEServiceById(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed)(implicit
     contexts: Seq[(String, String)]
-  ): Future[EService] = withHeaders { (bearerToken, correlationId, ip) =>
+  ): Future[EService] = withHeaders { (bearerToken, correlationId) =>
     val request =
-      api.updateEServiceById(xCorrelationId = correlationId, eServiceId, updateEServiceSeed, xForwardedFor = ip)(
-        BearerToken(bearerToken)
-      )
+      api.updateEServiceById(xCorrelationId = correlationId, eServiceId, updateEServiceSeed)(BearerToken(bearerToken))
     invoker.invoke(request, s"E-Service $eServiceId updated.").recoverWith {
       case err: ApiError[_] if err.code == 404 => Future.failed(EServiceNotFound(eServiceId))
     }
@@ -110,11 +103,9 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   def deprecateDescriptor(eServiceId: String, descriptorId: String)(implicit
     contexts: Seq[(String, String)]
   ): Future[Unit] =
-    withHeaders { (bearerToken, correlationId, ip) =>
+    withHeaders { (bearerToken, correlationId) =>
       val request =
-        api.deprecateDescriptor(xCorrelationId = correlationId, eServiceId, descriptorId, xForwardedFor = ip)(
-          BearerToken(bearerToken)
-        )
+        api.deprecateDescriptor(xCorrelationId = correlationId, eServiceId, descriptorId)(BearerToken(bearerToken))
       invoker
         .invoke(request, s"Eservice $eServiceId descriptor $descriptorId has been deprecated")
         .recoverWith {
@@ -125,10 +116,9 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
 
   def archiveDescriptor(eServiceId: String, descriptorId: String)(implicit
     contexts: Seq[(String, String)]
-  ): Future[Unit] = withHeaders { (bearerToken, correlationId, ip) =>
-    val request = api.archiveDescriptor(xCorrelationId = correlationId, eServiceId, descriptorId, xForwardedFor = ip)(
-      BearerToken(bearerToken)
-    )
+  ): Future[Unit] = withHeaders { (bearerToken, correlationId) =>
+    val request =
+      api.archiveDescriptor(xCorrelationId = correlationId, eServiceId, descriptorId)(BearerToken(bearerToken))
     invoker
       .invoke(request, s"Eservice $eServiceId descriptor $descriptorId has been archived")
       .recoverWith {
@@ -139,10 +129,9 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
 
   def publishDescriptor(eServiceId: String, descriptorId: String)(implicit
     contexts: Seq[(String, String)]
-  ): Future[Unit] = withHeaders { (bearerToken, correlationId, ip) =>
-    val request = api.publishDescriptor(xCorrelationId = correlationId, eServiceId, descriptorId, xForwardedFor = ip)(
-      BearerToken(bearerToken)
-    )
+  ): Future[Unit] = withHeaders { (bearerToken, correlationId) =>
+    val request =
+      api.publishDescriptor(xCorrelationId = correlationId, eServiceId, descriptorId)(BearerToken(bearerToken))
     invoker
       .invoke(request, s"Eservice $eServiceId descriptor $descriptorId has been published")
       .recoverWith {
@@ -153,20 +142,17 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
 
   def draftDescriptor(eServiceId: String, descriptorId: String)(implicit
     contexts: Seq[(String, String)]
-  ): Future[Unit] = withHeaders { (bearerToken, correlationId, ip) =>
-    val request = api.draftDescriptor(xCorrelationId = correlationId, eServiceId, descriptorId, xForwardedFor = ip)(
-      BearerToken(bearerToken)
-    )
+  ): Future[Unit] = withHeaders { (bearerToken, correlationId) =>
+    val request =
+      api.draftDescriptor(xCorrelationId = correlationId, eServiceId, descriptorId)(BearerToken(bearerToken))
     invoker.invoke(request, s"Eservice $eServiceId descriptor $descriptorId has been moved to draft")
   }
 
   def createDescriptor(eServiceId: String, eServiceDescriptorSeed: EServiceDescriptorSeed)(implicit
     contexts: Seq[(String, String)]
-  ): Future[EServiceDescriptor] = withHeaders { (bearerToken, correlationId, ip) =>
+  ): Future[EServiceDescriptor] = withHeaders { (bearerToken, correlationId) =>
     val request =
-      api.createDescriptor(xCorrelationId = correlationId, eServiceId, eServiceDescriptorSeed, xForwardedFor = ip)(
-        BearerToken(bearerToken)
-      )
+      api.createDescriptor(xCorrelationId = correlationId, eServiceId, eServiceDescriptorSeed)(BearerToken(bearerToken))
     invoker
       .invoke(request, "Descriptor created")
       .recoverWith {
@@ -178,13 +164,12 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
     eServiceId: UUID,
     descriptorId: UUID,
     documentSeed: CreateEServiceDescriptorDocumentSeed
-  )(implicit contexts: Seq[(String, String)]): Future[EService] = withHeaders { (bearerToken, correlationId, ip) =>
+  )(implicit contexts: Seq[(String, String)]): Future[EService] = withHeaders { (bearerToken, correlationId) =>
     val request = api.createEServiceDocument(
       xCorrelationId = correlationId,
       eServiceId = eServiceId,
       descriptorId = descriptorId,
-      createEServiceDescriptorDocumentSeed = documentSeed,
-      xForwardedFor = ip
+      createEServiceDescriptorDocumentSeed = documentSeed
     )(BearerToken(bearerToken))
     invoker
       .invoke(
@@ -199,14 +184,10 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
 
   override def deleteEServiceDocument(eServiceId: String, descriptorId: String, documentId: String)(implicit
     contexts: Seq[(String, String)]
-  ): Future[Unit] = withHeaders { (bearerToken, correlationId, ip) =>
-    val request = api.deleteEServiceDocument(
-      xCorrelationId = correlationId,
-      eServiceId,
-      descriptorId,
-      documentId,
-      xForwardedFor = ip
-    )(BearerToken(bearerToken))
+  ): Future[Unit] = withHeaders { (bearerToken, correlationId) =>
+    val request = api.deleteEServiceDocument(xCorrelationId = correlationId, eServiceId, descriptorId, documentId)(
+      BearerToken(bearerToken)
+    )
     invoker
       .invoke(request, s"Document with id $documentId deleted on Descriptor $descriptorId for E-Services $eServiceId")
       .recoverWith {
@@ -221,14 +202,13 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
     documentId: String,
     seed: UpdateEServiceDescriptorDocumentSeed
   )(implicit contexts: Seq[(String, String)]): Future[EServiceDoc] =
-    withHeaders { (bearerToken, correlationId, ip) =>
+    withHeaders { (bearerToken, correlationId) =>
       val request = api.updateEServiceDocument(
         xCorrelationId = correlationId,
         eServiceId = eServiceId,
         descriptorId = descriptorId,
         documentId = documentId,
-        updateEServiceDescriptorDocumentSeed = seed,
-        xForwardedFor = ip
+        updateEServiceDescriptorDocumentSeed = seed
       )(BearerToken(bearerToken))
       invoker
         .invoke(request, s"Document with id $documentId updated on Descriptor $descriptorId for E-Services $eServiceId")
@@ -240,13 +220,11 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
 
   override def suspendDescriptor(eServiceId: String, descriptorId: String)(implicit
     contexts: Seq[(String, String)]
-  ): Future[Unit] = withHeaders { (bearerToken, correlationId, ip) =>
-    val request = api.suspendDescriptor(
-      xCorrelationId = correlationId,
-      eServiceId = eServiceId,
-      descriptorId = descriptorId,
-      xForwardedFor = ip
-    )(BearerToken(bearerToken))
+  ): Future[Unit] = withHeaders { (bearerToken, correlationId) =>
+    val request =
+      api.suspendDescriptor(xCorrelationId = correlationId, eServiceId = eServiceId, descriptorId = descriptorId)(
+        BearerToken(bearerToken)
+      )
     invoker
       .invoke(request, s"Descriptor $descriptorId suspended for E-Services $eServiceId")
       .recoverWith {
@@ -300,12 +278,11 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
 
   override def createRiskAnalysis(eServiceId: UUID, riskAnalysisSeed: RiskAnalysisSeed)(implicit
     contexts: Seq[(String, String)]
-  ): Future[Unit] = withHeaders { (bearerToken, correlationId, ip) =>
+  ): Future[Unit] = withHeaders { (bearerToken, correlationId) =>
     val request = api.createRiskAnalysis(
       xCorrelationId = correlationId,
       eServiceId = eServiceId,
-      riskAnalysisSeed = riskAnalysisSeed,
-      xForwardedFor = ip
+      riskAnalysisSeed = riskAnalysisSeed
     )(BearerToken(bearerToken))
     invoker
       .invoke(request, s"Create Risk Analysis for E-Services $eServiceId")
@@ -317,13 +294,12 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
 
   override def updateRiskAnalysis(eServiceId: UUID, riskAnalysisId: UUID, riskAnalysisSeed: RiskAnalysisSeed)(implicit
     contexts: Seq[(String, String)]
-  ): Future[EServiceRiskAnalysis] = withHeaders { (bearerToken, correlationId, ip) =>
+  ): Future[EServiceRiskAnalysis] = withHeaders { (bearerToken, correlationId) =>
     val request = api.updateRiskAnalysis(
       xCorrelationId = correlationId,
       eServiceId = eServiceId,
       riskAnalysisId = riskAnalysisId,
-      riskAnalysisSeed = riskAnalysisSeed,
-      xForwardedFor = ip
+      riskAnalysisSeed = riskAnalysisSeed
     )(BearerToken(bearerToken))
     invoker
       .invoke(request, s"Update Risk Analysis $riskAnalysisId for E-Services $eServiceId")
@@ -335,13 +311,11 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
 
   override def deleteRiskAnalysis(eServiceId: UUID, riskAnalysisId: UUID)(implicit
     contexts: Seq[(String, String)]
-  ): Future[Unit] = withHeaders { (bearerToken, correlationId, ip) =>
-    val request = api.deleteRiskAnalysis(
-      xCorrelationId = correlationId,
-      eServiceId = eServiceId,
-      riskAnalysisId = riskAnalysisId,
-      xForwardedFor = ip
-    )(BearerToken(bearerToken))
+  ): Future[Unit] = withHeaders { (bearerToken, correlationId) =>
+    val request =
+      api.deleteRiskAnalysis(xCorrelationId = correlationId, eServiceId = eServiceId, riskAnalysisId = riskAnalysisId)(
+        BearerToken(bearerToken)
+      )
     invoker
       .invoke(request, s"Delete Risk Analysis $riskAnalysisId for E-Services $eServiceId")
       .recoverWith {

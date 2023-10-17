@@ -23,7 +23,7 @@ final case class AuthorizationManagementServiceImpl(invoker: AuthorizationManage
     state: ClientComponentState,
     audience: Seq[String],
     voucherLifespan: Int
-  )(implicit contexts: Seq[(String, String)]): Future[Unit] = withHeaders { (bearerToken, correlationId, ip) =>
+  )(implicit contexts: Seq[(String, String)]): Future[Unit] = withHeaders { (bearerToken, correlationId) =>
     val payload: ClientEServiceDetailsUpdate =
       ClientEServiceDetailsUpdate(
         descriptorId = descriptorId,
@@ -35,8 +35,7 @@ final case class AuthorizationManagementServiceImpl(invoker: AuthorizationManage
     val request = api.updateEServiceState(
       xCorrelationId = correlationId,
       eserviceId = eServiceId,
-      clientEServiceDetailsUpdate = payload,
-      xForwardedFor = ip
+      clientEServiceDetailsUpdate = payload
     )(BearerToken(bearerToken))
 
     invoker
