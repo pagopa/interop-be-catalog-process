@@ -252,6 +252,10 @@ object Converter {
       case EServiceMode.RECEIVE => CatalogManagementDependency.EServiceMode.RECEIVE
       case EServiceMode.DELIVER => CatalogManagementDependency.EServiceMode.DELIVER
     }
+    def toPersistent: readmodel.CatalogItemMode                = p match {
+      case EServiceMode.RECEIVE => readmodel.Receive
+      case EServiceMode.DELIVER => readmodel.Deliver
+    }
   }
 
   implicit class EServiceRiskAnalysisObjectWrapper(private val p: EServiceRiskAnalysis) extends AnyVal {

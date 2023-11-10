@@ -27,6 +27,7 @@ import it.pagopa.interop.catalogmanagement.model.{
   CatalogDocument,
   Published,
   CatalogDescriptorState,
+  CatalogItemMode,
   Deliver
 }
 import it.pagopa.interop.tenantmanagement.model.tenant.{PersistentTenant, PersistentTenantKind, PersistentExternalId}
@@ -268,6 +269,7 @@ object FakeDependencies {
       producersIds: Seq[UUID],
       attributesIds: Seq[UUID],
       states: Seq[CatalogDescriptorState],
+      mode: Option[CatalogItemMode],
       offset: Int,
       limit: Int,
       exactMatchOnName: Boolean = false

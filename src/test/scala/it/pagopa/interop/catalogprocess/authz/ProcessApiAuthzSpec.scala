@@ -86,7 +86,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
       validateAuthorization(
         endpoint,
         { implicit c: Seq[(String, String)] =>
-          service.getEServices(None, "fake", "fake", "fake", "fake", "fake", 0, 0)
+          service.getEServices(None, "fake", "fake", "fake", "fake", "fake", None, 0, 0)
         }
       )
     }

@@ -26,6 +26,7 @@ import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLo
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
+import it.pagopa.interop.catalogmanagement.model.CatalogItemMode
 
 final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker, api: EServiceApi)(implicit
   ec: ExecutionContext
@@ -261,6 +262,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
     producersIds: Seq[UUID],
     attributesIds: Seq[UUID],
     states: Seq[CatalogDescriptorState],
+    mode: Option[CatalogItemMode],
     offset: Int,
     limit: Int,
     exactMatchOnName: Boolean = false
@@ -271,6 +273,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       producersIds,
       attributesIds,
       states,
+      mode,
       offset,
       limit,
       exactMatchOnName
