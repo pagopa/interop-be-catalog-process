@@ -13,7 +13,7 @@ import org.mongodb.scala.model.Sorts.ascending
 
 import scala.concurrent.{ExecutionContext, Future}
 import java.util.UUID
-import it.pagopa.interop.catalogmanagement.model.CatalogDescriptorState
+import it.pagopa.interop.catalogmanagement.model.{CatalogItemMode, CatalogDescriptorState}
 import org.mongodb.scala.bson.BsonDocument
 
 object ReadModelCatalogQueries extends ReadModelQuery {
@@ -119,12 +119,13 @@ object ReadModelCatalogQueries extends ReadModelQuery {
     producersIds: Seq[UUID],
     attributesIds: Seq[UUID],
     states: Seq[CatalogDescriptorState],
+    mode: Option[CatalogItemMode],
     offset: Int,
     limit: Int,
     exactMatchOnName: Boolean = false
   )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PaginatedResult[CatalogItem]] = {
 
-    val query = listEServicesFilters(name, eServicesIds, producersIds, attributesIds, states, exactMatchOnName)
+    val query = listEServicesFilters(name, eServicesIds, producersIds, attributesIds, states, mode, exactMatchOnName)
 
     for {
       // Using aggregate to perform case insensitive sorting
@@ -161,6 +162,7 @@ object ReadModelCatalogQueries extends ReadModelQuery {
     producersIds: Seq[UUID],
     attributesIds: Seq[UUID],
     states: Seq[CatalogDescriptorState],
+    mode: Option[CatalogItemMode],
     exactMatchOnName: Boolean
   ): Bson = {
     val statesPartialFilter = states
@@ -189,8 +191,10 @@ object ReadModelCatalogQueries extends ReadModelQuery {
       if (exactMatchOnName) name.map(n => Filters.regex("data.name", s"^$n$$", "i"))
       else name.map(Filters.regex("data.name", _, "i"))
 
+    val modeFilter = mode.map(_.toString).map(Filters.eq("data.mode", _))
+
     mapToVarArgs(
-      eServicesIdsFilter.toList ++ producersIdsFilter.toList ++ attributesIdsFilter.toList ++ statesFilter.toList ++ nameFilter.toList
+      eServicesIdsFilter.toList ++ producersIdsFilter.toList ++ attributesIdsFilter.toList ++ statesFilter.toList ++ nameFilter.toList ++ modeFilter.toList
     )(Filters.and)
       .getOrElse(Filters.empty())
   }

@@ -7,6 +7,7 @@ import it.pagopa.interop.commons.cqrs.service.ReadModelService
 
 import java.util.UUID
 import scala.concurrent.{Future, ExecutionContext}
+import it.pagopa.interop.catalogmanagement.model.CatalogItemMode
 
 trait CatalogManagementService {
   def createEService(eServiceSeed: EServiceSeed)(implicit contexts: Seq[(String, String)]): Future[EService]
@@ -68,6 +69,7 @@ trait CatalogManagementService {
     producersIds: Seq[UUID],
     attributesIds: Seq[UUID],
     states: Seq[CatalogDescriptorState],
+    mode: Option[CatalogItemMode],
     offset: Int,
     limit: Int,
     exactMatchOnName: Boolean = false

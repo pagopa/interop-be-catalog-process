@@ -39,6 +39,7 @@ import it.pagopa.interop.commons.utils.errors.GenericComponentErrors
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
+import it.pagopa.interop.catalogmanagement.model.CatalogItemMode
 
 final case class ProcessApiServiceImpl(
   catalogManagementService: CatalogManagementService,
@@ -76,6 +77,7 @@ final case class ProcessApiServiceImpl(
           Seq(clientSeed.producerId),
           Seq.empty,
           Seq.empty,
+          None,
           0,
           1,
           exactMatchOnName = true
@@ -121,6 +123,7 @@ final case class ProcessApiServiceImpl(
     attributesIds: String,
     states: String,
     agreementStates: String,
+    mode: Option[String],
     offset: Int,
     limit: Int
   )(implicit contexts: Seq[(String, String)], toEntityMarshallerEServices: ToEntityMarshaller[EServices]): Route =
@@ -137,12 +140,22 @@ final case class ProcessApiServiceImpl(
         attributesIds: List[UUID],
         states: Seq[CatalogDescriptorState],
         agreementStates: Seq[PersistentAgreementState],
+        mode: Option[CatalogItemMode],
         offset: Int,
         limit: Int
       ): Future[PaginatedResult[CatalogItem]] = {
 
         if (agreementStates.isEmpty)
-          catalogManagementService.getEServices(name, eServicesIds, producersIds, attributesIds, states, offset, limit)
+          catalogManagementService.getEServices(
+            name,
+            eServicesIds,
+            producersIds,
+            attributesIds,
+            states,
+            mode,
+            offset,
+            limit
+          )
         else
           for {
             agreementEservicesIds <- agreementManagementService
@@ -163,6 +176,7 @@ final case class ProcessApiServiceImpl(
                   producersIds,
                   attributesIds,
                   states,
+                  mode,
                   offset,
                   limit
                 )
@@ -172,6 +186,7 @@ final case class ProcessApiServiceImpl(
       val result: Future[EServices] = for {
         organizationId  <- getOrganizationIdFutureUUID(contexts)
         states          <- parseArrayParameters(states).traverse(EServiceDescriptorState.fromValue).toFuture
+        mode            <- mode.traverse(EServiceMode.fromValue).toFuture
         producersUuids  <- parseArrayParameters(producersIds).traverse(_.toFutureUUID)
         eServicesUuids  <- parseArrayParameters(eServicesIds).traverse(_.toFutureUUID)
         attributesUuids <- parseArrayParameters(attributesIds).traverse(_.toFutureUUID)
@@ -187,6 +202,7 @@ final case class ProcessApiServiceImpl(
             attributesUuids,
             states.map(_.toPersistent),
             agreementStates.map(_.toPersistent),
+            mode.map(_.toPersistent),
             offset,
             limit
           )
