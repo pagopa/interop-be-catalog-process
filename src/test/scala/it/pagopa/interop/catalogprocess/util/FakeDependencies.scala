@@ -336,7 +336,9 @@ object FakeDependencies {
         createdAt = OffsetDateTime.now(),
         updatedAt = Some(OffsetDateTime.now().plusDays(10)),
         mails = Nil,
-        name = "name"
+        name = "name",
+        onboardedAt = None,
+        subUnitType = None
       )
     )
   }

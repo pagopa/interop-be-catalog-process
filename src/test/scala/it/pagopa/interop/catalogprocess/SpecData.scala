@@ -236,6 +236,8 @@ object SpecData {
     createdAt = OffsetDateTimeSupplier.get(),
     updatedAt = Some(OffsetDateTimeSupplier.get().plusDays(10)),
     mails = Nil,
-    name = "name"
+    name = "name",
+    onboardedAt = None,
+    subUnitType = None
   )
 }
