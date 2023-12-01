@@ -1,57 +1,100 @@
 package it.pagopa.interop.catalogprocess.server.impl
 
 import cats.syntax.all._
-import akka.http.scaladsl.Http
-import akka.management.scaladsl.AkkaManagement
-import it.pagopa.interop.commons.utils.CORSSupport
-import it.pagopa.interop.catalogprocess.server.Controller
-import it.pagopa.interop.catalogprocess.common.system.ApplicationConfiguration
-import scala.concurrent.Future
-import scala.util.{Failure, Success}
-import com.typesafe.scalalogging.Logger
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.Behaviors
-import scala.concurrent.ExecutionContext
-import buildinfo.BuildInfo
-import akka.actor.typed.DispatcherSelector
-import scala.concurrent.ExecutionContextExecutor
+import com.typesafe.scalalogging.Logger
 
-object Main extends App with CORSSupport with Dependencies {
+import it.pagopa.interop.catalogprocess.service.CatalogManagementService
+import it.pagopa.interop.commons.files.service.FileManager
+import it.pagopa.interop.commons.utils.CORRELATION_ID_HEADER
+import it.pagopa.interop.catalogmanagement.model.{CatalogItem, CatalogDocument}
+import it.pagopa.interop.catalogmanagement.client.model.UpdateEServiceDescriptorDocumentSeed
+import it.pagopa.interop.catalogprocess.common.system.ApplicationConfiguration
 
-  private val logger: Logger = Logger(this.getClass)
+import scala.concurrent.duration.Duration
+import java.util.concurrent.{Executors, ExecutorService}
+import scala.concurrent.{ExecutionContext, Future, Await, ExecutionContextExecutor}
+import it.pagopa.interop.commons.utils.Digester.toSha256
 
-  ActorSystem[Nothing](
-    Behaviors.setup[Nothing] { context =>
-      implicit val actorSystem: ActorSystem[_]        = context.system
-      implicit val executionContext: ExecutionContext = actorSystem.executionContext
+import java.util.UUID
+import scala.util.Failure
 
-      val selector: DispatcherSelector         = DispatcherSelector.fromConfig("futures-dispatcher")
-      val blockingEc: ExecutionContextExecutor = actorSystem.dispatchers.lookup(selector)
+object Main extends App with Dependencies {
 
-      AkkaManagement.get(actorSystem.classicSystem).start()
+  val logger: Logger = Logger(this.getClass)
 
-      val serverBinding: Future[Http.ServerBinding] = for {
-        jwtReader <- getJwtReader()
-        fileManager = getFileManager(blockingEc)
-        controller  = new Controller(
-          healthApi,
-          processApi(jwtReader, fileManager, blockingEc),
-          validationExceptionToRoute.some
-        )(actorSystem.classicSystem)
-        binding <-
-          Http().newServerAt("0.0.0.0", ApplicationConfiguration.serverPort).bind(corsHandler(controller.routes))
-      } yield binding
+  implicit val context: List[(String, String)] = (CORRELATION_ID_HEADER -> UUID.randomUUID().toString()) :: Nil
 
-      serverBinding.onComplete {
-        case Success(b) =>
-          logger.info(s"Started server at ${b.localAddress.getHostString()}:${b.localAddress.getPort()}")
-        case Failure(e) =>
-          actorSystem.terminate()
-          logger.error("Startup error: ", e)
-      }
+  implicit val actorSystem: ActorSystem[Nothing]  =
+    ActorSystem[Nothing](Behaviors.empty, "interop-be-catalog-process-alignment")
+  implicit val executionContext: ExecutionContext = actorSystem.executionContext
 
-      Behaviors.empty
-    },
-    BuildInfo.name
+  implicit val es: ExecutorService = Executors.newFixedThreadPool(1.max(Runtime.getRuntime.availableProcessors() - 1))
+  implicit val blockingEc: ExecutionContextExecutor               = ExecutionContext.fromExecutor(es)
+  implicit val catalogManagementService: CatalogManagementService = catalogManagementService(blockingEc)
+
+  implicit val fileManager: FileManager = FileManager.get(FileManager.S3)(blockingEc)
+
+  logger.info("Starting update")
+  logger.info(s"Retrieving eservices")
+  Await.result(
+    execution()
+      .andThen { case Failure(ex) => logger.error("Houston we have a problem", ex) }
+      .andThen { _ =>
+        fileManager.close()
+        es.shutdown()
+      },
+    Duration.Inf
+  ): Unit
+
+  logger.info("Completed update")
+
+  def execution(): Future[Unit] = for {
+    eservices <- getEservices()
+    _ = logger.info(s"Start update eservices ${eservices.size}")
+    _ <- eservices.traverse(updateEService)
+    _ = logger.info(s"End update eservices")
+  } yield ()
+
+  def updateWithFingerprint(eserviceId: UUID, descriptorId: UUID, document: CatalogDocument): Future[Unit] = for {
+    fingerprint <- fileManager
+      .get(ApplicationConfiguration.storageContainer)(document.path)
+      .map(bytes => toSha256(bytes.toByteArray()))
+    _           <- catalogManagementService.updateEServiceDocument(
+      eServiceId = eserviceId.toString,
+      descriptorId = descriptorId.toString,
+      documentId = document.id.toString,
+      updateEServiceDescriptorDocumentSeed =
+        UpdateEServiceDescriptorDocumentSeed(prettyName = document.name, checksum = Some(fingerprint))
+    )
+  } yield ()
+
+  def updateEService(eservice: CatalogItem): Future[Unit] = {
+    logger.info(s"Update eservice ${eservice.id}")
+    for {
+      _ <- eservice.descriptors.traverse(descriptor =>
+        descriptor.interface.traverse(document => updateWithFingerprint(eservice.id, descriptor.id, document))
+      )
+      _ <- eservice.descriptors.traverse(descriptor =>
+        descriptor.docs.traverse(document => updateWithFingerprint(eservice.id, descriptor.id, document))
+      )
+    } yield ()
+  }
+
+  def getEservices(): Future[Seq[CatalogItem]] = getAll(50)(
+    catalogManagementService
+      .getEServices(None, Seq.empty, Seq.empty, Seq.empty, Seq.empty, None, _, _, false)
+      .map(_.results)
   )
+
+  def getAll[T](limit: Int)(get: (Int, Int) => Future[Seq[T]]): Future[Seq[T]] = {
+    def go(offset: Int)(acc: Seq[T]): Future[Seq[T]] = {
+      get(offset, limit).flatMap(xs =>
+        if (xs.size < limit) Future.successful(xs ++ acc)
+        else go(offset + xs.size)(xs ++ acc)
+      )
+    }
+    go(0)(Nil)
+  }
 }
