@@ -9,12 +9,12 @@ import it.pagopa.interop.catalogprocess.util.FakeDependencies._
 import it.pagopa.interop.catalogprocess.util.{AuthorizedRoutes, AuthzScalatestRouteTest}
 import it.pagopa.interop.commons.cqrs.service.{ReadModelService, MongoDbReadModelService}
 import it.pagopa.interop.commons.cqrs.model.ReadModelConfig
-import it.pagopa.interop.commons.files.service.FileManager
+
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import java.util.concurrent.{ExecutorService, Executors}
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+import scala.concurrent.ExecutionContext
 import java.util.UUID
 
 class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with AuthzScalatestRouteTest {
@@ -24,9 +24,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
   val fakeAuthorizationManagementService: AuthorizationManagementService = new FakeAuthorizationManagementService()
   val fakeTenantManagementService: TenantManagementService               = new FakeTenantManagementService()
   private val threadPool: ExecutorService                                = Executors.newSingleThreadExecutor()
-  private val blockingEc: ExecutionContextExecutor = ExecutionContext.fromExecutorService(threadPool)
-  val fakeFileManager: FileManager                 = FileManager.get(FileManager.File)(blockingEc)
-  implicit val fakeReadModel: ReadModelService     = new MongoDbReadModelService(
+  implicit val fakeReadModel: ReadModelService                           = new MongoDbReadModelService(
     ReadModelConfig(
       "mongodb://localhost/?socketTimeoutMS=1&serverSelectionTimeoutMS=1&connectTimeoutMS=1&&autoReconnect=false&keepAlive=false",
       "db"
@@ -40,8 +38,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
       fakeCatalogManagementService,
       fakeAgreementManagementService,
       fakeAuthorizationManagementService,
-      fakeTenantManagementService,
-      fakeFileManager
+      fakeTenantManagementService
     )(ExecutionContext.global, fakeReadModel)
 
   "E-Service api operation authorization spec" should {

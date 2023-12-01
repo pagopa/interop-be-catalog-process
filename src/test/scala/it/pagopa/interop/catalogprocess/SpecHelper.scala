@@ -7,7 +7,6 @@ import org.scalamock.scalatest.MockFactory
 import com.typesafe.config.{Config, ConfigFactory}
 
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
-import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.api.ProcessApiService
@@ -24,7 +23,6 @@ trait SpecHelper extends SprayJsonSupport with DefaultJsonProtocol with MockFact
     .resolve()
 
   implicit val mockReadModel: ReadModelService                           = mock[ReadModelService]
-  val mockfileManager: FileManager                                       = mock[FileManager]
   val mockAuthorizationManagementService: AuthorizationManagementService = mock[AuthorizationManagementService]
   val mockCatalogManagementService: CatalogManagementService             = mock[CatalogManagementService]
   val mockAgreementManagementService: AgreementManagementService         = mock[AgreementManagementService]
@@ -34,8 +32,7 @@ trait SpecHelper extends SprayJsonSupport with DefaultJsonProtocol with MockFact
     mockCatalogManagementService,
     mockAgreementManagementService,
     mockAuthorizationManagementService,
-    mockTenantManagementService,
-    mockfileManager
+    mockTenantManagementService
   )(ExecutionContext.global, mockReadModel)
 
   implicit def fromResponseUnmarshallerProblem: FromEntityUnmarshaller[Problem]   =

@@ -27,7 +27,6 @@ import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors._
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
-import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt._
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.interop.commons.riskanalysis.api.impl.RiskAnalysisValidation
@@ -45,8 +44,7 @@ final case class ProcessApiServiceImpl(
   catalogManagementService: CatalogManagementService,
   agreementManagementService: AgreementManagementService,
   authorizationManagementService: AuthorizationManagementService,
-  tenantManagementService: TenantManagementService,
-  fileManager: FileManager
+  tenantManagementService: TenantManagementService
 )(implicit ec: ExecutionContext, readModel: ReadModelService)
     extends ProcessApiService {
 

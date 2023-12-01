@@ -22,7 +22,6 @@ import it.pagopa.interop.catalogprocess.api.impl.ResponseHandlers.serviceCode
 import it.pagopa.interop.catalogprocess.service._
 import it.pagopa.interop.catalogprocess.service.impl._
 import it.pagopa.interop.commons.cqrs.service.{MongoDbReadModelService, ReadModelService}
-import it.pagopa.interop.commons.files.service.FileManager
 import it.pagopa.interop.commons.jwt.service.JWTReader
 import it.pagopa.interop.commons.jwt.service.impl.{DefaultJWTReader, getClaimsVerifier}
 import it.pagopa.interop.commons.jwt.{JWTConfiguration, KID, PublicKeysHolder, SerializedKey}
@@ -39,13 +38,6 @@ trait Dependencies {
   implicit val loggerTI: LoggerTakingImplicit[ContextFieldsToLog] =
     Logger.takingImplicit[ContextFieldsToLog]("OAuth2JWTValidatorAsContexts")
 
-  def getFileManager(blockingEc: ExecutionContextExecutor): FileManager =
-    FileManager.get(ApplicationConfiguration.storageKind match {
-      case "S3"   => FileManager.S3
-      case "file" => FileManager.File
-      case _      => throw new Exception("Incorrect File Manager")
-    })(blockingEc)
-
   def getJwtReader(): Future[JWTReader] = JWTConfiguration.jwtReader
     .loadKeyset()
     .map(keyset =>
@@ -61,7 +53,7 @@ trait Dependencies {
     ApplicationConfiguration.readModelConfig
   )
 
-  def processApi(jwtReader: JWTReader, fileManager: FileManager, blockingEc: ExecutionContextExecutor)(implicit
+  def processApi(jwtReader: JWTReader, blockingEc: ExecutionContextExecutor)(implicit
     ec: ExecutionContext,
     actorSystem: ActorSystem[_]
   ): ProcessApi =
@@ -70,7 +62,6 @@ trait Dependencies {
         catalogManagementService = catalogManagementService(blockingEc),
         AgreementManagementServiceImpl,
         authorizationManagementService = authorizationManagementService(blockingEc),
-        fileManager = fileManager,
         tenantManagementService = TenantManagementServiceImpl
       ),
       ProcessApiMarshallerImpl,
