@@ -13,7 +13,8 @@ import it.pagopa.interop.catalogprocess.common.readmodel.{Consumers, PaginatedRe
 import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors.{
   DescriptorDocumentNotFound,
   EServiceNotFound,
-  EServiceRiskAnalysisNotFound
+  EServiceRiskAnalysisNotFound,
+  AttributeNotFound
 }
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
@@ -926,6 +927,24 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         .once()
         .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
 
+      (mockAttributeRegistryManagementService
+        .getAttributeById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(attributeId1, *, *)
+        .once()
+        .returns(Future.successful(SpecData.persistentCertifiedAttribute.copy(id = attributeId1)))
+
+      (mockAttributeRegistryManagementService
+        .getAttributeById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(attributeId2, *, *)
+        .once()
+        .returns(Future.successful(SpecData.persistentDeclaredAttribute.copy(id = attributeId2)))
+
+      (mockAttributeRegistryManagementService
+        .getAttributeById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(attributeId3, *, *)
+        .once()
+        .returns(Future.successful(SpecData.persistentVerifiedAttribute.copy(id = attributeId3)))
+
       (mockCatalogManagementService
         .createDescriptor(_: String, _: CatalogManagementDependency.EServiceDescriptorSeed)(_: Seq[(String, String)]))
         .expects(SpecData.catalogItem.id.toString, eServiceDescriptorSeed, *)
@@ -934,6 +953,46 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       Post() ~> service.createDescriptor(SpecData.catalogItem.id.toString, seed) ~> check {
         status shouldEqual StatusCodes.OK
+      }
+    }
+    "fail if attribute does not exists" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val attributeId1: UUID = UUID.randomUUID()
+      val attributeId2: UUID = UUID.randomUUID()
+      val attributeId3: UUID = UUID.randomUUID()
+
+      val seed = EServiceDescriptorSeed(
+        description = None,
+        audience = Seq("aud"),
+        voucherLifespan = 60,
+        dailyCallsPerConsumer = 0,
+        dailyCallsTotal = 0,
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(
+          certified = List(List(AttributeSeed(attributeId1, explicitAttributeVerification = false))),
+          declared = List(List(AttributeSeed(attributeId2, explicitAttributeVerification = false))),
+          verified = List(List(AttributeSeed(attributeId3, explicitAttributeVerification = true)))
+        )
+      )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
+
+      (mockAttributeRegistryManagementService
+        .getAttributeById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(attributeId1, *, *)
+        .once()
+        .returns(Future.failed(AttributeNotFound(attributeId1)))
+
+      Post() ~> service.createDescriptor(SpecData.catalogItem.id.toString, seed) ~> check {
+        status shouldEqual StatusCodes.BadRequest
       }
     }
     "fail if requester is not the Producer" in {

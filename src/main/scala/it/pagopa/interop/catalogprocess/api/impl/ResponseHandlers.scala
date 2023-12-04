@@ -150,6 +150,7 @@ object ResponseHandlers extends AkkaResponses {
       case Success(s)                                => success(s)
       case Failure(ex: OperationForbidden.type)      => forbidden(ex, logMessage)
       case Failure(ex: EServiceNotFound)             => notFound(ex, logMessage)
+      case Failure(ex: AttributeNotFound)            => badRequest(ex, logMessage)
       case Failure(ex: DraftDescriptorAlreadyExists) => badRequest(ex, logMessage)
       case Failure(ex)                               => internalServerError(ex, logMessage)
     }

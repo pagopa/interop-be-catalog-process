@@ -23,17 +23,20 @@ trait SpecHelper extends SprayJsonSupport with DefaultJsonProtocol with MockFact
     .parseResourcesAnySyntax("application-test")
     .resolve()
 
-  implicit val mockReadModel: ReadModelService                           = mock[ReadModelService]
-  val mockfileManager: FileManager                                       = mock[FileManager]
-  val mockAuthorizationManagementService: AuthorizationManagementService = mock[AuthorizationManagementService]
-  val mockCatalogManagementService: CatalogManagementService             = mock[CatalogManagementService]
-  val mockAgreementManagementService: AgreementManagementService         = mock[AgreementManagementService]
-  val mockTenantManagementService: TenantManagementService               = mock[TenantManagementService]
+  implicit val mockReadModel: ReadModelService                                   = mock[ReadModelService]
+  val mockfileManager: FileManager                                               = mock[FileManager]
+  val mockAuthorizationManagementService: AuthorizationManagementService         = mock[AuthorizationManagementService]
+  val mockCatalogManagementService: CatalogManagementService                     = mock[CatalogManagementService]
+  val mockAgreementManagementService: AgreementManagementService                 = mock[AgreementManagementService]
+  val mockAttributeRegistryManagementService: AttributeRegistryManagementService =
+    mock[AttributeRegistryManagementService]
+  val mockTenantManagementService: TenantManagementService                       = mock[TenantManagementService]
 
   val service: ProcessApiService = ProcessApiServiceImpl(
     mockCatalogManagementService,
     mockAgreementManagementService,
     mockAuthorizationManagementService,
+    mockAttributeRegistryManagementService,
     mockTenantManagementService,
     mockfileManager
   )(ExecutionContext.global, mockReadModel)

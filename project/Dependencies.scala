@@ -69,6 +69,12 @@ object Dependencies {
   private[this] object pagopa {
     lazy val namespace = "it.pagopa"
 
+    lazy val attributeRegistryManagementClient =
+      namespace %% "interop-be-attribute-registry-management-client" % attributeRegistryManagementVersion
+    
+    lazy val attributeRegistryManagementModels =
+      namespace %% "interop-be-attribute-registry-management-models" % attributeRegistryManagementVersion
+
     lazy val catalogManagementClient =
       namespace %% "interop-be-catalog-management-client" % catalogManagementVersion
     
@@ -110,6 +116,8 @@ object Dependencies {
       logback.classic                          % Compile,
       akka.slf4j                               % Compile,
       resilience4j.rateLimiter                 % Compile,
+      pagopa.attributeRegistryManagementClient % Compile,
+      pagopa.attributeRegistryManagementModels % Compile,
       pagopa.catalogManagementClient           % Compile,
       pagopa.catalogManagementModels           % Compile,
       pagopa.agreementManagementModels         % Compile,
