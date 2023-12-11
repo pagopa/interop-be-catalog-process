@@ -35,9 +35,11 @@ import it.pagopa.interop.catalogprocess.service.{
   AuthorizationManagementService,
   CatalogManagementService,
   AgreementManagementService,
+  AttributeRegistryManagementService,
   TenantManagementService
 }
 import it.pagopa.interop.catalogmanagement.client.model.{EServiceMode, EServiceRiskAnalysis, RiskAnalysisForm}
+import it.pagopa.interop.attributeregistrymanagement.model.persistence.attribute.{PersistentAttribute, Certified}
 
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -310,6 +312,22 @@ object FakeDependencies {
       audience: Seq[String],
       voucherLifespan: Int
     )(implicit contexts: Seq[(String, String)]): Future[Unit] = Future.successful(())
+  }
+
+  class FakeAttributeRegistryManagementService extends AttributeRegistryManagementService {
+    override def getAttributeById(
+      attributeId: UUID
+    )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PersistentAttribute] = Future.successful(
+      PersistentAttribute(
+        id = attributeId,
+        code = None,
+        origin = None,
+        kind = Certified,
+        description = "description",
+        name = "name",
+        creationTime = OffsetDateTime.now()
+      )
+    )
   }
 
   class FakeAgreementManagementService extends AgreementManagementService {
