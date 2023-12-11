@@ -34,6 +34,7 @@ trait SpecHelper extends SprayJsonSupport with DefaultJsonProtocol with MockFact
     mockCatalogManagementService,
     mockAgreementManagementService,
     mockAuthorizationManagementService,
+    mockAttributeRegistryManagementService,
     mockTenantManagementService
   )(ExecutionContext.global, mockReadModel)
 

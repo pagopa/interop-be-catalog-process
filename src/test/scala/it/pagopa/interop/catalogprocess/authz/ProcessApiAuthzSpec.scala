@@ -26,7 +26,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
     new FakeAttributeRegistryManagementService()
   val fakeTenantManagementService: TenantManagementService                       = new FakeTenantManagementService()
   private val threadPool: ExecutorService                                        = Executors.newSingleThreadExecutor()
-  implicit val fakeReadModel: ReadModelService                           = new MongoDbReadModelService(
+  implicit val fakeReadModel: ReadModelService                                   = new MongoDbReadModelService(
     ReadModelConfig(
       "mongodb://localhost/?socketTimeoutMS=1&serverSelectionTimeoutMS=1&connectTimeoutMS=1&&autoReconnect=false&keepAlive=false",
       "db"
