@@ -22,8 +22,10 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
   val fakeAgreementManagementService: AgreementManagementService         = new FakeAgreementManagementService()
   val fakeCatalogManagementService: CatalogManagementService             = new FakeCatalogManagementService()
   val fakeAuthorizationManagementService: AuthorizationManagementService = new FakeAuthorizationManagementService()
-  val fakeTenantManagementService: TenantManagementService               = new FakeTenantManagementService()
-  private val threadPool: ExecutorService                                = Executors.newSingleThreadExecutor()
+  val fakeAttributeRegistryManagementService: AttributeRegistryManagementService =
+    new FakeAttributeRegistryManagementService()
+  val fakeTenantManagementService: TenantManagementService                       = new FakeTenantManagementService()
+  private val threadPool: ExecutorService                                        = Executors.newSingleThreadExecutor()
   implicit val fakeReadModel: ReadModelService                           = new MongoDbReadModelService(
     ReadModelConfig(
       "mongodb://localhost/?socketTimeoutMS=1&serverSelectionTimeoutMS=1&connectTimeoutMS=1&&autoReconnect=false&keepAlive=false",
@@ -38,6 +40,7 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
       fakeCatalogManagementService,
       fakeAgreementManagementService,
       fakeAuthorizationManagementService,
+      fakeAttributeRegistryManagementService,
       fakeTenantManagementService
     )(ExecutionContext.global, fakeReadModel)
 

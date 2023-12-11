@@ -73,5 +73,7 @@ object CatalogProcessErrors {
     def apply(failures: NonEmptyChain[error.RiskAnalysisValidationError]): RiskAnalysisValidationFailed =
       RiskAnalysisValidationFailed(failures.map(_.message).distinct.iterator.mkString("[", ", ", "]"))
   }
+  final case class AttributeNotFound(attributeId: UUID)
+      extends ComponentError("0020", s"Attribute ${attributeId.toString} not found")
 
 }

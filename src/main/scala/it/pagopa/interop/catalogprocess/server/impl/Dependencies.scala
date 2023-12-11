@@ -60,8 +60,9 @@ trait Dependencies {
     new ProcessApi(
       ProcessApiServiceImpl(
         catalogManagementService = catalogManagementService(blockingEc),
-        AgreementManagementServiceImpl,
+        agreementManagementService = AgreementManagementServiceImpl,
         authorizationManagementService = authorizationManagementService(blockingEc),
+        attributeRegistryManagementService = AttributeRegistryManagementServiceImpl,
         tenantManagementService = TenantManagementServiceImpl
       ),
       ProcessApiMarshallerImpl,
