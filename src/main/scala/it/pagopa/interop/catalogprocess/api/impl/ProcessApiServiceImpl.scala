@@ -45,6 +45,7 @@ final case class ProcessApiServiceImpl(
   catalogManagementService: CatalogManagementService,
   agreementManagementService: AgreementManagementService,
   authorizationManagementService: AuthorizationManagementService,
+  attributeRegistryManagementService: AttributeRegistryManagementService,
   tenantManagementService: TenantManagementService,
   fileManager: FileManager
 )(implicit ec: ExecutionContext, readModel: ReadModelService)
@@ -354,6 +355,15 @@ final case class ProcessApiServiceImpl(
       catalogItem               <- catalogManagementService.getEServiceById(eServiceUuid)
       _                         <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       _                         <- hasNotDraftDescriptor(catalogItem).toFuture
+      _                         <- eServiceDescriptorSeed.attributes.certified.traverse(
+        _.traverse(attr => attributeRegistryManagementService.getAttributeById(attr.id))
+      )
+      _                         <- eServiceDescriptorSeed.attributes.declared.traverse(
+        _.traverse(attr => attributeRegistryManagementService.getAttributeById(attr.id))
+      )
+      _                         <- eServiceDescriptorSeed.attributes.verified.traverse(
+        _.traverse(attr => attributeRegistryManagementService.getAttributeById(attr.id))
+      )
       createdEServiceDescriptor <- catalogManagementService.createDescriptor(
         eServiceId,
         eServiceDescriptorSeed.toDependency

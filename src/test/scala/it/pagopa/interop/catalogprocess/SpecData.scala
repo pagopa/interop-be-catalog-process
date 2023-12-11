@@ -7,6 +7,12 @@ import it.pagopa.interop.commons.utils.service.OffsetDateTimeSupplier
 import it.pagopa.interop.tenantmanagement.model.tenant.{PersistentExternalId, PersistentTenant, PersistentTenantKind}
 
 import java.util.UUID
+import it.pagopa.interop.attributeregistrymanagement.model.persistence.attribute.{
+  PersistentAttribute,
+  Certified,
+  Declared,
+  Verified
+}
 
 object SpecData {
   val eServiceId   = UUID.randomUUID()
@@ -34,6 +40,34 @@ object SpecData {
     stamps = PersistentStamps(),
     rejectionReason = None,
     suspendedAt = None
+  )
+
+  val persistentCertifiedAttribute = PersistentAttribute(
+    id = UUID.randomUUID(),
+    code = None,
+    origin = None,
+    kind = Certified,
+    description = "description",
+    name = "name",
+    creationTime = OffsetDateTimeSupplier.get()
+  )
+  val persistentDeclaredAttribute  = PersistentAttribute(
+    id = UUID.randomUUID(),
+    code = None,
+    origin = None,
+    kind = Declared,
+    description = "description",
+    name = "name",
+    creationTime = OffsetDateTimeSupplier.get()
+  )
+  val persistentVerifiedAttribute  = PersistentAttribute(
+    id = UUID.randomUUID(),
+    code = None,
+    origin = None,
+    kind = Verified,
+    description = "description",
+    name = "name",
+    creationTime = OffsetDateTimeSupplier.get()
   )
 
   val catalogItem: CatalogManagement.CatalogItem = CatalogManagement.CatalogItem(
