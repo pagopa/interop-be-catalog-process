@@ -88,7 +88,6 @@ object Dependencies {
       namespace %% "interop-be-authorization-management-client" % authorizationManagementVersion
 
     lazy val commonsUtils = namespace %% "interop-commons-utils"          % commonsVersion
-    lazy val fileManager  = namespace %% "interop-commons-file-manager"   % commonsVersion
     lazy val commonsJWT   = namespace %% "interop-commons-jwt"            % commonsVersion
     lazy val commonsCqrs  = namespace %% "interop-commons-cqrs"           % commonsVersion
     lazy val riskAnalysis = namespace %% "interop-commons-risk-analysis"  % commonsVersion
@@ -120,7 +119,6 @@ object Dependencies {
       pagopa.authorizationManagementClient     % Compile,
       pagopa.tenantManagementModels            % Compile,
       pagopa.commonsUtils                      % Compile,
-      pagopa.fileManager                       % Compile,
       pagopa.commonsJWT                        % Compile,
       pagopa.commonsCqrs                       % Compile,
       pagopa.riskAnalysis                      % Compile,

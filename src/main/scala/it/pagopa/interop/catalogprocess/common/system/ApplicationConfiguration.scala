@@ -13,10 +13,6 @@ object ApplicationConfiguration {
 
   val jwtAudience: Set[String] = config.getString("catalog-process.jwt.audience").split(",").toSet.filter(_.nonEmpty)
 
-  val storageKind: String = config.getString("catalog-process.storage.kind")
-
-  val storageContainer: String = config.getString("catalog-process.storage.container")
-
   val readModelConfig: ReadModelConfig = {
     val connectionString: String = config.getString("catalog-process.read-model.db.connection-string")
     val dbName: String           = config.getString("catalog-process.read-model.db.name")
