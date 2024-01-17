@@ -35,10 +35,14 @@ import it.pagopa.interop.commons.utils.AkkaUtils._
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.GenericComponentErrors
+import it.pagopa.interop.catalogmanagement.model.CatalogItemMode
+import it.pagopa.interop.agreementmanagement.model.agreement.{
+  Active => AgreementActive,
+  Suspended => AgreementSuspended
+}
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
-import it.pagopa.interop.catalogmanagement.model.CatalogItemMode
 
 final case class ProcessApiServiceImpl(
   catalogManagementService: CatalogManagementService,
@@ -162,6 +166,7 @@ final case class ProcessApiServiceImpl(
                 eServicesIds = eServicesIds,
                 producersIds = Nil,
                 consumersIds = Seq(organizationId),
+                descriptorsIds = Nil,
                 states = agreementStates
               )
               .map(_.map(_.eserviceId))
@@ -249,10 +254,11 @@ final case class ProcessApiServiceImpl(
       _ <- catalogManagementService.publishDescriptor(eServiceId, descriptorId)
       _ <- currentActiveDescriptor
         .map(oldDescriptor =>
-          deprecateDescriptorOrCancelPublication(
-            eServiceId = eServiceId,
-            descriptorIdToDeprecate = oldDescriptor.id.toString,
-            descriptorIdToCancel = descriptorId
+          deprecateOrArchiveDescriptorOrCancelPublication(
+            eServiceId = eServiceUuid,
+            oldDescriptorId = oldDescriptor.id,
+            descriptorId = descriptorUuid,
+            validStates = List(AgreementActive, AgreementSuspended)
           )
         )
         .sequence
@@ -451,12 +457,27 @@ final case class ProcessApiServiceImpl(
       EServiceCannotBeUpdated(eService.id.toString)
     )
 
-  private[this] def deprecateDescriptorOrCancelPublication(
-    eServiceId: String,
-    descriptorIdToDeprecate: String,
-    descriptorIdToCancel: String
-  )(implicit contexts: Seq[(String, String)]): Future[Unit] = deprecateDescriptor(descriptorIdToDeprecate, eServiceId)
-    .recoverWith(error => resetDescriptorToDraft(eServiceId, descriptorIdToCancel).flatMap(_ => Future.failed(error)))
+  private[this] def deprecateOrArchiveDescriptorOrCancelPublication(
+    eServiceId: UUID,
+    oldDescriptorId: UUID,
+    descriptorId: UUID,
+    validStates: Seq[PersistentAgreementState]
+  )(implicit contexts: Seq[(String, String)]): Future[Unit] = for {
+    validAgreements <- agreementManagementService.getAgreements(
+      List(eServiceId),
+      Nil,
+      Nil,
+      List(oldDescriptorId),
+      validStates
+    )
+    _               <- validAgreements.headOption match {
+      case Some(_) =>
+        deprecateDescriptor(oldDescriptorId.toString, eServiceId.toString).recoverWith(error =>
+          resetDescriptorToDraft(eServiceId.toString, descriptorId.toString).flatMap(_ => Future.failed(error))
+        )
+      case None    => catalogManagementService.archiveDescriptor(eServiceId.toString, oldDescriptorId.toString)
+    }
+  } yield ()
 
   private[this] def deprecateDescriptor(descriptorId: String, eServiceId: String)(implicit
     contexts: Seq[(String, String)]

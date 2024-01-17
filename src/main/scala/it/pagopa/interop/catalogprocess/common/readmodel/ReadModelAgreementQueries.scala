@@ -17,13 +17,14 @@ object ReadModelAgreementQueries extends ReadModelQuery {
     eServicesIds: Seq[UUID],
     consumersIds: Seq[UUID],
     producersIds: Seq[UUID],
+    descriptorsIds: Seq[UUID],
     states: Seq[PersistentAgreementState],
     offset: Int,
     limit: Int
   )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[Seq[PersistentAgreement]] = {
 
     val query: Bson =
-      getAgreementsFilters(eServicesIds, consumersIds, producersIds, states)
+      getAgreementsFilters(eServicesIds, consumersIds, producersIds, descriptorsIds, states)
 
     for {
       agreements <- readModel.aggregate[PersistentAgreement](
@@ -40,20 +41,23 @@ object ReadModelAgreementQueries extends ReadModelQuery {
     eServicesIds: Seq[UUID],
     consumersIds: Seq[UUID],
     producersIds: Seq[UUID],
+    descriptorsIds: Seq[UUID],
     states: Seq[PersistentAgreementState]
   ): Bson = {
 
     val statesFilter = listStatesFilter(states)
 
-    val eServicesIdsFilter =
+    val eServicesIdsFilter   =
       mapToVarArgs(eServicesIds.map(id => Filters.eq("data.eserviceId", id.toString)))(Filters.or)
-    val consumersIdsFilter =
+    val consumersIdsFilter   =
       mapToVarArgs(consumersIds.map(id => Filters.eq("data.consumerId", id.toString)))(Filters.or)
-    val producersIdsFilter =
+    val producersIdsFilter   =
       mapToVarArgs(producersIds.map(id => Filters.eq("data.producerId", id.toString)))(Filters.or)
+    val descriptorsIdsFilter =
+      mapToVarArgs(descriptorsIds.map(id => Filters.eq("data.descriptorId", id.toString)))(Filters.or)
 
     mapToVarArgs(
-      eServicesIdsFilter.toList ++ consumersIdsFilter.toList ++ producersIdsFilter.toList ++ statesFilter.toList
+      eServicesIdsFilter.toList ++ consumersIdsFilter.toList ++ producersIdsFilter.toList ++ descriptorsIdsFilter.toList ++ statesFilter.toList
     )(Filters.and).getOrElse(Filters.empty())
   }
 

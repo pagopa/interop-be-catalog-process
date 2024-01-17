@@ -135,11 +135,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val limit           = 50
 
       (mockAgreementManagementService
-        .getAgreements(_: Seq[UUID], _: Seq[UUID], _: Seq[UUID], _: Seq[PersistentAgreementState])(
+        .getAgreements(_: Seq[UUID], _: Seq[UUID], _: Seq[UUID], _: Seq[UUID], _: Seq[PersistentAgreementState])(
           _: ExecutionContext,
           _: ReadModelService
         ))
-        .expects(eServicesIds, Seq(requesterId), producersIds, Seq(Active), *, *)
+        .expects(eServicesIds, Seq(requesterId), producersIds, Nil, Seq(Active), *, *)
         .once()
         .returns(Future.successful(Seq(SpecData.agreement)))
 
@@ -204,11 +204,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val limit           = 50
 
       (mockAgreementManagementService
-        .getAgreements(_: Seq[UUID], _: Seq[UUID], _: Seq[UUID], _: Seq[PersistentAgreementState])(
+        .getAgreements(_: Seq[UUID], _: Seq[UUID], _: Seq[UUID], _: Seq[UUID], _: Seq[PersistentAgreementState])(
           _: ExecutionContext,
           _: ReadModelService
         ))
-        .expects(eServicesIds, Seq(requesterId), producersIds, Seq(Active), *, *)
+        .expects(eServicesIds, Seq(requesterId), producersIds, Nil, Seq(Active), *, *)
         .once()
         .returns(Future.successful(Seq.empty))
 
