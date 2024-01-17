@@ -475,7 +475,10 @@ final case class ProcessApiServiceImpl(
         deprecateDescriptor(oldDescriptorId.toString, eServiceId.toString).recoverWith(error =>
           resetDescriptorToDraft(eServiceId.toString, descriptorId.toString).flatMap(_ => Future.failed(error))
         )
-      case None    => catalogManagementService.archiveDescriptor(eServiceId.toString, oldDescriptorId.toString)
+      case None    =>
+        catalogManagementService.archiveDescriptor(eServiceId.toString, oldDescriptorId.toString) recoverWith (error =>
+          resetDescriptorToDraft(eServiceId.toString, descriptorId.toString).flatMap(_ => Future.failed(error))
+        )
     }
   } yield ()
 
