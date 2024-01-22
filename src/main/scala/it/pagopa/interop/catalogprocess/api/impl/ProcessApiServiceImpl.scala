@@ -224,6 +224,32 @@ final case class ProcessApiServiceImpl(
     val operationLabel = s"Publishing descriptor $descriptorId for EService $eServiceId"
     logger.info(operationLabel)
 
+    def changeStateOfOldDescriptorOrCancelPublication(
+      eServiceId: UUID,
+      oldDescriptorId: UUID,
+      descriptorId: UUID,
+      validStates: Seq[PersistentAgreementState]
+    ): Future[Unit] = for {
+      validAgreements <- agreementManagementService.getAgreements(
+        List(eServiceId),
+        Nil,
+        Nil,
+        List(oldDescriptorId),
+        validStates
+      )
+      _               <- validAgreements.headOption match {
+        case Some(_) =>
+          deprecateDescriptor(oldDescriptorId.toString, eServiceId.toString).recoverWith(error =>
+            resetDescriptorToDraft(eServiceId.toString, descriptorId.toString).flatMap(_ => Future.failed(error))
+          )
+        case None    =>
+          catalogManagementService.archiveDescriptor(eServiceId.toString, oldDescriptorId.toString) recoverWith (
+            error =>
+              resetDescriptorToDraft(eServiceId.toString, descriptorId.toString).flatMap(_ => Future.failed(error))
+          )
+      }
+    } yield ()
+
     def verifyRiskAnalysisForPublication(catalogItem: CatalogItem): Future[Unit] = catalogItem.mode match {
       case Deliver => Future.unit
       case Receive =>
@@ -254,7 +280,7 @@ final case class ProcessApiServiceImpl(
       _ <- catalogManagementService.publishDescriptor(eServiceId, descriptorId)
       _ <- currentActiveDescriptor
         .map(oldDescriptor =>
-          deprecateOrArchiveDescriptorOrCancelPublication(
+          changeStateOfOldDescriptorOrCancelPublication(
             eServiceId = eServiceUuid,
             oldDescriptorId = oldDescriptor.id,
             descriptorId = descriptorUuid,
@@ -456,31 +482,6 @@ final case class ProcessApiServiceImpl(
       (),
       EServiceCannotBeUpdated(eService.id.toString)
     )
-
-  private[this] def deprecateOrArchiveDescriptorOrCancelPublication(
-    eServiceId: UUID,
-    oldDescriptorId: UUID,
-    descriptorId: UUID,
-    validStates: Seq[PersistentAgreementState]
-  )(implicit contexts: Seq[(String, String)]): Future[Unit] = for {
-    validAgreements <- agreementManagementService.getAgreements(
-      List(eServiceId),
-      Nil,
-      Nil,
-      List(oldDescriptorId),
-      validStates
-    )
-    _               <- validAgreements.headOption match {
-      case Some(_) =>
-        deprecateDescriptor(oldDescriptorId.toString, eServiceId.toString).recoverWith(error =>
-          resetDescriptorToDraft(eServiceId.toString, descriptorId.toString).flatMap(_ => Future.failed(error))
-        )
-      case None    =>
-        catalogManagementService.archiveDescriptor(eServiceId.toString, oldDescriptorId.toString) recoverWith (error =>
-          resetDescriptorToDraft(eServiceId.toString, descriptorId.toString).flatMap(_ => Future.failed(error))
-        )
-    }
-  } yield ()
 
   private[this] def deprecateDescriptor(descriptorId: String, eServiceId: String)(implicit
     contexts: Seq[(String, String)]
