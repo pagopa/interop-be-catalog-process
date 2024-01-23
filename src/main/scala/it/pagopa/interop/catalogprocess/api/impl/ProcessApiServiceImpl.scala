@@ -326,6 +326,7 @@ final case class ProcessApiServiceImpl(
       catalogItem    <- catalogManagementService.getEServiceById(eServiceUuid)
       _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       descriptor     <- assertDescriptorExists(catalogItem, descriptorUuid)
+      _              <- isDraftDescriptor(descriptor)
       updated        <- catalogManagementService.createEServiceDocument(catalogItem.id, descriptor.id, managementSeed)
     } yield updated.toApi
 
