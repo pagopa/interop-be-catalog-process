@@ -34,7 +34,7 @@ import it.pagopa.interop.commons.riskanalysis.{model => Commons}
 import it.pagopa.interop.commons.utils.AkkaUtils._
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
-import it.pagopa.interop.commons.utils.errors.GenericComponentErrors
+import it.pagopa.interop.commons.utils.errors.{ComponentError, GenericComponentErrors}
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
@@ -106,6 +106,7 @@ final case class ProcessApiServiceImpl(
       organizationId <- getOrganizationIdFutureUUID(contexts)
       eServiceUuid   <- eServiceId.toFutureUUID
       catalogItem    <- catalogManagementService.getEServiceById(eServiceUuid)
+      _              <- descriptorDeletable(catalogItem, descriptorId).toFuture
       _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       result         <- catalogManagementService.deleteDraft(eServiceId, descriptorId)
     } yield result
@@ -114,6 +115,21 @@ final case class ProcessApiServiceImpl(
       deleteDraftResponse[Unit](operationLabel)(_ => deleteDraft204)
     }
   }
+
+  private def descriptorDeletable(catalogItem: CatalogItem, descriptorId: String): Either[ComponentError, Unit] =
+    getDescriptor(catalogItem, descriptorId).flatMap(descriptor =>
+      Left(NotValidDescriptor(descriptorId, descriptor.state.toString))
+        .withRight[Unit]
+        .unlessA(descriptor.state == Draft)
+    )
+
+  private def getDescriptor(
+    eService: CatalogItem,
+    descriptorId: String
+  ): Either[EServiceDescriptorNotFound, CatalogDescriptor] =
+    eService.descriptors
+      .find(_.id.toString == descriptorId)
+      .toRight(EServiceDescriptorNotFound(eService.id.toString, descriptorId))
 
   override def getEServices(
     name: Option[String],
