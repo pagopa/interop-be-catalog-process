@@ -1454,7 +1454,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         SpecData.catalogItem.id.toString,
         SpecData.catalogDescriptor.id.toString
       ) ~> check {
-        status shouldEqual StatusCodes.InternalServerError
+        status shouldEqual StatusCodes.BadRequest
       }
     }
     "fail if EService does not exist" in {
