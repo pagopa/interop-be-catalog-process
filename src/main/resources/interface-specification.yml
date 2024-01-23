@@ -264,6 +264,12 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        '409':
+          description: E-Service has some descriptors
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /eservices/{eServiceId}/consumers:
     parameters:
       - $ref: '#/components/parameters/CorrelationIdHeader'
