@@ -781,7 +781,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
     }
   }
   "EService document deletion" should {
-    "succeed" in {
+    "succeed only on Draft descriptor" in {
       val requesterId  = UUID.randomUUID()
       val descriptorId = UUID.randomUUID()
 
@@ -2561,7 +2561,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
     }
   }
   "Document deletion" should {
-    "succeed" in {
+    "succeed only on Draft Descriptor" in {
       val requesterId  = UUID.randomUUID()
       val descriptorId = UUID.randomUUID()
       val documentId   = UUID.randomUUID()
@@ -2664,6 +2664,37 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         documentId.toString
       ) ~> check {
         status shouldEqual StatusCodes.NotFound
+      }
+    }
+    "fail if descriptor is not Draft" in {
+      val requesterId  = UUID.randomUUID()
+      val descriptorId = UUID.randomUUID()
+      val documentId   = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val descriptor =
+        SpecData.catalogDescriptor.copy(
+          id = descriptorId,
+          docs = Seq(SpecData.catalogDocument.copy(id = documentId)),
+          state = Published
+        )
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(eService))
+
+      Delete() ~> service.deleteEServiceDocumentById(
+        SpecData.catalogItem.id.toString,
+        descriptorId.toString,
+        documentId.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.BadRequest
       }
     }
   }
