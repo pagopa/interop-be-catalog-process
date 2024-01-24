@@ -786,14 +786,20 @@ paths:
       responses:
         '204':
           description: Document deleted.
-        '404':
-          description: E-Service descriptor document not found
+        '400':
+          description: Bad request
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
-        '400':
-          description: Bad request
+                $ref: '#/components/schemas/Problem'  
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'  
+        '404':
+          description: E-Service descriptor document not found
           content:
             application/problem+json:
               schema:
