@@ -2320,7 +2320,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         .returns(Future.successful(eService))
 
       Post() ~> service.createEServiceDocument(SpecData.catalogItem.id.toString, descriptorId.toString, seed) ~> check {
-        status shouldEqual StatusCodes.Forbidden
+        status shouldEqual StatusCodes.BadRequest
       }
     }
     "fail if requester is not the Producer" in {
