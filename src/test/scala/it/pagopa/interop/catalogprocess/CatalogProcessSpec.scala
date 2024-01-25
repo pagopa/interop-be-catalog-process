@@ -1625,7 +1625,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         SpecData.catalogItem.id.toString,
         SpecData.catalogDescriptor.id.toString
       ) ~> check {
-        status shouldEqual StatusCodes.InternalServerError
+        status shouldEqual StatusCodes.BadRequest
       }
     }
     "fail if EService does not exist" in {
@@ -2270,13 +2270,18 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
 
+      val draftDescriptor = SpecData.catalogDescriptor.copy(state = Draft)
+
       (mockCatalogManagementService
         .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
         .expects(SpecData.catalogItem.id, *, *)
         .once()
-        .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
+        .returns(
+          Future
+            .successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID(), descriptors = Seq(draftDescriptor)))
+        )
 
-      Delete() ~> service.deleteDraft(SpecData.catalogItem.id.toString, UUID.randomUUID.toString) ~> check {
+      Delete() ~> service.deleteDraft(SpecData.catalogItem.id.toString, draftDescriptor.id.toString) ~> check {
         status shouldEqual StatusCodes.Forbidden
       }
     }
