@@ -2515,6 +2515,52 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         status shouldEqual StatusCodes.Forbidden
       }
     }
+    "fail if document is an interface and it already exists" in {
+      val requesterId                             = UUID.randomUUID()
+      val descriptorId                            = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val descriptor = SpecData.catalogDescriptor.copy(
+        id = descriptorId,
+        interface = Some(
+          CatalogDocument(
+            id = UUID.randomUUID(),
+            name = "name",
+            contentType = "application/yaml",
+            prettyName = "pretty",
+            path = "path",
+            checksum = "checksum",
+            uploadDate = OffsetDateTimeSupplier.get().minusDays(10)
+          )
+        )
+      )
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
+
+      val documentId = UUID.randomUUID()
+
+      val seed = CreateEServiceDescriptorDocumentSeed(
+        documentId = documentId,
+        kind = EServiceDocumentKind.INTERFACE,
+        prettyName = "prettyName",
+        filePath = "filePath",
+        fileName = "fileName",
+        contentType = "application/json",
+        checksum = "checksum",
+        serverUrls = Seq.empty
+      )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(eService))
+
+      Post() ~> service.createEServiceDocument(SpecData.catalogItem.id.toString, descriptorId.toString, seed) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+      }
+    }
   }
   "Document retrieve" should {
     "succeed" in {
