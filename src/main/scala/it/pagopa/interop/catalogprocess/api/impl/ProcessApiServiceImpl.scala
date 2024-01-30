@@ -358,6 +358,9 @@ final case class ProcessApiServiceImpl(
       catalogItem    <- catalogManagementService.getEServiceById(eServiceUuid)
       _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       descriptor     <- assertDescriptorExists(catalogItem, descriptorUuid)
+      _              <-
+        if (documentSeed.kind == EServiceDocumentKind.INTERFACE) assertInterfaceDoesNotExists(descriptor)
+        else Future.unit
       updated        <- catalogManagementService.createEServiceDocument(catalogItem.id, descriptor.id, managementSeed)
     } yield updated.toApi
 
@@ -859,4 +862,9 @@ object ProcessApiServiceImpl {
       .find(_.id == descriptorId)
       .toFuture(EServiceDescriptorNotFound(eService.id.toString, descriptorId.toString))
 
+  def assertInterfaceDoesNotExists(descriptor: CatalogDescriptor): Future[Unit] =
+    descriptor.interface match {
+      case Some(_) => Future.failed(InterfaceAlreadyExists(descriptor.id))
+      case None    => Future.unit
+    }
 }
