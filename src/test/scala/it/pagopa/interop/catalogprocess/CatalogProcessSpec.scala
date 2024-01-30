@@ -2,7 +2,11 @@ package it.pagopa.interop.catalogprocess
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import it.pagopa.interop.agreementmanagement.model.agreement.{Active, PersistentAgreementState}
+import it.pagopa.interop.agreementmanagement.model.agreement.{
+  Active => AgreementActive,
+  Suspended => AgreementSuspended,
+  PersistentAgreementState
+}
 import it.pagopa.interop.authorizationmanagement.client.{model => AuthorizationManagementDependency}
 import it.pagopa.interop.catalogmanagement.client.model.AgreementApprovalPolicy.AUTOMATIC
 import it.pagopa.interop.catalogmanagement.client.{model => CatalogManagementDependency}
@@ -136,11 +140,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val limit           = 50
 
       (mockAgreementManagementService
-        .getAgreements(_: Seq[UUID], _: Seq[UUID], _: Seq[UUID], _: Seq[PersistentAgreementState])(
+        .getAgreements(_: Seq[UUID], _: Seq[UUID], _: Seq[UUID], _: Seq[UUID], _: Seq[PersistentAgreementState])(
           _: ExecutionContext,
           _: ReadModelService
         ))
-        .expects(eServicesIds, Seq(requesterId), producersIds, Seq(Active), *, *)
+        .expects(eServicesIds, Seq(requesterId), producersIds, Nil, Seq(AgreementActive), *, *)
         .once()
         .returns(Future.successful(Seq(SpecData.agreement)))
 
@@ -205,11 +209,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       val limit           = 50
 
       (mockAgreementManagementService
-        .getAgreements(_: Seq[UUID], _: Seq[UUID], _: Seq[UUID], _: Seq[PersistentAgreementState])(
+        .getAgreements(_: Seq[UUID], _: Seq[UUID], _: Seq[UUID], _: Seq[UUID], _: Seq[PersistentAgreementState])(
           _: ExecutionContext,
           _: ReadModelService
         ))
-        .expects(eServicesIds, Seq(requesterId), producersIds, Seq(Active), *, *)
+        .expects(eServicesIds, Seq(requesterId), producersIds, Nil, Seq(AgreementActive), *, *)
         .once()
         .returns(Future.successful(Seq.empty))
 
@@ -1407,6 +1411,173 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         SpecData.catalogItem.id.toString,
         SpecData.catalogDescriptor.id.toString
       ) ~> check {
+        status shouldEqual StatusCodes.NoContent
+      }
+    }
+
+    "succeed if descriptor is Draft and archive the previous one" in {
+      val requesterId   = UUID.randomUUID()
+      val descriptorId1 = UUID.randomUUID()
+      val descriptorId2 = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem.copy(
+              producerId = requesterId,
+              descriptors = Seq(
+                SpecData.catalogDescriptor
+                  .copy(
+                    id = descriptorId1,
+                    state = Published,
+                    interface = Option(SpecData.catalogDocument),
+                    version = "2"
+                  ),
+                SpecData.catalogDescriptor
+                  .copy(id = descriptorId2, state = Draft, interface = Option(SpecData.catalogDocument))
+              )
+            )
+          )
+        )
+
+      (mockAgreementManagementService
+        .getAgreements(_: Seq[UUID], _: Seq[UUID], _: Seq[UUID], _: Seq[UUID], _: Seq[PersistentAgreementState])(
+          _: ExecutionContext,
+          _: ReadModelService
+        ))
+        .expects(
+          Seq(SpecData.catalogItem.id),
+          Nil,
+          Nil,
+          List(descriptorId1),
+          Seq(AgreementActive, AgreementSuspended),
+          *,
+          *
+        )
+        .once()
+        .returns(Future.successful(Seq.empty))
+
+      (mockCatalogManagementService
+        .archiveDescriptor(_: String, _: String)(_: Seq[(String, String)]))
+        .expects(SpecData.catalogItem.id.toString, descriptorId1.toString, *)
+        .returning(Future.unit)
+        .once()
+
+      (mockCatalogManagementService
+        .publishDescriptor(_: String, _: String)(_: Seq[(String, String)]))
+        .expects(SpecData.catalogItem.id.toString, descriptorId2.toString, *)
+        .returning(Future.unit)
+        .once()
+
+      (mockAuthorizationManagementService
+        .updateStateOnClients(
+          _: UUID,
+          _: UUID,
+          _: AuthorizationManagementDependency.ClientComponentState,
+          _: Seq[String],
+          _: Int
+        )(_: Seq[(String, String)]))
+        .expects(
+          SpecData.catalogItem.id,
+          descriptorId2,
+          AuthorizationManagementDependency.ClientComponentState.ACTIVE,
+          SpecData.catalogDescriptor.audience,
+          SpecData.catalogDescriptor.voucherLifespan,
+          *
+        )
+        .returning(Future.unit)
+        .once()
+
+      Post() ~> service.publishDescriptor(SpecData.catalogItem.id.toString, descriptorId2.toString) ~> check {
+        status shouldEqual StatusCodes.NoContent
+      }
+    }
+    "succeed if descriptor is Draft and deprecate the previous one" in {
+      val requesterId   = UUID.randomUUID()
+      val descriptorId1 = UUID.randomUUID()
+      val descriptorId2 = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem.copy(
+              producerId = requesterId,
+              descriptors = Seq(
+                SpecData.catalogDescriptor
+                  .copy(
+                    id = descriptorId1,
+                    state = Published,
+                    interface = Option(SpecData.catalogDocument),
+                    version = "2"
+                  ),
+                SpecData.catalogDescriptor
+                  .copy(id = descriptorId2, state = Draft, interface = Option(SpecData.catalogDocument))
+              )
+            )
+          )
+        )
+
+      (mockAgreementManagementService
+        .getAgreements(_: Seq[UUID], _: Seq[UUID], _: Seq[UUID], _: Seq[UUID], _: Seq[PersistentAgreementState])(
+          _: ExecutionContext,
+          _: ReadModelService
+        ))
+        .expects(
+          Seq(SpecData.catalogItem.id),
+          Nil,
+          Nil,
+          List(descriptorId1),
+          Seq(AgreementActive, AgreementSuspended),
+          *,
+          *
+        )
+        .once()
+        .returns(Future.successful(Seq(SpecData.agreement)))
+
+      (mockCatalogManagementService
+        .deprecateDescriptor(_: String, _: String)(_: Seq[(String, String)]))
+        .expects(SpecData.catalogItem.id.toString, descriptorId1.toString, *)
+        .returning(Future.unit)
+        .once()
+
+      (mockCatalogManagementService
+        .publishDescriptor(_: String, _: String)(_: Seq[(String, String)]))
+        .expects(SpecData.catalogItem.id.toString, descriptorId2.toString, *)
+        .returning(Future.unit)
+        .once()
+
+      (mockAuthorizationManagementService
+        .updateStateOnClients(
+          _: UUID,
+          _: UUID,
+          _: AuthorizationManagementDependency.ClientComponentState,
+          _: Seq[String],
+          _: Int
+        )(_: Seq[(String, String)]))
+        .expects(
+          SpecData.catalogItem.id,
+          descriptorId2,
+          AuthorizationManagementDependency.ClientComponentState.ACTIVE,
+          SpecData.catalogDescriptor.audience,
+          SpecData.catalogDescriptor.voucherLifespan,
+          *
+        )
+        .returning(Future.unit)
+        .once()
+
+      Post() ~> service.publishDescriptor(SpecData.catalogItem.id.toString, descriptorId2.toString) ~> check {
         status shouldEqual StatusCodes.NoContent
       }
     }
