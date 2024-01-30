@@ -35,10 +35,14 @@ import it.pagopa.interop.commons.utils.AkkaUtils._
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
 import it.pagopa.interop.commons.utils.errors.{ComponentError, GenericComponentErrors}
+import it.pagopa.interop.catalogmanagement.model.CatalogItemMode
+import it.pagopa.interop.agreementmanagement.model.agreement.{
+  Active => AgreementActive,
+  Suspended => AgreementSuspended
+}
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
-import it.pagopa.interop.catalogmanagement.model.CatalogItemMode
 
 final case class ProcessApiServiceImpl(
   catalogManagementService: CatalogManagementService,
@@ -178,6 +182,7 @@ final case class ProcessApiServiceImpl(
                 eServicesIds = eServicesIds,
                 producersIds = Nil,
                 consumersIds = Seq(organizationId),
+                descriptorsIds = Nil,
                 states = agreementStates
               )
               .map(_.map(_.eserviceId))
@@ -235,6 +240,32 @@ final case class ProcessApiServiceImpl(
     val operationLabel = s"Publishing descriptor $descriptorId for EService $eServiceId"
     logger.info(operationLabel)
 
+    def changeStateOfOldDescriptorOrCancelPublication(
+      eServiceId: UUID,
+      oldDescriptorId: UUID,
+      descriptorId: UUID,
+      validStates: Seq[PersistentAgreementState]
+    ): Future[Unit] = for {
+      validAgreements <- agreementManagementService.getAgreements(
+        List(eServiceId),
+        Nil,
+        Nil,
+        List(oldDescriptorId),
+        validStates
+      )
+      _               <- validAgreements.headOption match {
+        case Some(_) =>
+          deprecateDescriptor(oldDescriptorId.toString, eServiceId.toString).recoverWith(error =>
+            resetDescriptorToDraft(eServiceId.toString, descriptorId.toString).flatMap(_ => Future.failed(error))
+          )
+        case None    =>
+          catalogManagementService.archiveDescriptor(eServiceId.toString, oldDescriptorId.toString) recoverWith (
+            error =>
+              resetDescriptorToDraft(eServiceId.toString, descriptorId.toString).flatMap(_ => Future.failed(error))
+          )
+      }
+    } yield ()
+
     def verifyRiskAnalysisForPublication(catalogItem: CatalogItem): Future[Unit] = catalogItem.mode match {
       case Deliver => Future.unit
       case Receive =>
@@ -265,10 +296,11 @@ final case class ProcessApiServiceImpl(
       _ <- catalogManagementService.publishDescriptor(eServiceId, descriptorId)
       _ <- currentActiveDescriptor
         .map(oldDescriptor =>
-          deprecateDescriptorOrCancelPublication(
-            eServiceId = eServiceId,
-            descriptorIdToDeprecate = oldDescriptor.id.toString,
-            descriptorIdToCancel = descriptorId
+          changeStateOfOldDescriptorOrCancelPublication(
+            eServiceId = eServiceUuid,
+            oldDescriptorId = oldDescriptor.id,
+            descriptorId = descriptorUuid,
+            validStates = List(AgreementActive, AgreementSuspended)
           )
         )
         .sequence
@@ -327,6 +359,9 @@ final case class ProcessApiServiceImpl(
       _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       descriptor     <- assertDescriptorExists(catalogItem, descriptorUuid)
       _              <- isDraftDescriptor(descriptor)
+      _              <-
+        if (documentSeed.kind == EServiceDocumentKind.INTERFACE) assertInterfaceDoesNotExists(descriptor)
+        else Future.unit
       updated        <- catalogManagementService.createEServiceDocument(catalogItem.id, descriptor.id, managementSeed)
     } yield updated.toApi
 
@@ -467,13 +502,6 @@ final case class ProcessApiServiceImpl(
       (),
       EServiceCannotBeUpdated(eService.id.toString)
     )
-
-  private[this] def deprecateDescriptorOrCancelPublication(
-    eServiceId: String,
-    descriptorIdToDeprecate: String,
-    descriptorIdToCancel: String
-  )(implicit contexts: Seq[(String, String)]): Future[Unit] = deprecateDescriptor(descriptorIdToDeprecate, eServiceId)
-    .recoverWith(error => resetDescriptorToDraft(eServiceId, descriptorIdToCancel).flatMap(_ => Future.failed(error)))
 
   private[this] def deprecateDescriptor(descriptorId: String, eServiceId: String)(implicit
     contexts: Seq[(String, String)]
@@ -835,4 +863,9 @@ object ProcessApiServiceImpl {
       .find(_.id == descriptorId)
       .toFuture(EServiceDescriptorNotFound(eService.id.toString, descriptorId.toString))
 
+  def assertInterfaceDoesNotExists(descriptor: CatalogDescriptor): Future[Unit] =
+    descriptor.interface match {
+      case Some(_) => Future.failed(InterfaceAlreadyExists(descriptor.id))
+      case None    => Future.unit
+    }
 }

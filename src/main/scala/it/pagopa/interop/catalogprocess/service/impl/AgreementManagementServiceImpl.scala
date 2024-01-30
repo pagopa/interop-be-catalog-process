@@ -14,24 +14,35 @@ object AgreementManagementServiceImpl extends AgreementManagementService {
     eServicesIds: Seq[UUID],
     consumersIds: Seq[UUID],
     producersIds: Seq[UUID],
+    descriptorsIds: Seq[UUID],
     states: Seq[PersistentAgreementState]
   )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[Seq[PersistentAgreement]] =
-    getAllAgreements(eServicesIds, consumersIds, producersIds, states)
+    getAllAgreements(eServicesIds, consumersIds, producersIds, descriptorsIds, states)
 
   private def getAgreements(
     eServicesIds: Seq[UUID],
     consumersIds: Seq[UUID],
     producersIds: Seq[UUID],
+    descriptorsIds: Seq[UUID],
     states: Seq[PersistentAgreementState],
     offset: Int,
     limit: Int
   )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[Seq[PersistentAgreement]] =
-    ReadModelAgreementQueries.getAgreements(eServicesIds, consumersIds, producersIds, states, offset, limit)
+    ReadModelAgreementQueries.getAgreements(
+      eServicesIds,
+      consumersIds,
+      producersIds,
+      descriptorsIds,
+      states,
+      offset,
+      limit
+    )
 
   private def getAllAgreements(
     eServicesIds: Seq[UUID],
     consumersIds: Seq[UUID],
     producersIds: Seq[UUID],
+    descriptorsIds: Seq[UUID],
     states: Seq[PersistentAgreementState]
   )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[Seq[PersistentAgreement]] = {
 
@@ -40,6 +51,7 @@ object AgreementManagementServiceImpl extends AgreementManagementService {
         eServicesIds = eServicesIds,
         consumersIds = consumersIds,
         producersIds = producersIds,
+        descriptorsIds = descriptorsIds,
         states = states,
         offset = offset,
         limit = 50
