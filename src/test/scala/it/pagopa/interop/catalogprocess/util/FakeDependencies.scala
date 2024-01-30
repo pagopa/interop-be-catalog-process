@@ -335,6 +335,7 @@ object FakeDependencies {
       eServicesIds: Seq[UUID],
       consumersIds: Seq[UUID],
       producersIds: Seq[UUID],
+      descriptorsIds: Seq[UUID],
       states: Seq[PersistentAgreementState]
     )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[Seq[PersistentAgreement]] =
       Future.successful(Seq.empty)
