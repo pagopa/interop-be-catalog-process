@@ -76,7 +76,10 @@ object CatalogProcessErrors {
   final case class AttributeNotFound(attributeId: UUID)
       extends ComponentError("0020", s"Attribute ${attributeId.toString} not found")
 
+  final case class EServiceWithDescriptorsNotDeletable(eServiceId: String)
+      extends ComponentError("0021", s"EService $eServiceId contains descriptors and cannot be deleted")
+
   final case class InterfaceAlreadyExists(descriptorId: UUID)
-      extends ComponentError("0021", s"Descriptor ${descriptorId.toString} already has an interface")
+      extends ComponentError("0022", s"Descriptor ${descriptorId.toString} already has an interface")
 
 }
