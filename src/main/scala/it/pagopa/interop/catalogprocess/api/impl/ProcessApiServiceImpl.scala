@@ -548,6 +548,8 @@ final case class ProcessApiServiceImpl(
       documentUuid   <- documentId.toFutureUUID
       catalogItem    <- catalogManagementService.getEServiceById(eServiceUuid)
       _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
+      descriptor     <- assertDescriptorExists(catalogItem, descriptorUuid)
+      _              <- isDraftDescriptor(descriptor)
       result         <- catalogManagementService.deleteEServiceDocument(
         eServiceUuid.toString,
         descriptorUuid.toString,

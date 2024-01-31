@@ -786,27 +786,40 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
     }
   }
   "EService document deletion" should {
-    "succeed" in {
-      val requesterId = UUID.randomUUID()
+    "succeed only on Draft descriptor" in {
+      val requesterId  = UUID.randomUUID()
+      val descriptorId = UUID.randomUUID()
 
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
       val eServiceDoc = SpecData.eServiceDoc
 
-      val descriptor =
+      val eServiceDescriptor =
         SpecData.eServiceDescriptor.copy(
-          state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED,
+          id = descriptorId,
+          state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
           docs = Seq(eServiceDoc)
         )
 
-      val eService = SpecData.eService.copy(descriptors = Seq(descriptor), producerId = requesterId)
+      val eService = SpecData.eService.copy(descriptors = Seq(eServiceDescriptor), producerId = requesterId)
+
+      val descriptor =
+        SpecData.catalogDescriptor.copy(
+          id = descriptorId,
+          docs = Seq(SpecData.catalogDocument.copy(id = eServiceDoc.id)),
+          state = Draft
+        )
 
       (mockCatalogManagementService
         .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
         .expects(eService.id, *, *)
         .once()
-        .returns(Future.successful(SpecData.catalogItem.copy(id = eService.id, producerId = requesterId)))
+        .returns(
+          Future.successful(
+            SpecData.catalogItem.copy(id = eService.id, producerId = requesterId, descriptors = Seq(descriptor))
+          )
+        )
 
       (mockCatalogManagementService
         .deleteEServiceDocument(_: String, _: String, _: String)(_: Seq[(String, String)]))
@@ -858,6 +871,82 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         UUID.randomUUID().toString
       ) ~> check {
         status shouldEqual StatusCodes.NotFound
+      }
+    }
+    "fail if descriptor does not exists" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val eService = SpecData.eService.copy(descriptors = Seq.empty, producerId = requesterId)
+
+      val descriptor =
+        SpecData.catalogDescriptor.copy(
+          id = UUID.randomUUID(),
+          docs = Seq(SpecData.catalogDocument.copy(id = SpecData.eServiceDoc.id)),
+          state = Draft
+        )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eService.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem.copy(id = eService.id, producerId = requesterId, descriptors = Seq(descriptor))
+          )
+        )
+
+      Delete() ~> service.deleteEServiceDocumentById(
+        eService.id.toString,
+        UUID.randomUUID().toString,
+        SpecData.eServiceDoc.id.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
+    "fail if Descriptor is not Draft" in {
+      val requesterId  = UUID.randomUUID()
+      val descriptorId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val eServiceDoc = SpecData.eServiceDoc
+
+      val eServiceDescriptor =
+        SpecData.eServiceDescriptor.copy(
+          id = descriptorId,
+          state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED,
+          docs = Seq(eServiceDoc)
+        )
+
+      val eService = SpecData.eService.copy(descriptors = Seq(eServiceDescriptor), producerId = requesterId)
+
+      val descriptor =
+        SpecData.catalogDescriptor.copy(
+          id = descriptorId,
+          docs = Seq(SpecData.catalogDocument.copy(id = eServiceDoc.id)),
+          state = Published
+        )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eService.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem.copy(id = eService.id, producerId = requesterId, descriptors = Seq(descriptor))
+          )
+        )
+
+      Delete() ~> service.deleteEServiceDocumentById(
+        eService.id.toString,
+        descriptor.id.toString,
+        eServiceDoc.id.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.BadRequest
       }
     }
   }
@@ -2749,7 +2838,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
     }
   }
   "Document deletion" should {
-    "succeed" in {
+    "succeed only on Draft Descriptor" in {
       val requesterId  = UUID.randomUUID()
       val descriptorId = UUID.randomUUID()
       val documentId   = UUID.randomUUID()
@@ -2758,7 +2847,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
       val descriptor =
-        SpecData.catalogDescriptor.copy(id = descriptorId, docs = Seq(SpecData.catalogDocument.copy(id = documentId)))
+        SpecData.catalogDescriptor.copy(
+          id = descriptorId,
+          docs = Seq(SpecData.catalogDocument.copy(id = documentId)),
+          state = Draft
+        )
 
       val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
 
@@ -2818,6 +2911,67 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         UUID.randomUUID().toString
       ) ~> check {
         status shouldEqual StatusCodes.Forbidden
+      }
+    }
+    "fail if descriptor does not exists" in {
+      val requesterId  = UUID.randomUUID()
+      val descriptorId = UUID.randomUUID()
+      val documentId   = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val descriptor =
+        SpecData.catalogDescriptor.copy(
+          id = UUID.randomUUID(),
+          docs = Seq(SpecData.catalogDocument.copy(id = documentId))
+        )
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(eService))
+
+      Delete() ~> service.deleteEServiceDocumentById(
+        SpecData.catalogItem.id.toString,
+        descriptorId.toString,
+        documentId.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
+    "fail if descriptor is not Draft" in {
+      val requesterId  = UUID.randomUUID()
+      val descriptorId = UUID.randomUUID()
+      val documentId   = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val descriptor =
+        SpecData.catalogDescriptor.copy(
+          id = descriptorId,
+          docs = Seq(SpecData.catalogDocument.copy(id = documentId)),
+          state = Published
+        )
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(eService))
+
+      Delete() ~> service.deleteEServiceDocumentById(
+        SpecData.catalogItem.id.toString,
+        descriptorId.toString,
+        documentId.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.BadRequest
       }
     }
   }
