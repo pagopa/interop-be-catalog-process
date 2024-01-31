@@ -358,6 +358,7 @@ final case class ProcessApiServiceImpl(
       catalogItem    <- catalogManagementService.getEServiceById(eServiceUuid)
       _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       descriptor     <- assertDescriptorExists(catalogItem, descriptorUuid)
+      _              <- isDraftDescriptor(descriptor)
       _              <-
         if (documentSeed.kind == EServiceDocumentKind.INTERFACE) assertInterfaceDoesNotExists(descriptor)
         else Future.unit
