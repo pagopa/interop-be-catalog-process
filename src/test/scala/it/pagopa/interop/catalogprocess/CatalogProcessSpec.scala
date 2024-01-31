@@ -2378,7 +2378,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId)
+      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, state = Draft)
 
       val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
 
@@ -2484,6 +2484,40 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         seed
       ) ~> check {
         status shouldEqual StatusCodes.NotFound
+      }
+    }
+    "fail if EService descriptor is not draft" in {
+
+      val requesterId                             = UUID.randomUUID()
+      val descriptorId                            = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId, state = Published)
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
+
+      val documentId = UUID.randomUUID()
+
+      val seed = CreateEServiceDescriptorDocumentSeed(
+        documentId = documentId,
+        kind = EServiceDocumentKind.DOCUMENT,
+        prettyName = "prettyName",
+        filePath = "filePath",
+        fileName = "fileName",
+        contentType = "application/pdf",
+        checksum = "checksum",
+        serverUrls = Seq.empty
+      )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(eService))
+
+      Post() ~> service.createEServiceDocument(SpecData.catalogItem.id.toString, descriptorId.toString, seed) ~> check {
+        status shouldEqual StatusCodes.BadRequest
       }
     }
     "fail if requester is not the Producer" in {
