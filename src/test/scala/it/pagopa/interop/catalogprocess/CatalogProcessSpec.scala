@@ -18,7 +18,8 @@ import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors.{
   DescriptorDocumentNotFound,
   EServiceNotFound,
   EServiceRiskAnalysisNotFound,
-  AttributeNotFound
+  AttributeNotFound,
+  EServiceWithDescriptorsNotDeletable
 }
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
@@ -2378,14 +2379,12 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
   "EService deletion" should {
     "succeed" in {
 
-      val requesterId                             = UUID.randomUUID()
-      val descriptorId                            = UUID.randomUUID()
+      val requesterId = UUID.randomUUID()
+
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId)
-
-      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
+      val eService = SpecData.catalogItem.copy(descriptors = Seq.empty, producerId = requesterId)
 
       (mockCatalogManagementService
         .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
@@ -2417,6 +2416,33 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       Delete() ~> service.deleteEService(SpecData.catalogItem.id.toString) ~> check {
         status shouldEqual StatusCodes.NotFound
+      }
+    }
+    "fail if EService has descriptors" in {
+
+      val requesterId                             = UUID.randomUUID()
+      val descriptorId                            = UUID.randomUUID()
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val descriptor = SpecData.catalogDescriptor.copy(id = descriptorId)
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(eService))
+
+      (mockCatalogManagementService
+        .deleteEService(_: String)(_: Seq[(String, String)]))
+        .expects(eService.id.toString, *)
+        .returning(Future.failed(EServiceWithDescriptorsNotDeletable(SpecData.catalogItem.id.toString)))
+        .once()
+
+      Delete() ~> service.deleteEService(SpecData.catalogItem.id.toString) ~> check {
+        status shouldEqual StatusCodes.Conflict
       }
     }
     "fail if requester is not the Producer" in {
