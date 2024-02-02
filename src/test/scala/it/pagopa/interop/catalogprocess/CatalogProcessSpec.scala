@@ -2769,8 +2769,69 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
     }
   }
   "Document retrieve" should {
-    "succeed" in {
+    "succeed if role is admin and the requester is the producer" in {
 
+      val requesterId  = UUID.randomUUID()
+      val descriptorId = UUID.randomUUID()
+      val documentId   = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val descriptor = SpecData.catalogDescriptor.copy(
+        id = descriptorId,
+        interface = Some(SpecData.catalogDocument.copy(id = documentId))
+      )
+
+      val eService = SpecData.catalogItem.copy(producerId = requesterId, descriptors = Seq(descriptor))
+
+      (mockCatalogManagementService
+        .getEServiceDocument(_: UUID, _: UUID, _: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, descriptorId, documentId, *, *)
+        .once()
+        .returns(Future.successful((eService, SpecData.catalogDocument.copy(id = documentId))))
+
+      Post() ~> service.getEServiceDocumentById(
+        eService.id.toString,
+        descriptorId.toString,
+        documentId.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+    "succeed if role is api and the requester is the producer" in {
+
+      val requesterId  = UUID.randomUUID()
+      val descriptorId = UUID.randomUUID()
+      val documentId   = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "api", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val descriptor = SpecData.catalogDescriptor.copy(
+        id = descriptorId,
+        interface = Some(SpecData.catalogDocument.copy(id = documentId))
+      )
+
+      val eService = SpecData.catalogItem.copy(producerId = requesterId, descriptors = Seq(descriptor))
+
+      (mockCatalogManagementService
+        .getEServiceDocument(_: UUID, _: UUID, _: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, descriptorId, documentId, *, *)
+        .once()
+        .returns(Future.successful((eService, SpecData.catalogDocument.copy(id = documentId))))
+
+      Post() ~> service.getEServiceDocumentById(
+        eService.id.toString,
+        descriptorId.toString,
+        documentId.toString
+      ) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+    "fail if the requester is not the producer and document belongs to a draft descriptor " in {
+
+      val requesterId  = UUID.randomUUID()
       val descriptorId = UUID.randomUUID()
       val documentId   = UUID.randomUUID()
 
@@ -2779,23 +2840,24 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       val descriptor = SpecData.catalogDescriptor.copy(
         id = descriptorId,
+        state = Draft,
         interface = Some(SpecData.catalogDocument.copy(id = documentId))
       )
 
-      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor))
+      val eService = SpecData.catalogItem.copy(producerId = requesterId, descriptors = Seq(descriptor))
 
       (mockCatalogManagementService
         .getEServiceDocument(_: UUID, _: UUID, _: UUID)(_: ExecutionContext, _: ReadModelService))
         .expects(SpecData.catalogItem.id, descriptorId, documentId, *, *)
         .once()
-        .returns(Future.successful(SpecData.catalogDocument.copy(id = documentId)))
+        .returns(Future.successful((eService, SpecData.catalogDocument.copy(id = documentId))))
 
       Post() ~> service.getEServiceDocumentById(
         eService.id.toString,
         descriptorId.toString,
         documentId.toString
       ) ~> check {
-        status shouldEqual StatusCodes.OK
+        status shouldEqual StatusCodes.NotFound
       }
     }
     "fail if Document does not exist" in {

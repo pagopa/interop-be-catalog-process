@@ -403,11 +403,21 @@ final case class ProcessApiServiceImpl(
     logger.info(operationLabel)
 
     val result: Future[EServiceDoc] = for {
-      eServiceUuid   <- eServiceId.toFutureUUID
-      descriptorUuid <- descriptorId.toFutureUUID
-      documentIdUuid <- documentId.toFutureUUID
-      eServiceDoc    <- catalogManagementService.getEServiceDocument(eServiceUuid, descriptorUuid, documentIdUuid)
-    } yield eServiceDoc.toApi
+      organizationId                 <- getOrganizationIdFutureUUID(contexts)
+      eServiceUuid                   <- eServiceId.toFutureUUID
+      descriptorUuid                 <- descriptorId.toFutureUUID
+      documentIdUuid                 <- documentId.toFutureUUID
+      role                           <- getUserRolesFuture(contexts)
+      (catalogItem, catalogDocument) <- catalogManagementService.getEServiceDocument(
+        eServiceUuid,
+        descriptorUuid,
+        documentIdUuid
+      )
+      eService                       <- applyVisibilityToEService(catalogItem, organizationId, role)
+      _                              <-
+        if (eService.descriptors.map(_.id).contains(descriptorUuid)) Future.successful(())
+        else Future.failed(DescriptorDocumentNotFound(eServiceId, descriptorId, documentId))
+    } yield catalogDocument.toApi
 
     onComplete(result) {
       getEServiceDocumentByIdResponse[EServiceDoc](operationLabel)(getEServiceDocumentById200)

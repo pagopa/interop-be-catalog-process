@@ -46,7 +46,7 @@ trait CatalogManagementService {
   def getEServiceDocument(eServiceId: UUID, descriptorId: UUID, documentId: UUID)(implicit
     ec: ExecutionContext,
     readModel: ReadModelService
-  ): Future[CatalogDocument]
+  ): Future[(CatalogItem, CatalogDocument)]
   def updateEServiceDocument(
     eServiceId: String,
     descriptorId: String,

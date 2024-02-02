@@ -26,6 +26,7 @@ import it.pagopa.interop.catalogmanagement.model.{
   CatalogAttributes,
   CatalogDocument,
   Published,
+  CatalogDescriptor,
   CatalogDescriptorState,
   CatalogItemMode,
   Deliver
@@ -44,6 +45,7 @@ import it.pagopa.interop.attributeregistrymanagement.model.persistence.attribute
 import java.time.OffsetDateTime
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
+import it.pagopa.interop.catalogmanagement.model.Automatic
 
 /**
  * Holds fake implementation of dependencies for tests not requiring neither mocks or stubs
@@ -73,15 +75,50 @@ object FakeDependencies {
     override def getEServiceDocument(eServiceId: UUID, descriptorId: UUID, documentId: UUID)(implicit
       ec: ExecutionContext,
       readModel: ReadModelService
-    ): Future[CatalogDocument] = Future.successful(
-      CatalogDocument(
-        id = UUID.randomUUID(),
-        name = "fake",
-        contentType = "fake",
-        prettyName = "fake",
-        path = "fake",
-        checksum = "fake",
-        uploadDate = OffsetDateTime.now()
+    ): Future[(CatalogItem, CatalogDocument)] = Future.successful(
+      (
+        CatalogItem(
+          id = UUID.randomUUID(),
+          producerId = UUID.randomUUID(),
+          name = "fake",
+          description = "fake",
+          technology = Rest,
+          descriptors = Seq(
+            CatalogDescriptor(
+              id = UUID.randomUUID(),
+              version = "???",
+              description = None,
+              audience = Seq.empty,
+              voucherLifespan = 0,
+              dailyCallsPerConsumer = 0,
+              dailyCallsTotal = 0,
+              interface = None,
+              docs = Seq.empty,
+              state = Published,
+              agreementApprovalPolicy = Some(Automatic),
+              serverUrls = Nil,
+              attributes = CatalogAttributes(Nil, Nil, Nil),
+              createdAt = OffsetDateTime.now(),
+              publishedAt = Some(OffsetDateTime.now()),
+              suspendedAt = None,
+              deprecatedAt = None,
+              archivedAt = None
+            )
+          ),
+          attributes = Some(CatalogAttributes.empty),
+          createdAt = OffsetDateTime.now(),
+          riskAnalysis = Seq.empty,
+          mode = Deliver
+        ),
+        CatalogDocument(
+          id = UUID.randomUUID(),
+          name = "fake",
+          contentType = "fake",
+          prettyName = "fake",
+          path = "fake",
+          checksum = "fake",
+          uploadDate = OffsetDateTime.now()
+        )
       )
     )
 
