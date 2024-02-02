@@ -2748,7 +2748,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
     }
   }
   "Document update" should {
-    "succeed only on draft descriptor" in {
+    "succeed on draft descriptor" in {
       val requesterId  = UUID.randomUUID()
       val descriptorId = UUID.randomUUID()
       val documentId   = UUID.randomUUID()
