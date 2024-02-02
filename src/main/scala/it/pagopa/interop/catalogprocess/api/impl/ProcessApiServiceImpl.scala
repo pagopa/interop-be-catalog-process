@@ -75,6 +75,7 @@ final case class ProcessApiServiceImpl(
       clientSeed = eServiceSeed.toDependency(organizationId)
       maybeEservice <- catalogManagementService
         .getEServices(
+          organizationId,
           eServiceSeed.name.some,
           Seq.empty,
           Seq(clientSeed.producerId),
@@ -160,20 +161,23 @@ final case class ProcessApiServiceImpl(
         states: Seq[CatalogDescriptorState],
         agreementStates: Seq[PersistentAgreementState],
         mode: Option[CatalogItemMode],
+        visibilityRestrictions: Boolean,
         offset: Int,
         limit: Int
       ): Future[PaginatedResult[CatalogItem]] = {
 
         if (agreementStates.isEmpty)
           catalogManagementService.getEServices(
-            name,
-            eServicesIds,
-            producersIds,
-            attributesIds,
-            states,
-            mode,
-            offset,
-            limit
+            requesterId = organizationId,
+            name = name,
+            eServicesIds = eServicesIds,
+            producersIds = producersIds,
+            attributesIds = attributesIds,
+            states = states,
+            mode = mode,
+            visibilityRestrictions = visibilityRestrictions,
+            offset = offset,
+            limit = limit
           )
         else
           for {
@@ -191,14 +195,16 @@ final case class ProcessApiServiceImpl(
                 Future.successful(ReadModelCatalogQueries.emptyResults[CatalogItem])
               else
                 catalogManagementService.getEServices(
-                  name,
-                  agreementEservicesIds,
-                  producersIds,
-                  attributesIds,
-                  states,
-                  mode,
-                  offset,
-                  limit
+                  requesterId = organizationId,
+                  name = name,
+                  eServicesIds = agreementEservicesIds,
+                  producersIds = producersIds,
+                  attributesIds = attributesIds,
+                  states = states,
+                  mode = mode,
+                  visibilityRestrictions = visibilityRestrictions,
+                  offset = offset,
+                  limit = limit
                 )
           } yield result
       }
@@ -213,7 +219,9 @@ final case class ProcessApiServiceImpl(
         agreementStates <- parseArrayParameters(agreementStates)
           .traverse(AgreementState.fromValue)
           .toFuture
-        eServices       <-
+        role            <- getUserRolesFuture(contexts)
+        visibilityRestrictions = Seq(ADMIN_ROLE, API_ROLE).contains(role)
+        eServices <-
           getEservicesInner(
             organizationId,
             name,
@@ -223,10 +231,15 @@ final case class ProcessApiServiceImpl(
             states.map(_.toPersistent),
             agreementStates.map(_.toPersistent),
             mode.map(_.toPersistent),
+            visibilityRestrictions,
             offset,
             limit
           )
-      } yield EServices(results = eServices.results.map(_.toApi), totalCount = eServices.totalCount)
+        results =
+          if (visibilityRestrictions)
+            eServices.results.map(ese => ese.copy(descriptors = ese.descriptors.filterNot(_.state == Draft)))
+          else eServices.results
+      } yield EServices(results = results.map(_.toApi), totalCount = eServices.totalCount)
 
       onComplete(result) {
         getEServicesResponse(operationLabel)(getEServices200)

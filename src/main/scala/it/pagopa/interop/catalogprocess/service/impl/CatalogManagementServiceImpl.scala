@@ -259,6 +259,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   ): Future[PaginatedResult[Consumers]] = ReadModelCatalogQueries.getConsumers(eServiceId, offset, limit)
 
   override def getEServices(
+    requesterId: UUID,
     name: Option[String],
     eServicesIds: Seq[UUID],
     producersIds: Seq[UUID],
@@ -267,9 +268,11 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
     mode: Option[CatalogItemMode],
     offset: Int,
     limit: Int,
-    exactMatchOnName: Boolean = false
+    exactMatchOnName: Boolean = false,
+    visibilityRestrictions: Boolean = false
   )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PaginatedResult[CatalogItem]] =
     ReadModelCatalogQueries.getEServices(
+      requesterId,
       name,
       eServicesIds,
       producersIds,
@@ -278,7 +281,8 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       mode,
       offset,
       limit,
-      exactMatchOnName
+      exactMatchOnName,
+      visibilityRestrictions
     )
 
   override def createRiskAnalysis(eServiceId: UUID, riskAnalysisSeed: RiskAnalysisSeed)(implicit

@@ -15,6 +15,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import java.util.UUID
 import it.pagopa.interop.catalogmanagement.model.{CatalogItemMode, CatalogDescriptorState}
 import org.mongodb.scala.bson.BsonDocument
+import it.pagopa.interop.catalogmanagement.model.Draft
 
 object ReadModelCatalogQueries extends ReadModelQuery {
 
@@ -114,6 +115,7 @@ object ReadModelCatalogQueries extends ReadModelQuery {
   }
 
   def getEServices(
+    requesterId: UUID,
     name: Option[String],
     eServicesIds: Seq[UUID],
     producersIds: Seq[UUID],
@@ -122,10 +124,21 @@ object ReadModelCatalogQueries extends ReadModelQuery {
     mode: Option[CatalogItemMode],
     offset: Int,
     limit: Int,
-    exactMatchOnName: Boolean = false
+    exactMatchOnName: Boolean = false,
+    visibilityRestrictions: Boolean = false
   )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PaginatedResult[CatalogItem]] = {
 
-    val query = listEServicesFilters(name, eServicesIds, producersIds, attributesIds, states, mode, exactMatchOnName)
+    val query = listEServicesFilters(
+      requesterId,
+      name,
+      eServicesIds,
+      producersIds,
+      attributesIds,
+      states,
+      mode,
+      exactMatchOnName,
+      visibilityRestrictions
+    )
 
     for {
       // Using aggregate to perform case insensitive sorting
@@ -157,13 +170,15 @@ object ReadModelCatalogQueries extends ReadModelQuery {
   }
 
   private def listEServicesFilters(
+    requesterId: UUID,
     name: Option[String],
     eServicesIds: Seq[UUID],
     producersIds: Seq[UUID],
     attributesIds: Seq[UUID],
     states: Seq[CatalogDescriptorState],
     mode: Option[CatalogItemMode],
-    exactMatchOnName: Boolean
+    exactMatchOnName: Boolean,
+    visibilityRestrictions: Boolean
   ): Bson = {
     val statesPartialFilter = states
       .map(_.toString)
@@ -193,8 +208,22 @@ object ReadModelCatalogQueries extends ReadModelQuery {
 
     val modeFilter = mode.map(_.toString).map(Filters.eq("data.mode", _))
 
+    val visibilityRestrictionsFilter =
+      if (visibilityRestrictions)
+        Some(
+          Filters.nor(
+            Filters.and(Filters.ne("data.producerId", requesterId.toString), Filters.size("data.descriptors", 0)),
+            Filters.and(
+              Filters.ne("data.producerId", requesterId.toString),
+              Filters.size("data.descriptors", 1),
+              Filters.eq("data.descriptors.state", Draft.toString())
+            )
+          )
+        )
+      else Some(Filters.empty())
+
     mapToVarArgs(
-      eServicesIdsFilter.toList ++ producersIdsFilter.toList ++ attributesIdsFilter.toList ++ statesFilter.toList ++ nameFilter.toList ++ modeFilter.toList
+      eServicesIdsFilter.toList ++ producersIdsFilter.toList ++ attributesIdsFilter.toList ++ statesFilter.toList ++ nameFilter.toList ++ modeFilter.toList ++ visibilityRestrictionsFilter.toList
     )(Filters.and)
       .getOrElse(Filters.empty())
   }

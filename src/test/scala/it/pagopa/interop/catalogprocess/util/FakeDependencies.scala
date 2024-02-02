@@ -266,6 +266,7 @@ object FakeDependencies {
     )
 
     override def getEServices(
+      requesterId: UUID,
       name: Option[String],
       eServicesIds: Seq[UUID],
       producersIds: Seq[UUID],
@@ -274,7 +275,8 @@ object FakeDependencies {
       mode: Option[CatalogItemMode],
       offset: Int,
       limit: Int,
-      exactMatchOnName: Boolean = false
+      exactMatchOnName: Boolean = false,
+      visibilityRestrictions: Boolean = false
     )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PaginatedResult[CatalogItem]] =
       Future.successful(PaginatedResult(results = Seq.empty, totalCount = 0))
 
