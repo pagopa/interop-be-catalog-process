@@ -2748,7 +2748,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
     }
   }
   "Document update" should {
-    "succeed" in {
+    "succeed on draft descriptor" in {
       val requesterId  = UUID.randomUUID()
       val descriptorId = UUID.randomUUID()
       val documentId   = UUID.randomUUID()
@@ -2757,7 +2757,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
       val descriptor =
-        SpecData.catalogDescriptor.copy(id = descriptorId, docs = Seq(SpecData.catalogDocument.copy(id = documentId)))
+        SpecData.catalogDescriptor.copy(
+          id = descriptorId,
+          state = Draft,
+          docs = Seq(SpecData.catalogDocument.copy(id = documentId))
+        )
 
       val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
 
@@ -2792,6 +2796,36 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         status shouldEqual StatusCodes.OK
       }
     }
+    "fail if descriptor is not draft" in {
+      val requesterId  = UUID.randomUUID()
+      val descriptorId = UUID.randomUUID()
+      val documentId   = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val descriptor =
+        SpecData.catalogDescriptor.copy(id = descriptorId, docs = Seq(SpecData.catalogDocument.copy(id = documentId)))
+
+      val eService = SpecData.catalogItem.copy(descriptors = Seq(descriptor), producerId = requesterId)
+
+      val seed = UpdateEServiceDescriptorDocumentSeed(prettyName = "prettyNameUpdated")
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(eService))
+
+      Post() ~> service.updateEServiceDocumentById(
+        SpecData.catalogItem.id.toString,
+        descriptorId.toString,
+        documentId.toString,
+        seed
+      ) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+      }
+    }
     "fail if EService does not exist" in {
 
       val requesterId                             = UUID.randomUUID()
@@ -2805,6 +2839,31 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         .expects(SpecData.catalogItem.id, *, *)
         .once()
         .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
+
+      Post() ~> service.updateEServiceDocumentById(
+        SpecData.catalogItem.id.toString,
+        UUID.randomUUID().toString,
+        UUID.randomUUID().toString,
+        seed
+      ) ~> check {
+        status shouldEqual StatusCodes.NotFound
+      }
+    }
+    "fail if descriptor does not exist" in {
+
+      val requesterId = UUID.randomUUID()
+      val eService    = SpecData.catalogItem.copy(descriptors = Seq.empty, producerId = requesterId)
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val seed = UpdateEServiceDescriptorDocumentSeed(prettyName = "prettyNameUpdated")
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(eService))
 
       Post() ~> service.updateEServiceDocumentById(
         SpecData.catalogItem.id.toString,
