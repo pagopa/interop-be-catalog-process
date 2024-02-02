@@ -234,6 +234,12 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        '409':
+          description: Already exists an E-Service with the same name
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'        
     delete:
       security:
         - bearerAuth: []
