@@ -34,7 +34,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestRouteTest {
 
   "Eservice retrieve" should {
-    "succeed when found" in {
+    "succeed when found with role admin and requester is the producer " in {
       val eServiceId  = UUID.randomUUID()
       val requesterId = UUID.randomUUID()
 
@@ -45,13 +45,29 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
         .expects(eServiceId, *, *)
         .once()
-        .returns(Future.successful(SpecData.catalogItem))
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
 
       Get() ~> service.getEServiceById(eServiceId.toString) ~> check {
         status shouldEqual StatusCodes.OK
       }
     }
+    "succeed when found with role api and requester is the producer " in {
+      val eServiceId  = UUID.randomUUID()
+      val requesterId = UUID.randomUUID()
 
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "api", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eServiceId, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
+
+      Get() ~> service.getEServiceById(eServiceId.toString) ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
     "fail with 404 when not found" in {
       val eServiceId  = UUID.randomUUID()
       val requesterId = UUID.randomUUID()
@@ -67,10 +83,77 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       Get() ~> service.getEServiceById(eServiceId.toString) ~> check {
         status shouldEqual StatusCodes.NotFound
+        val problem = responseAs[Problem]
+        problem.status shouldBe StatusCodes.NotFound.intValue
+        problem.errors.head.code shouldBe "009-0007"
+      }
+    }
+    "fail with 404 when eservice has no descriptor and requester is not the producer" in {
+      val eServiceId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eServiceId, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem))
+
+      Get() ~> service.getEServiceById(eServiceId.toString) ~> check {
+        status shouldEqual StatusCodes.NotFound
+        val problem = responseAs[Problem]
+        problem.status shouldBe StatusCodes.NotFound.intValue
+        problem.errors.head.code shouldBe "009-0007"
+      }
+    }
+    "fail with 404 when eservice has only a draft descriptor and requester is not the producer" in {
+      val eServiceId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eServiceId, *, *)
+        .once()
+        .returns(
+          Future
+            .successful(SpecData.catalogItem.copy(descriptors = Seq(SpecData.catalogDescriptor.copy(state = Draft))))
+        )
+
+      Get() ~> service.getEServiceById(eServiceId.toString) ~> check {
+        status shouldEqual StatusCodes.NotFound
+        val problem = responseAs[Problem]
+        problem.status shouldBe StatusCodes.NotFound.intValue
+        problem.errors.head.code shouldBe "009-0007"
+      }
+    }
+    "succeed when eservice has several descriptors and requester is not the producer" in {
+      val eServiceId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> UUID.randomUUID().toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(eServiceId, *, *)
+        .once()
+        .returns(
+          Future
+            .successful(
+              SpecData.catalogItem
+                .copy(descriptors = Seq(SpecData.catalogDescriptor, SpecData.catalogDescriptor.copy(state = Draft)))
+            )
+        )
+
+      Get() ~> service.getEServiceById(eServiceId.toString) ~> check {
+        status shouldEqual StatusCodes.OK
+        val response: EService = responseAs[EService]
+        response.descriptors.filterNot(_.state == EServiceDescriptorState.DRAFT).size shouldEqual 1
       }
     }
   }
-
   "EServices retrieve" should {
 
     "succeed when Agreement States are empty" in {
