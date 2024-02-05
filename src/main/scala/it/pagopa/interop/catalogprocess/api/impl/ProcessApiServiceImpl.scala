@@ -327,12 +327,9 @@ final case class ProcessApiServiceImpl(
       Future.successful(catalogItem)
     else {
       catalogItem match {
-        case CatalogItem(_, _, _, _, _, _, descriptors, _, _, _) if (descriptors.isEmpty) =>
+        case CatalogItem(_, _, _, _, _, _, descriptors, _, _, _) if descriptors.forall(_.state == Draft) =>
           Future.failed(EServiceNotFound(catalogItem.id.toString))
-        case CatalogItem(_, _, _, _, _, _, descriptors, _, _, _)
-            if (descriptors.size == 1 && descriptors.exists(_.state == Draft)) =>
-          Future.failed(EServiceNotFound(catalogItem.id.toString))
-        case CatalogItem(_, _, _, _, _, _, descriptors, _, _, _)                          =>
+        case CatalogItem(_, _, _, _, _, _, descriptors, _, _, _)                                         =>
           Future.successful(catalogItem.copy(descriptors = descriptors.filterNot(_.state == Draft)))
       }
     }
