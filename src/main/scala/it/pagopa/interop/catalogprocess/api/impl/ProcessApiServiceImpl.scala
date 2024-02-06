@@ -73,22 +73,7 @@ final case class ProcessApiServiceImpl(
       origin         <- getExternalIdOriginFuture(contexts)
       _              <- if (origin == IPA) Future.unit else Future.failed(OriginIsNotCompliant(IPA))
       clientSeed = eServiceSeed.toDependency(organizationId)
-      maybeEservice <- catalogManagementService
-        .getEServices(
-          organizationId,
-          eServiceSeed.name.some,
-          Seq.empty,
-          Seq(clientSeed.producerId),
-          Seq.empty,
-          Seq.empty,
-          None,
-          0,
-          1,
-          exactMatchOnName = true
-        )
-        .map(_.results.headOption.map(_.name))
-
-      _               <- maybeEservice.fold(Future.unit)(_ => Future.failed(DuplicatedEServiceName(eServiceSeed.name)))
+      _               <- checkDuplicateName(None, eServiceSeed.name, clientSeed.producerId)
       createdEService <- catalogManagementService.createEService(clientSeed)
     } yield createdEService.toApi
 
@@ -331,6 +316,19 @@ final case class ProcessApiServiceImpl(
     }
   }
 
+  private def applyVisibilityToEService(
+    catalogItem: CatalogItem,
+    organizationId: UUID,
+    role: String
+  ): Future[CatalogItem] = {
+    if (Seq(ADMIN_ROLE, API_ROLE).contains(role) && catalogItem.producerId == organizationId)
+      Future.successful(catalogItem)
+    else if (catalogItem.descriptors.forall(_.state == Draft))
+      Future.failed(EServiceNotFound(catalogItem.id.toString))
+    else
+      Future.successful(catalogItem.copy(descriptors = catalogItem.descriptors.filterNot(_.state == Draft)))
+  }
+
   override def getEServiceById(eServiceId: String)(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
@@ -340,9 +338,12 @@ final case class ProcessApiServiceImpl(
     logger.info(operationLabel)
 
     val result: Future[EService] = for {
-      eServiceUuid <- eServiceId.toFutureUUID
-      eService     <- catalogManagementService.getEServiceById(eServiceUuid)
-    } yield eService.toApi
+      organizationId <- getOrganizationIdFutureUUID(contexts)
+      eServiceUuid   <- eServiceId.toFutureUUID
+      role           <- getUserRolesFuture(contexts)
+      eService       <- catalogManagementService.getEServiceById(eServiceUuid)
+      catalogItem    <- applyVisibilityToEService(eService, organizationId, role)
+    } yield catalogItem.toApi
 
     onComplete(result) {
       getEServiceByIdResponse[EService](operationLabel)(getEServiceById200)
@@ -470,6 +471,13 @@ final case class ProcessApiServiceImpl(
     }
   }
 
+  private def checkDuplicateName(eServiceId: Option[UUID], name: String, producerId: UUID): Future[Unit] = for {
+    result <- catalogManagementService
+      .getEServices(name.some, Seq.empty, Seq(producerId), Seq.empty, Seq.empty, None, 0, 1, exactMatchOnName = true)
+    eservice = eServiceId.fold(result.results)(id => result.results.filterNot(_.id == id))
+    _ <- eservice.headOption.map(_.name).fold(Future.unit)(_ => Future.failed(DuplicatedEServiceName(name)))
+  } yield ()
+
   override def updateEServiceById(eServiceId: String, updateEServiceSeed: UpdateEServiceSeed)(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
@@ -484,6 +492,7 @@ final case class ProcessApiServiceImpl(
       catalogItem     <- catalogManagementService.getEServiceById(eServiceUuid)
       _               <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       _               <- eServiceCanBeUpdated(catalogItem).toFuture
+      _               <- checkDuplicateName(Some(eServiceUuid), updateEServiceSeed.name, catalogItem.producerId)
       _               <- deleteRiskAnalysisOnModeUpdate(updateEServiceSeed.mode, catalogItem)
       updatedEService <- catalogManagementService.updateEServiceById(eServiceId, updateEServiceSeed.toDependency)
     } yield updatedEService.toApi
