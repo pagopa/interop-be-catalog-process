@@ -312,9 +312,12 @@ object FakeDependencies {
       mode: Option[CatalogItemMode],
       offset: Int,
       limit: Int,
-      exactMatchOnName: Boolean = false,
-      visibilityRestrictions: Boolean = false
-    )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PaginatedResult[CatalogItem]] =
+      exactMatchOnName: Boolean = false
+    )(implicit
+      ec: ExecutionContext,
+      readModel: ReadModelService,
+      contexts: Seq[(String, String)]
+    ): Future[PaginatedResult[CatalogItem]] =
       Future.successful(PaginatedResult(results = Seq.empty, totalCount = 0))
 
     override def createRiskAnalysis(eServiceId: UUID, riskAnalysisSeed: RiskAnalysisSeed)(implicit

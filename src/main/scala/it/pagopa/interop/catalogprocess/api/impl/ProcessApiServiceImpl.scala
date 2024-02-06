@@ -146,7 +146,6 @@ final case class ProcessApiServiceImpl(
         states: Seq[CatalogDescriptorState],
         agreementStates: Seq[PersistentAgreementState],
         mode: Option[CatalogItemMode],
-        visibilityRestrictions: Boolean,
         offset: Int,
         limit: Int
       ): Future[PaginatedResult[CatalogItem]] = {
@@ -160,7 +159,6 @@ final case class ProcessApiServiceImpl(
             attributesIds = attributesIds,
             states = states,
             mode = mode,
-            visibilityRestrictions = visibilityRestrictions,
             offset = offset,
             limit = limit
           )
@@ -187,7 +185,6 @@ final case class ProcessApiServiceImpl(
                   attributesIds = attributesIds,
                   states = states,
                   mode = mode,
-                  visibilityRestrictions = visibilityRestrictions,
                   offset = offset,
                   limit = limit
                 )
@@ -204,9 +201,7 @@ final case class ProcessApiServiceImpl(
         agreementStates <- parseArrayParameters(agreementStates)
           .traverse(AgreementState.fromValue)
           .toFuture
-        role            <- getUserRolesFuture(contexts)
-        visibilityRestrictions = Seq(ADMIN_ROLE, API_ROLE).contains(role)
-        eServices <-
+        eServices       <-
           getEservicesInner(
             organizationId,
             name,
@@ -216,15 +211,10 @@ final case class ProcessApiServiceImpl(
             states.map(_.toPersistent),
             agreementStates.map(_.toPersistent),
             mode.map(_.toPersistent),
-            visibilityRestrictions,
             offset,
             limit
           )
-        results =
-          if (visibilityRestrictions)
-            eServices.results.map(ese => ese.copy(descriptors = ese.descriptors.filterNot(_.state == Draft)))
-          else eServices.results
-      } yield EServices(results = results.map(_.toApi), totalCount = eServices.totalCount)
+      } yield EServices(results = eServices.results.map(_.toApi), totalCount = eServices.totalCount)
 
       onComplete(result) {
         getEServicesResponse(operationLabel)(getEServices200)
@@ -481,11 +471,8 @@ final case class ProcessApiServiceImpl(
     }
   }
 
-  private def checkDuplicateName(
-    requesterId: UUID,
-    eServiceId: Option[UUID],
-    name: String,
-    producerId: UUID
+  private def checkDuplicateName(requesterId: UUID, eServiceId: Option[UUID], name: String, producerId: UUID)(implicit
+    contexts: Seq[(String, String)]
   ): Future[Unit] = for {
     result <- catalogManagementService
       .getEServices(

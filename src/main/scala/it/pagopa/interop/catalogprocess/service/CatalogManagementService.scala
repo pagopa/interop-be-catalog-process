@@ -73,9 +73,12 @@ trait CatalogManagementService {
     mode: Option[CatalogItemMode],
     offset: Int,
     limit: Int,
-    exactMatchOnName: Boolean = false,
-    visibilityRestrictions: Boolean = false
-  )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PaginatedResult[CatalogItem]]
+    exactMatchOnName: Boolean = false
+  )(implicit
+    ec: ExecutionContext,
+    readModel: ReadModelService,
+    contexts: Seq[(String, String)]
+  ): Future[PaginatedResult[CatalogItem]]
 
   def createRiskAnalysis(eServiceId: UUID, riskAnalysisSeed: RiskAnalysisSeed)(implicit
     contexts: Seq[(String, String)]

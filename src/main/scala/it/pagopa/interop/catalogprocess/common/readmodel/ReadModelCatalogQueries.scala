@@ -125,20 +125,11 @@ object ReadModelCatalogQueries extends ReadModelQuery {
     offset: Int,
     limit: Int,
     exactMatchOnName: Boolean = false,
-    visibilityRestrictions: Boolean = false
+    isSupervisor: Boolean
   )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PaginatedResult[CatalogItem]] = {
 
-    val query = listEServicesFilters(
-      requesterId,
-      name,
-      eServicesIds,
-      producersIds,
-      attributesIds,
-      states,
-      mode,
-      exactMatchOnName,
-      visibilityRestrictions
-    )
+    val query =
+      listEServicesFilters(requesterId, name, eServicesIds, producersIds, attributesIds, states, mode, exactMatchOnName)
 
     for {
       // Using aggregate to perform case insensitive sorting
@@ -146,6 +137,7 @@ object ReadModelCatalogQueries extends ReadModelQuery {
       eServices <- readModel.aggregate[CatalogItem](
         "eservices",
         Seq(
+          addFields(Field("isSuperVisor", isSupervisor)),
           `match`(query),
           project(fields(include("data"), computed("lowerName", Document("""{ "$toLower" : "$data.name" }""")))),
           sort(ascending("lowerName"))
@@ -159,6 +151,7 @@ object ReadModelCatalogQueries extends ReadModelQuery {
       count     <- readModel.aggregate[TotalCountResult](
         "eservices",
         Seq(
+          addFields(Field("isSuperVisor", isSupervisor)),
           `match`(query),
           count("totalCount"),
           project(computed("data", Document("""{ "totalCount" : "$totalCount" }""")))
@@ -177,8 +170,7 @@ object ReadModelCatalogQueries extends ReadModelQuery {
     attributesIds: Seq[UUID],
     states: Seq[CatalogDescriptorState],
     mode: Option[CatalogItemMode],
-    exactMatchOnName: Boolean,
-    visibilityRestrictions: Boolean
+    exactMatchOnName: Boolean
   ): Bson = {
     val statesPartialFilter = states
       .map(_.toString)
@@ -208,22 +200,28 @@ object ReadModelCatalogQueries extends ReadModelQuery {
 
     val modeFilter = mode.map(_.toString).map(Filters.eq("data.mode", _))
 
-    val visibilityRestrictionsFilter =
-      if (visibilityRestrictions)
-        Some(
-          Filters.nor(
-            Filters.and(Filters.ne("data.producerId", requesterId.toString), Filters.size("data.descriptors", 0)),
-            Filters.and(
-              Filters.ne("data.producerId", requesterId.toString),
-              Filters.size("data.descriptors", 1),
-              Filters.eq("data.descriptors.state", Draft.toString())
-            )
+    /**
+      * Allow only the producer with right permissions to see eservices in draft, that is:
+      * - eservices without descriptors
+      * - eservices with only one descriptor that is in Draft state
+      */
+    val isSupervisorFilter =
+      Some(
+        Filters.nor(
+          Filters.and(
+            Filters.and(Filters.eq("isSuperVisor", false), Filters.ne("data.producerId", requesterId.toString)),
+            Filters.size("data.descriptors", 0)
+          ),
+          Filters.and(
+            Filters.and(Filters.eq("isSuperVisor", false), Filters.ne("data.producerId", requesterId.toString)),
+            Filters.size("data.descriptors", 1),
+            Filters.eq("data.descriptors.state", Draft.toString())
           )
         )
-      else Some(Filters.empty())
+      )
 
     mapToVarArgs(
-      eServicesIdsFilter.toList ++ producersIdsFilter.toList ++ attributesIdsFilter.toList ++ statesFilter.toList ++ nameFilter.toList ++ modeFilter.toList ++ visibilityRestrictionsFilter.toList
+      eServicesIdsFilter.toList ++ producersIdsFilter.toList ++ attributesIdsFilter.toList ++ statesFilter.toList ++ nameFilter.toList ++ modeFilter.toList ++ isSupervisorFilter.toList
     )(Filters.and)
       .getOrElse(Filters.empty())
   }
