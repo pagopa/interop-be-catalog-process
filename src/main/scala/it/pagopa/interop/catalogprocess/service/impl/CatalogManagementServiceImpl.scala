@@ -244,14 +244,14 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   override def getEServiceDocument(eServiceId: UUID, descriptorId: UUID, documentId: UUID)(implicit
     ec: ExecutionContext,
     readModel: ReadModelService
-  ): Future[CatalogDocument] = for {
+  ): Future[(CatalogItem, CatalogDocument)] = for {
     catalogItem     <- ReadModelCatalogQueries
       .getEServiceDocument(eServiceId, descriptorId, documentId)
       .flatMap(_.toFuture(DescriptorDocumentNotFound(eServiceId.toString, descriptorId.toString, documentId.toString)))
     catalogDocument <- getDocument(catalogItem, descriptorId, documentId).toFuture(
       DescriptorDocumentNotFound(eServiceId.toString, descriptorId.toString, documentId.toString)
     )
-  } yield catalogDocument
+  } yield (catalogItem, catalogDocument)
 
   override def getConsumers(eServiceId: UUID, offset: Int, limit: Int)(implicit
     ec: ExecutionContext,
