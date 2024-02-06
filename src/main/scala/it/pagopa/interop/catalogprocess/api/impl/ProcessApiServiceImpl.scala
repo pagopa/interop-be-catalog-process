@@ -325,14 +325,10 @@ final case class ProcessApiServiceImpl(
   ): Future[CatalogItem] = {
     if (Seq(ADMIN_ROLE, API_ROLE).contains(role) && catalogItem.producerId == organizationId)
       Future.successful(catalogItem)
-    else {
-      catalogItem match {
-        case CatalogItem(_, _, _, _, _, _, descriptors, _, _, _) if descriptors.forall(_.state == Draft) =>
-          Future.failed(EServiceNotFound(catalogItem.id.toString))
-        case CatalogItem(_, _, _, _, _, _, descriptors, _, _, _)                                         =>
-          Future.successful(catalogItem.copy(descriptors = descriptors.filterNot(_.state == Draft)))
-      }
-    }
+    else if (catalogItem.descriptors.forall(_.state == Draft))
+      Future.failed(EServiceNotFound(catalogItem.id.toString))
+    else
+      Future.successful(catalogItem.copy(descriptors = catalogItem.descriptors.filterNot(_.state == Draft)))
   }
 
   override def getEServiceById(eServiceId: String)(implicit
