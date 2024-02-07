@@ -279,6 +279,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   ): Future[PaginatedResult[CatalogItem]] = for {
     role <- getUserRolesFuture(contexts)
     roles = Seq(ADMIN_ROLE, API_ROLE)
+    isSuperVisor = roles.intersect(role.split(",")).nonEmpty
     eservices <- ReadModelCatalogQueries.getEServices(
       requesterId,
       name,
@@ -290,10 +291,10 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       offset,
       limit,
       exactMatchOnName,
-      roles.contains(role)
+      isSuperVisor
     )
     filtered =
-      if (!roles.contains(role))
+      if (!isSuperVisor)
         eservices.results.map(ese => ese.copy(descriptors = ese.descriptors.filterNot(_.state == Draft)))
       else
         eservices.results.map(ese =>
