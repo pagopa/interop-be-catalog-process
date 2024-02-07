@@ -125,7 +125,7 @@ object ReadModelCatalogQueries extends ReadModelQuery {
     offset: Int,
     limit: Int,
     exactMatchOnName: Boolean = false,
-    isSupervisor: Boolean
+    isSuperVisor: Boolean
   )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PaginatedResult[CatalogItem]] = {
 
     val query =
@@ -137,7 +137,7 @@ object ReadModelCatalogQueries extends ReadModelQuery {
       eServices <- readModel.aggregate[CatalogItem](
         "eservices",
         Seq(
-          addFields(Field("isSuperVisor", isSupervisor)),
+          addFields(Field("isSuperVisor", isSuperVisor)),
           `match`(query),
           project(fields(include("data"), computed("lowerName", Document("""{ "$toLower" : "$data.name" }""")))),
           sort(ascending("lowerName"))
@@ -151,7 +151,7 @@ object ReadModelCatalogQueries extends ReadModelQuery {
       count     <- readModel.aggregate[TotalCountResult](
         "eservices",
         Seq(
-          addFields(Field("isSuperVisor", isSupervisor)),
+          addFields(Field("isSuperVisor", isSuperVisor)),
           `match`(query),
           count("totalCount"),
           project(computed("data", Document("""{ "totalCount" : "$totalCount" }""")))
@@ -209,11 +209,11 @@ object ReadModelCatalogQueries extends ReadModelQuery {
       Some(
         Filters.nor(
           Filters.and(
-            Filters.and(Filters.eq("isSuperVisor", false), Filters.ne("data.producerId", requesterId.toString)),
+            Filters.and(Filters.ne("isSuperVisor", false), Filters.ne("data.producerId", requesterId.toString)),
             Filters.size("data.descriptors", 0)
           ),
           Filters.and(
-            Filters.and(Filters.eq("isSuperVisor", false), Filters.ne("data.producerId", requesterId.toString)),
+            Filters.and(Filters.ne("isSuperVisor", false), Filters.ne("data.producerId", requesterId.toString)),
             Filters.size("data.descriptors", 1),
             Filters.eq("data.descriptors.state", Draft.toString())
           )
