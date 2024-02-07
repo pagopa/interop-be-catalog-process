@@ -309,7 +309,7 @@ final case class ProcessApiServiceImpl(
     organizationId: UUID,
     role: String
   ): Future[CatalogItem] = {
-    if (Seq(ADMIN_ROLE, API_ROLE).contains(role) && catalogItem.producerId == organizationId)
+    if (Seq(ADMIN_ROLE, API_ROLE).intersect(role.split(",").toList.map(_.trim())).nonEmpty && catalogItem.producerId == organizationId)
       Future.successful(catalogItem)
     else if (catalogItem.descriptors.forall(_.state == Draft))
       Future.failed(EServiceNotFound(catalogItem.id.toString))
