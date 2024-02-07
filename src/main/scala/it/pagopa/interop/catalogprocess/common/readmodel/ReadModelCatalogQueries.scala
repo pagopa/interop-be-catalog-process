@@ -208,12 +208,10 @@ object ReadModelCatalogQueries extends ReadModelQuery {
     val isSupervisorFilter =
       Some(
         Filters.nor(
+          Filters.eq("isSuperVisor", false),
+          Filters.and(Filters.ne("data.producerId", requesterId.toString), Filters.size("data.descriptors", 0)),
           Filters.and(
-            Filters.and(Filters.ne("isSuperVisor", false), Filters.ne("data.producerId", requesterId.toString)),
-            Filters.size("data.descriptors", 0)
-          ),
-          Filters.and(
-            Filters.and(Filters.ne("isSuperVisor", false), Filters.ne("data.producerId", requesterId.toString)),
+            Filters.ne("data.producerId", requesterId.toString),
             Filters.size("data.descriptors", 1),
             Filters.eq("data.descriptors.state", Draft.toString())
           )
