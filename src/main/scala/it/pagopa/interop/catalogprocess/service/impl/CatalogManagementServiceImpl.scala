@@ -278,7 +278,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
     contexts: Seq[(String, String)]
   ): Future[PaginatedResult[CatalogItem]] = for {
     role <- getUserRolesFuture(contexts)
-    roles = Seq(ADMIN_ROLE, API_ROLE)
+    roles        = Seq(ADMIN_ROLE, API_ROLE)
     isSuperVisor = roles.intersect(role.split(",")).nonEmpty
     eservices <- ReadModelCatalogQueries.getEServices(
       requesterId,
