@@ -176,6 +176,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       (mockCatalogManagementService
         .getEServices(
+          _: UUID,
           _: Option[String],
           _: Seq[UUID],
           _: Seq[UUID],
@@ -185,8 +186,22 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
           _: Int,
           _: Int,
           _: Boolean
-        )(_: ExecutionContext, _: ReadModelService))
-        .expects(name, eServicesIds, producersIds, attributesIds, states, mode, offset, limit, false, *, *)
+        )(_: ExecutionContext, _: ReadModelService, _: Seq[(String, String)]))
+        .expects(
+          requesterId,
+          name,
+          eServicesIds,
+          producersIds,
+          attributesIds,
+          states,
+          mode,
+          offset,
+          limit,
+          false,
+          *,
+          *,
+          context
+        )
         .once()
         .returns(Future.successful(PaginatedResult(results = Seq(SpecData.catalogItem), 1)))
 
@@ -233,6 +248,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       (mockCatalogManagementService
         .getEServices(
+          _: UUID,
           _: Option[String],
           _: Seq[UUID],
           _: Seq[UUID],
@@ -242,8 +258,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
           _: Int,
           _: Int,
           _: Boolean
-        )(_: ExecutionContext, _: ReadModelService))
+        )(_: ExecutionContext, _: ReadModelService, _: Seq[(String, String)]))
         .expects(
+          requesterId,
           name,
           Seq(SpecData.agreement.eserviceId),
           producersIds,
@@ -254,7 +271,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
           limit,
           false,
           *,
-          *
+          *,
+          context
         )
         .once()
         .returns(Future.successful(PaginatedResult(results = Seq(SpecData.catalogItem), 1)))
@@ -429,6 +447,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       (mockCatalogManagementService
         .getEServices(
+          _: UUID,
           _: Option[String],
           _: Seq[UUID],
           _: Seq[UUID],
@@ -438,8 +457,22 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
           _: Int,
           _: Int,
           _: Boolean
-        )(_: ExecutionContext, _: ReadModelService))
-        .expects(Some(seed.name), Seq.empty, Seq(seed.producerId), Seq.empty, Seq.empty, None, 0, 1, true, *, *)
+        )(_: ExecutionContext, _: ReadModelService, _: Seq[(String, String)]))
+        .expects(
+          requesterId,
+          Some(seed.name),
+          Seq.empty,
+          Seq(seed.producerId),
+          Seq.empty,
+          Seq.empty,
+          None,
+          0,
+          1,
+          true,
+          *,
+          *,
+          context
+        )
         .once()
         .returns(Future.successful(PaginatedResult(results = catalogItems, catalogItems.size)))
 
@@ -492,6 +525,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       (mockCatalogManagementService
         .getEServices(
+          _: UUID,
           _: Option[String],
           _: Seq[UUID],
           _: Seq[UUID],
@@ -501,8 +535,22 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
           _: Int,
           _: Int,
           _: Boolean
-        )(_: ExecutionContext, _: ReadModelService))
-        .expects(Some(apiSeed.name), Seq.empty, Seq(requesterId), Seq.empty, Seq.empty, None, 0, 1, true, *, *)
+        )(_: ExecutionContext, _: ReadModelService, _: Seq[(String, String)]))
+        .expects(
+          requesterId,
+          Some(apiSeed.name),
+          Seq.empty,
+          Seq(requesterId),
+          Seq.empty,
+          Seq.empty,
+          None,
+          0,
+          1,
+          true,
+          *,
+          *,
+          context
+        )
         .once()
         .returns(Future.successful(PaginatedResult(results = catalogItems, catalogItems.size)))
 
@@ -576,6 +624,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       (mockCatalogManagementService
         .getEServices(
+          _: UUID,
           _: Option[String],
           _: Seq[UUID],
           _: Seq[UUID],
@@ -585,8 +634,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
           _: Int,
           _: Int,
           _: Boolean
-        )(_: ExecutionContext, _: ReadModelService))
+        )(_: ExecutionContext, _: ReadModelService, _: Seq[(String, String)]))
         .expects(
+          requesterId,
           Some(updatedEServiceSeed.name),
           Seq.empty,
           Seq(requesterId),
@@ -597,7 +647,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
           1,
           true,
           *,
-          *
+          *,
+          context
         )
         .once()
         .returns(Future.successful(PaginatedResult(results = Seq.empty, 0)))
@@ -657,6 +708,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       (mockCatalogManagementService
         .getEServices(
+          _: UUID,
           _: Option[String],
           _: Seq[UUID],
           _: Seq[UUID],
@@ -666,8 +718,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
           _: Int,
           _: Int,
           _: Boolean
-        )(_: ExecutionContext, _: ReadModelService))
+        )(_: ExecutionContext, _: ReadModelService, _: Seq[(String, String)]))
         .expects(
+          requesterId,
           Some(updatedEServiceSeed.name),
           Seq.empty,
           Seq(requesterId),
@@ -678,7 +731,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
           1,
           true,
           *,
-          *
+          *,
+          context
         )
         .once()
         .returns(
@@ -758,6 +812,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       (mockCatalogManagementService
         .getEServices(
+          _: UUID,
           _: Option[String],
           _: Seq[UUID],
           _: Seq[UUID],
@@ -767,8 +822,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
           _: Int,
           _: Int,
           _: Boolean
-        )(_: ExecutionContext, _: ReadModelService))
+        )(_: ExecutionContext, _: ReadModelService, _: Seq[(String, String)]))
         .expects(
+          requesterId,
           Some(updatedEServiceSeed.name),
           Seq.empty,
           Seq(requesterId),
@@ -779,7 +835,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
           1,
           true,
           *,
-          *
+          *,
+          context
         )
         .once()
         .returns(Future.successful(PaginatedResult(results = Seq.empty, 0)))
@@ -844,6 +901,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       (mockCatalogManagementService
         .getEServices(
+          _: UUID,
           _: Option[String],
           _: Seq[UUID],
           _: Seq[UUID],
@@ -853,8 +911,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
           _: Int,
           _: Int,
           _: Boolean
-        )(_: ExecutionContext, _: ReadModelService))
+        )(_: ExecutionContext, _: ReadModelService, _: Seq[(String, String)]))
         .expects(
+          requesterId,
           Some(updatedEServiceSeed.name),
           Seq.empty,
           Seq(requesterId),
@@ -865,7 +924,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
           1,
           true,
           *,
-          *
+          *,
+          context
         )
         .once()
         .returns(Future.successful(PaginatedResult(results = Seq.empty, 0)))
@@ -908,6 +968,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       (mockCatalogManagementService
         .getEServices(
+          _: UUID,
           _: Option[String],
           _: Seq[UUID],
           _: Seq[UUID],
@@ -917,8 +978,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
           _: Int,
           _: Int,
           _: Boolean
-        )(_: ExecutionContext, _: ReadModelService))
+        )(_: ExecutionContext, _: ReadModelService, _: Seq[(String, String)]))
         .expects(
+          requesterId,
           Some(updatedEServiceSeed.name),
           Seq.empty,
           Seq(requesterId),
@@ -929,7 +991,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
           1,
           true,
           *,
-          *
+          *,
+          context
         )
         .once()
         .returns(

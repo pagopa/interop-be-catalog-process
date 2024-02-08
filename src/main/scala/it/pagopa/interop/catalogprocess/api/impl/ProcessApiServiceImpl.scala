@@ -73,7 +73,7 @@ final case class ProcessApiServiceImpl(
       origin         <- getExternalIdOriginFuture(contexts)
       _              <- if (origin == IPA) Future.unit else Future.failed(OriginIsNotCompliant(IPA))
       clientSeed = eServiceSeed.toDependency(organizationId)
-      _               <- checkDuplicateName(None, eServiceSeed.name, clientSeed.producerId)
+      _               <- checkDuplicateName(organizationId, None, eServiceSeed.name, clientSeed.producerId)
       createdEService <- catalogManagementService.createEService(clientSeed)
     } yield createdEService.toApi
 
@@ -152,14 +152,15 @@ final case class ProcessApiServiceImpl(
 
         if (agreementStates.isEmpty)
           catalogManagementService.getEServices(
-            name,
-            eServicesIds,
-            producersIds,
-            attributesIds,
-            states,
-            mode,
-            offset,
-            limit
+            requesterId = organizationId,
+            name = name,
+            eServicesIds = eServicesIds,
+            producersIds = producersIds,
+            attributesIds = attributesIds,
+            states = states,
+            mode = mode,
+            offset = offset,
+            limit = limit
           )
         else
           for {
@@ -177,14 +178,15 @@ final case class ProcessApiServiceImpl(
                 Future.successful(ReadModelCatalogQueries.emptyResults[CatalogItem])
               else
                 catalogManagementService.getEServices(
-                  name,
-                  agreementEservicesIds,
-                  producersIds,
-                  attributesIds,
-                  states,
-                  mode,
-                  offset,
-                  limit
+                  requesterId = organizationId,
+                  name = name,
+                  eServicesIds = agreementEservicesIds,
+                  producersIds = producersIds,
+                  attributesIds = attributesIds,
+                  states = states,
+                  mode = mode,
+                  offset = offset,
+                  limit = limit
                 )
           } yield result
       }
@@ -309,7 +311,11 @@ final case class ProcessApiServiceImpl(
     organizationId: UUID,
     role: String
   ): Future[CatalogItem] = {
-    if (Seq(ADMIN_ROLE, API_ROLE).intersect(role.split(",").toList.map(_.trim())).nonEmpty && catalogItem.producerId == organizationId)
+    if (
+      Seq(ADMIN_ROLE, API_ROLE)
+        .intersect(role.split(",").toList.map(_.trim()))
+        .nonEmpty && catalogItem.producerId == organizationId
+    )
       Future.successful(catalogItem)
     else if (catalogItem.descriptors.forall(_.state == Draft))
       Future.failed(EServiceNotFound(catalogItem.id.toString))
@@ -469,9 +475,22 @@ final case class ProcessApiServiceImpl(
     }
   }
 
-  private def checkDuplicateName(eServiceId: Option[UUID], name: String, producerId: UUID): Future[Unit] = for {
+  private def checkDuplicateName(requesterId: UUID, eServiceId: Option[UUID], name: String, producerId: UUID)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[Unit] = for {
     result <- catalogManagementService
-      .getEServices(name.some, Seq.empty, Seq(producerId), Seq.empty, Seq.empty, None, 0, 1, exactMatchOnName = true)
+      .getEServices(
+        requesterId,
+        name.some,
+        Seq.empty,
+        Seq(producerId),
+        Seq.empty,
+        Seq.empty,
+        None,
+        0,
+        1,
+        exactMatchOnName = true
+      )
     eservice = eServiceId.fold(result.results)(id => result.results.filterNot(_.id == id))
     _ <- eservice.headOption.map(_.name).fold(Future.unit)(_ => Future.failed(DuplicatedEServiceName(name)))
   } yield ()
@@ -485,13 +504,13 @@ final case class ProcessApiServiceImpl(
     logger.info(operationLabel)
 
     val result = for {
-      organizationId  <- getOrganizationIdFutureUUID(contexts)
-      eServiceUuid    <- eServiceId.toFutureUUID
-      catalogItem     <- catalogManagementService.getEServiceById(eServiceUuid)
-      _               <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
-      _               <- eServiceCanBeUpdated(catalogItem).toFuture
-      _               <- checkDuplicateName(Some(eServiceUuid), updateEServiceSeed.name, catalogItem.producerId)
-      _               <- deleteRiskAnalysisOnModeUpdate(updateEServiceSeed.mode, catalogItem)
+      organizationId <- getOrganizationIdFutureUUID(contexts)
+      eServiceUuid   <- eServiceId.toFutureUUID
+      catalogItem    <- catalogManagementService.getEServiceById(eServiceUuid)
+      _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
+      _              <- eServiceCanBeUpdated(catalogItem).toFuture
+      _ <- checkDuplicateName(organizationId, Some(eServiceUuid), updateEServiceSeed.name, catalogItem.producerId)
+      _ <- deleteRiskAnalysisOnModeUpdate(updateEServiceSeed.mode, catalogItem)
       updatedEService <- catalogManagementService.updateEServiceById(eServiceId, updateEServiceSeed.toDependency)
     } yield updatedEService.toApi
 

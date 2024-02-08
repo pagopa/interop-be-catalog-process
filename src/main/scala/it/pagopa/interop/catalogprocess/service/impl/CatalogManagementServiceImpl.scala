@@ -1,5 +1,7 @@
 package it.pagopa.interop.catalogprocess.service.impl
 
+import it.pagopa.interop.commons.jwt.{ADMIN_ROLE, API_ROLE}
+import it.pagopa.interop.commons.utils.AkkaUtils._
 import it.pagopa.interop.catalogmanagement.client.api.EServiceApi
 import it.pagopa.interop.catalogprocess.common.readmodel.ReadModelCatalogQueries
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
@@ -7,7 +9,9 @@ import it.pagopa.interop.catalogmanagement.model.{
   CatalogItem,
   CatalogDocument,
   CatalogDescriptor,
-  CatalogDescriptorState
+  CatalogDescriptorState,
+  CatalogItemMode,
+  Draft
 }
 import it.pagopa.interop.catalogprocess.common.readmodel.{PaginatedResult, Consumers}
 import it.pagopa.interop.catalogmanagement.client.invoker.{ApiError, BearerToken}
@@ -27,7 +31,6 @@ import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLo
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
-import it.pagopa.interop.catalogmanagement.model.CatalogItemMode
 
 final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker, api: EServiceApi)(implicit
   ec: ExecutionContext
@@ -259,6 +262,7 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
   ): Future[PaginatedResult[Consumers]] = ReadModelCatalogQueries.getConsumers(eServiceId, offset, limit)
 
   override def getEServices(
+    requesterId: UUID,
     name: Option[String],
     eServicesIds: Seq[UUID],
     producersIds: Seq[UUID],
@@ -268,8 +272,16 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
     offset: Int,
     limit: Int,
     exactMatchOnName: Boolean = false
-  )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PaginatedResult[CatalogItem]] =
-    ReadModelCatalogQueries.getEServices(
+  )(implicit
+    ec: ExecutionContext,
+    readModel: ReadModelService,
+    contexts: Seq[(String, String)]
+  ): Future[PaginatedResult[CatalogItem]] = for {
+    role <- getUserRolesFuture(contexts)
+    roles        = Seq(ADMIN_ROLE, API_ROLE)
+    isSuperVisor = roles.intersect(role.split(",").toList.map(_.trim())).nonEmpty
+    eservices <- ReadModelCatalogQueries.getEServices(
+      requesterId,
       name,
       eServicesIds,
       producersIds,
@@ -278,8 +290,18 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       mode,
       offset,
       limit,
-      exactMatchOnName
+      exactMatchOnName,
+      isSuperVisor
     )
+    filtered =
+      if (!isSuperVisor)
+        eservices.results.map(ese => ese.copy(descriptors = ese.descriptors.filterNot(_.state == Draft)))
+      else
+        eservices.results.map(ese =>
+          if (ese.producerId != requesterId) ese.copy(descriptors = ese.descriptors.filterNot(_.state == Draft))
+          else ese
+        )
+  } yield eservices.copy(results = filtered)
 
   override def createRiskAnalysis(eServiceId: UUID, riskAnalysisSeed: RiskAnalysisSeed)(implicit
     contexts: Seq[(String, String)]

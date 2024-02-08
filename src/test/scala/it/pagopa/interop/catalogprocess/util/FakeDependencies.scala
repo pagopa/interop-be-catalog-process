@@ -303,6 +303,7 @@ object FakeDependencies {
     )
 
     override def getEServices(
+      requesterId: UUID,
       name: Option[String],
       eServicesIds: Seq[UUID],
       producersIds: Seq[UUID],
@@ -312,7 +313,11 @@ object FakeDependencies {
       offset: Int,
       limit: Int,
       exactMatchOnName: Boolean = false
-    )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PaginatedResult[CatalogItem]] =
+    )(implicit
+      ec: ExecutionContext,
+      readModel: ReadModelService,
+      contexts: Seq[(String, String)]
+    ): Future[PaginatedResult[CatalogItem]] =
       Future.successful(PaginatedResult(results = Seq.empty, totalCount = 0))
 
     override def createRiskAnalysis(eServiceId: UUID, riskAnalysisSeed: RiskAnalysisSeed)(implicit
