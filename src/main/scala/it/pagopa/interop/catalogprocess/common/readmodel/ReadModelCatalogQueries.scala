@@ -129,7 +129,17 @@ object ReadModelCatalogQueries extends ReadModelQuery {
   )(implicit ec: ExecutionContext, readModel: ReadModelService): Future[PaginatedResult[CatalogItem]] = {
 
     val query =
-      listEServicesFilters(requesterId, name, eServicesIds, producersIds, attributesIds, states, mode, exactMatchOnName)
+      listEServicesFilters(
+        requesterId,
+        name,
+        eServicesIds,
+        producersIds,
+        attributesIds,
+        states,
+        mode,
+        exactMatchOnName,
+        isSuperVisor
+      )
 
     for {
       // Using aggregate to perform case insensitive sorting
@@ -137,7 +147,6 @@ object ReadModelCatalogQueries extends ReadModelQuery {
       eServices <- readModel.aggregate[CatalogItem](
         "eservices",
         Seq(
-          addFields(Field("isSuperVisor", isSuperVisor)),
           `match`(query),
           project(fields(include("data"), computed("lowerName", Document("""{ "$toLower" : "$data.name" }""")))),
           sort(ascending("lowerName"))
@@ -151,7 +160,6 @@ object ReadModelCatalogQueries extends ReadModelQuery {
       count     <- readModel.aggregate[TotalCountResult](
         "eservices",
         Seq(
-          addFields(Field("isSuperVisor", isSuperVisor)),
           `match`(query),
           count("totalCount"),
           project(computed("data", Document("""{ "totalCount" : "$totalCount" }""")))
@@ -170,7 +178,8 @@ object ReadModelCatalogQueries extends ReadModelQuery {
     attributesIds: Seq[UUID],
     states: Seq[CatalogDescriptorState],
     mode: Option[CatalogItemMode],
-    exactMatchOnName: Boolean
+    exactMatchOnName: Boolean,
+    isSuperVisor: Boolean
   ): Bson = {
     val statesPartialFilter = states
       .map(_.toString)
@@ -206,17 +215,24 @@ object ReadModelCatalogQueries extends ReadModelQuery {
       * - eservices with only one descriptor that is in Draft state
       */
     val isSupervisorFilter =
-      Some(
-        Filters.nor(
-          Filters.eq("isSuperVisor", false),
-          Filters.and(Filters.ne("data.producerId", requesterId.toString), Filters.size("data.descriptors", 0)),
-          Filters.and(
-            Filters.ne("data.producerId", requesterId.toString),
-            Filters.size("data.descriptors", 1),
-            Filters.eq("data.descriptors.state", Draft.toString())
+      if (isSuperVisor)
+        Some(
+          Filters.nor(
+            Filters.and(Filters.ne("data.producerId", requesterId.toString), Filters.size("data.descriptors", 0)),
+            Filters.and(
+              Filters.ne("data.producerId", requesterId.toString),
+              Filters.size("data.descriptors", 1),
+              Filters.eq("data.descriptors.state", Draft.toString())
+            )
           )
         )
-      )
+      else
+        Some(
+          Filters.nor(
+            Filters.size("data.descriptors", 0),
+            Filters.and(Filters.size("data.descriptors", 1), Filters.eq("data.descriptors.state", Draft.toString()))
+          )
+        )
 
     mapToVarArgs(
       eServicesIdsFilter.toList ++ producersIdsFilter.toList ++ attributesIdsFilter.toList ++ statesFilter.toList ++ nameFilter.toList ++ modeFilter.toList ++ isSupervisorFilter.toList
