@@ -32,6 +32,11 @@
       "roles": ["admin", "api"],
       "verb": "PUT"
     },
+    {
+      "route": "updatePublishedDescriptor",
+      "roles": ["admin", "api"],
+      "verb": "POST"
+    },
     { "route": "updateEServiceById", "roles": ["admin", "api"], "verb": "PUT" },
     { "route": "createDescriptor", "roles": ["admin", "api"], "verb": "POST" },
     {

@@ -129,6 +129,15 @@ class ProcessApiAuthzSpec extends AnyWordSpecLike with BeforeAndAfterAll with Au
       )
     }
 
+    "accept authorized roles for updatePublishedDescriptor" in {
+      val endpoint = AuthorizedRoutes.endpoints("updatePublishedDescriptor")
+      val fakeSeed = UpdateEServicePublishedDescriptorSeed(0, 0, 0)
+      validateAuthorization(
+        endpoint,
+        { implicit c: Seq[(String, String)] => service.updatePublishedDescriptor("fake", "fake", fakeSeed) }
+      )
+    }
+
     "accept authorized roles for updateEServiceById" in {
       val endpoint = AuthorizedRoutes.endpoints("updateEServiceById")
       val fakeSeed =

@@ -463,7 +463,7 @@ final case class ProcessApiServiceImpl(
       _               <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       descriptor      <- assertDescriptorExists(catalogItem, descriptorUuid)
       _               <- isDraftDescriptor(descriptor)
-      updatedEService <- catalogManagementService.updateDraftDescriptor(
+      updatedEService <- catalogManagementService.updateDescriptor(
         eServiceId,
         descriptorId,
         updateEServiceDescriptorSeed.toDependency
@@ -474,6 +474,39 @@ final case class ProcessApiServiceImpl(
       updateDraftDescriptorResponse[EService](operationLabel)(updateDraftDescriptor200)
     }
   }
+
+  override def updatePublishedDescriptor(
+    eServiceId: String,
+    descriptorId: String,
+    seed: UpdateEServicePublishedDescriptorSeed
+  )(implicit
+    contexts: Seq[(String, String)],
+    toEntityMarshallerProblem: ToEntityMarshaller[Problem],
+    toEntityMarshallerEService: ToEntityMarshaller[EService]
+  ): Route =
+    authorize(ADMIN_ROLE, API_ROLE) {
+      val operationLabel = s"Update Published Descriptor $descriptorId for EService $eServiceId"
+      logger.info(operationLabel)
+
+      val result: Future[EService] = for {
+        organizationId  <- getOrganizationIdFutureUUID(contexts)
+        eServiceUuid    <- eServiceId.toFutureUUID
+        descriptorUuid  <- descriptorId.toFutureUUID
+        catalogItem     <- catalogManagementService.getEServiceById(eServiceUuid)
+        _               <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
+        descriptor      <- assertDescriptorExists(catalogItem, descriptorUuid)
+        _               <- descriptorCanBeUpdated(descriptor)
+        updatedEService <- catalogManagementService.updateDescriptor(
+          eServiceId,
+          descriptorId,
+          seed.toDependency(descriptor)
+        )
+      } yield updatedEService.toApi
+
+      onComplete(result) {
+        updatePublishedDescriptorResponse[EService](operationLabel)(updatePublishedDescriptor200)
+      }
+    }
 
   private def checkDuplicateName(requesterId: UUID, eServiceId: Option[UUID], name: String, producerId: UUID)(implicit
     contexts: Seq[(String, String)]
@@ -563,6 +596,14 @@ final case class ProcessApiServiceImpl(
   private def descriptorCanBeSuspended(descriptor: CatalogDescriptor): Future[CatalogDescriptor] =
     descriptor.state match {
       case Deprecated => Future.successful(descriptor)
+      case Published  => Future.successful(descriptor)
+      case _          => Future.failed(NotValidDescriptor(descriptor.id.toString, descriptor.state.toString))
+    }
+
+  private def descriptorCanBeUpdated(descriptor: CatalogDescriptor): Future[CatalogDescriptor] =
+    descriptor.state match {
+      case Deprecated => Future.successful(descriptor)
+      case Suspended  => Future.successful(descriptor)
       case Published  => Future.successful(descriptor)
       case _          => Future.failed(NotValidDescriptor(descriptor.id.toString, descriptor.state.toString))
     }

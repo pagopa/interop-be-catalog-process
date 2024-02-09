@@ -169,6 +169,18 @@ object ResponseHandlers extends AkkaResponses {
       case Failure(ex)                             => internalServerError(ex, logMessage)
     }
 
+  def updatePublishedDescriptorResponse[T](logMessage: String)(
+    success: T => Route
+  )(result: Try[T])(implicit contexts: Seq[(String, String)], logger: LoggerTakingImplicit[ContextFieldsToLog]): Route =
+    result match {
+      case Success(s)                              => success(s)
+      case Failure(ex: OperationForbidden.type)    => forbidden(ex, logMessage)
+      case Failure(ex: EServiceNotFound)           => notFound(ex, logMessage)
+      case Failure(ex: EServiceDescriptorNotFound) => notFound(ex, logMessage)
+      case Failure(ex: NotValidDescriptor)         => badRequest(ex, logMessage)
+      case Failure(ex)                             => internalServerError(ex, logMessage)
+    }
+
   def deleteDraftResponse[T](logMessage: String)(
     success: T => Route
   )(result: Try[T])(implicit contexts: Seq[(String, String)], logger: LoggerTakingImplicit[ContextFieldsToLog]): Route =

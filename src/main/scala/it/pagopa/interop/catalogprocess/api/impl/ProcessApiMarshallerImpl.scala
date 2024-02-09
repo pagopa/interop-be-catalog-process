@@ -46,4 +46,8 @@ object ProcessApiMarshallerImpl extends ProcessApiMarshaller with SprayJsonSuppo
 
   override implicit def fromEntityUnmarshallerEServiceRiskAnalysisSeed
     : FromEntityUnmarshaller[EServiceRiskAnalysisSeed] = sprayJsonUnmarshaller[EServiceRiskAnalysisSeed]
+
+  override implicit def fromEntityUnmarshallerUpdateEServicePublishedDescriptorSeed
+    : FromEntityUnmarshaller[UpdateEServicePublishedDescriptorSeed] =
+    sprayJsonUnmarshaller[UpdateEServicePublishedDescriptorSeed]
 }

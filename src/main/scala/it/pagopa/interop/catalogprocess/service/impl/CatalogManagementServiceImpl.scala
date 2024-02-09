@@ -82,8 +82,8 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       }
     }
 
-  override def updateDraftDescriptor(eServiceId: String, descriptorId: String, seed: UpdateEServiceDescriptorSeed)(
-    implicit contexts: Seq[(String, String)]
+  override def updateDescriptor(eServiceId: String, descriptorId: String, seed: UpdateEServiceDescriptorSeed)(implicit
+    contexts: Seq[(String, String)]
   ): Future[EService] =
     withHeaders { (bearerToken, correlationId) =>
       val request =
