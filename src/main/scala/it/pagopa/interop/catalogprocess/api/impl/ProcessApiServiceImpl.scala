@@ -510,6 +510,7 @@ final case class ProcessApiServiceImpl(
       _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       _              <- eServiceCanBeUpdated(catalogItem).toFuture
       _ <- checkDuplicateName(organizationId, Some(eServiceUuid), updateEServiceSeed.name, catalogItem.producerId)
+      _ <- deleteInterfaceOnTechnologyUpdate(updateEServiceSeed.technology, catalogItem)
       _ <- deleteRiskAnalysisOnModeUpdate(updateEServiceSeed.mode, catalogItem)
       updatedEService <- catalogManagementService.updateEServiceById(eServiceId, updateEServiceSeed.toDependency)
     } yield updatedEService.toApi
@@ -517,6 +518,20 @@ final case class ProcessApiServiceImpl(
     onComplete(result) {
       updateEServiceByIdResponse(operationLabel)(updateEServiceById200)
     }
+  }
+
+  private def deleteInterfaceOnTechnologyUpdate(newTechnology: EServiceTechnology, catalogItem: CatalogItem)(implicit
+    contexts: Seq[(String, String)]
+  ): Future[Unit] = {
+    if (catalogItem.technology.toApi != newTechnology)
+      for {
+        descriptor <- interfaceCanBeDeleted(catalogItem).toFuture
+        _          <- descriptor.interface.traverse(interface =>
+          catalogManagementService
+            .deleteEServiceDocument(catalogItem.id.toString, descriptor.id.toString, interface.id.toString)
+        )
+      } yield ()
+    else Future.unit
   }
 
   private def deleteRiskAnalysisOnModeUpdate(newMode: EServiceMode, catalogItem: CatalogItem)(implicit
@@ -540,6 +555,13 @@ final case class ProcessApiServiceImpl(
         (eService.descriptors.length == 1 && eService.descriptors.exists(_.state == Draft)),
       (),
       EServiceCannotBeUpdated(eService.id.toString)
+    )
+
+  private def interfaceCanBeDeleted(eService: CatalogItem): Either[Throwable, CatalogDescriptor] = Either
+    .cond(
+      (eService.descriptors.length == 1 && eService.descriptors.exists(_.state == Draft)),
+      eService.descriptors.head,
+      InterfaceCannotBeDeleted(eService.id)
     )
 
   private[this] def deprecateDescriptor(descriptorId: String, eServiceId: String)(implicit

@@ -249,6 +249,17 @@ object SpecData {
       uploadDate = OffsetDateTimeSupplier.get().minusDays(10)
     )
 
+  val catalogDocumentInterface: CatalogManagement.CatalogDocument =
+    CatalogManagement.CatalogDocument(
+      id = docId,
+      name = "name",
+      contentType = "application/yaml",
+      prettyName = "pretty",
+      path = "path",
+      checksum = "checksum",
+      uploadDate = OffsetDateTimeSupplier.get().minusDays(10)
+    )
+
   val eService: CatalogManagementDependency.EService = CatalogManagementDependency.EService(
     id = eServiceId,
     producerId = UUID.randomUUID(),

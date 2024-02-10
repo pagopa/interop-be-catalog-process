@@ -91,12 +91,13 @@ object ResponseHandlers extends AkkaResponses {
     success: T => Route
   )(result: Try[T])(implicit contexts: Seq[(String, String)], logger: LoggerTakingImplicit[ContextFieldsToLog]): Route =
     result match {
-      case Success(s)                           => success(s)
-      case Failure(ex: OperationForbidden.type) => forbidden(ex, logMessage)
-      case Failure(ex: EServiceNotFound)        => notFound(ex, logMessage)
-      case Failure(ex: EServiceCannotBeUpdated) => badRequest(ex, logMessage)
-      case Failure(ex: DuplicatedEServiceName)  => conflict(ex, logMessage)
-      case Failure(ex)                          => internalServerError(ex, logMessage)
+      case Success(s)                            => success(s)
+      case Failure(ex: OperationForbidden.type)  => forbidden(ex, logMessage)
+      case Failure(ex: EServiceNotFound)         => notFound(ex, logMessage)
+      case Failure(ex: EServiceCannotBeUpdated)  => badRequest(ex, logMessage)
+      case Failure(ex: InterfaceCannotBeDeleted) => badRequest(ex, logMessage)
+      case Failure(ex: DuplicatedEServiceName)   => conflict(ex, logMessage)
+      case Failure(ex)                           => internalServerError(ex, logMessage)
     }
 
   def deleteEServiceResponse[T](logMessage: String)(
