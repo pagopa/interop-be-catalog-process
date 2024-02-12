@@ -1710,7 +1710,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       }
     }
   }
-  "Published Descriptor update" should {
+  "Descriptor update" should {
     "succeed if published" in {
       val requesterId = UUID.randomUUID()
 
@@ -1729,7 +1729,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         )
 
       val seed =
-        UpdateEServicePublishedDescriptorSeed(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
+        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
 
       val depSeed = CatalogManagementDependency.UpdateEServiceDescriptorSeed(
         description = None,
@@ -1750,7 +1750,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         .returning(Future.successful(SpecData.eService))
         .once()
 
-      Put() ~> service.updatePublishedDescriptor(
+      Put() ~> service.updateDescriptor(
         SpecData.catalogItem.id.toString,
         SpecData.catalogDescriptor.id.toString,
         seed
@@ -1776,7 +1776,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         )
 
       val seed =
-        UpdateEServicePublishedDescriptorSeed(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
+        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
 
       val depSeed = CatalogManagementDependency.UpdateEServiceDescriptorSeed(
         description = None,
@@ -1797,7 +1797,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         .returning(Future.successful(SpecData.eService))
         .once()
 
-      Put() ~> service.updatePublishedDescriptor(
+      Put() ~> service.updateDescriptor(
         SpecData.catalogItem.id.toString,
         SpecData.catalogDescriptor.id.toString,
         seed
@@ -1824,7 +1824,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         )
 
       val seed =
-        UpdateEServicePublishedDescriptorSeed(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
+        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
 
       val depSeed = CatalogManagementDependency.UpdateEServiceDescriptorSeed(
         description = None,
@@ -1845,7 +1845,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         .returning(Future.successful(SpecData.eService))
         .once()
 
-      Put() ~> service.updatePublishedDescriptor(
+      Put() ~> service.updateDescriptor(
         SpecData.catalogItem.id.toString,
         SpecData.catalogDescriptor.id.toString,
         seed
@@ -1871,9 +1871,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         )
 
       val seed =
-        UpdateEServicePublishedDescriptorSeed(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
+        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
 
-      Put() ~> service.updatePublishedDescriptor(
+      Put() ~> service.updateDescriptor(
         SpecData.catalogItem.id.toString,
         SpecData.catalogDescriptor.id.toString,
         seed
@@ -1888,7 +1888,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
       val seed =
-        UpdateEServicePublishedDescriptorSeed(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
+        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
 
       (mockCatalogManagementService
         .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
@@ -1896,11 +1896,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         .once()
         .returns(Future.failed(EServiceNotFound(SpecData.catalogItem.id.toString)))
 
-      Put() ~> service.updatePublishedDescriptor(
-        SpecData.catalogItem.id.toString,
-        UUID.randomUUID.toString,
-        seed
-      ) ~> check {
+      Put() ~> service.updateDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID.toString, seed) ~> check {
         status shouldEqual StatusCodes.NotFound
       }
     }
@@ -1911,7 +1907,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
       val seed =
-        UpdateEServicePublishedDescriptorSeed(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
+        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
 
       (mockCatalogManagementService
         .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
@@ -1919,11 +1915,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         .once()
         .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
 
-      Put() ~> service.updatePublishedDescriptor(
-        SpecData.catalogItem.id.toString,
-        UUID.randomUUID.toString,
-        seed
-      ) ~> check {
+      Put() ~> service.updateDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID.toString, seed) ~> check {
         status shouldEqual StatusCodes.NotFound
       }
     }
@@ -1939,13 +1931,9 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
 
       val seed =
-        UpdateEServicePublishedDescriptorSeed(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
+        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
 
-      Put() ~> service.updatePublishedDescriptor(
-        SpecData.catalogItem.id.toString,
-        UUID.randomUUID().toString,
-        seed
-      ) ~> check {
+      Put() ~> service.updateDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID().toString, seed) ~> check {
         status shouldEqual StatusCodes.Forbidden
       }
     }

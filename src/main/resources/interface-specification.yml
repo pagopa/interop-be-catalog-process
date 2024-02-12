@@ -469,7 +469,7 @@ paths:
       tags:
         - process
       summary: Publish the selected descriptor.
-      operationId: updatePublishedDescriptor
+      operationId: updateDescriptor
       parameters:
         - name: eServiceId
           in: path
@@ -491,7 +491,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateEServicePublishedDescriptorSeed'
+              $ref: '#/components/schemas/UpdateEServiceDescriptorQuotas'
       responses:
         '200':
           description: EService with published descriptor updated.
@@ -1209,7 +1209,7 @@ components:
           $ref: '#/components/schemas/AgreementApprovalPolicy'
         attributes:
           $ref: '#/components/schemas/AttributesSeed'
-    UpdateEServicePublishedDescriptorSeed:
+    UpdateEServiceDescriptorQuotas:
       type: object
       properties:
         voucherLifespan:

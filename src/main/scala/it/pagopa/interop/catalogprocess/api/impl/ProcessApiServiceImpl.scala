@@ -475,17 +475,13 @@ final case class ProcessApiServiceImpl(
     }
   }
 
-  override def updatePublishedDescriptor(
-    eServiceId: String,
-    descriptorId: String,
-    seed: UpdateEServicePublishedDescriptorSeed
-  )(implicit
+  override def updateDescriptor(eServiceId: String, descriptorId: String, seed: UpdateEServiceDescriptorQuotas)(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
     toEntityMarshallerEService: ToEntityMarshaller[EService]
   ): Route =
     authorize(ADMIN_ROLE, API_ROLE) {
-      val operationLabel = s"Update Published Descriptor $descriptorId for EService $eServiceId"
+      val operationLabel = s"Update Descriptor $descriptorId for EService $eServiceId"
       logger.info(operationLabel)
 
       val result: Future[EService] = for {
@@ -504,7 +500,7 @@ final case class ProcessApiServiceImpl(
       } yield updatedEService.toApi
 
       onComplete(result) {
-        updatePublishedDescriptorResponse[EService](operationLabel)(updatePublishedDescriptor200)
+        updateDescriptorResponse[EService](operationLabel)(updateDescriptor200)
       }
     }
 

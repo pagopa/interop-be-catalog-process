@@ -33,7 +33,7 @@
       "verb": "PUT"
     },
     {
-      "route": "updatePublishedDescriptor",
+      "route": "updateDescriptor",
       "roles": ["admin", "api"],
       "verb": "POST"
     },

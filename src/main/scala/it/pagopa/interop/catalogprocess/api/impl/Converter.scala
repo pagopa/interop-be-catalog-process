@@ -80,7 +80,7 @@ object Converter {
       )
   }
 
-  implicit class UpdateEServicePublishedDescriptorSeedWrapper(private val seed: UpdateEServicePublishedDescriptorSeed)
+  implicit class UpdateEServiceDescriptorQuotasWrapper(private val seed: UpdateEServiceDescriptorQuotas)
       extends AnyVal {
     def toDependency(
       descriptor: readmodel.CatalogDescriptor
