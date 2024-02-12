@@ -684,7 +684,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
           interface = None
         )
 
-      val eService = SpecData.catalogItem.copy(descriptors = Seq(catalogDescriptor), producerId = requesterId)
+      val eService =
+        SpecData.catalogItem.copy(technology = Rest, descriptors = Seq(catalogDescriptor), producerId = requesterId)
 
       val eServiceSeed =
         UpdateEServiceSeed(

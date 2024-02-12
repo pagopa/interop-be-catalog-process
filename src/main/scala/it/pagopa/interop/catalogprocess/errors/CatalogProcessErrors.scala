@@ -81,8 +81,4 @@ object CatalogProcessErrors {
 
   final case class InterfaceAlreadyExists(descriptorId: UUID)
       extends ComponentError("0022", s"Descriptor ${descriptorId.toString} already has an interface")
-
-  final case class InterfaceCannotBeDeleted(eServiceId: UUID)
-      extends ComponentError("0023", s"Interface cannot be deleted on eService $eServiceId")
-
 }

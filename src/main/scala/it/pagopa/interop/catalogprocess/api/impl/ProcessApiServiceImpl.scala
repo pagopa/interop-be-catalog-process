@@ -525,7 +525,9 @@ final case class ProcessApiServiceImpl(
   ): Future[Unit] = {
     if (catalogItem.technology.toApi != newTechnology)
       for {
-        descriptor <- interfaceCanBeDeleted(catalogItem).toFuture
+        descriptor <- catalogItem.descriptors
+          .find(_.state == Draft)
+          .toFuture(EServiceCannotBeUpdated(catalogItem.id.toString))
         _          <- descriptor.interface.traverse(interface =>
           catalogManagementService
             .deleteEServiceDocument(catalogItem.id.toString, descriptor.id.toString, interface.id.toString)
@@ -555,13 +557,6 @@ final case class ProcessApiServiceImpl(
         (eService.descriptors.length == 1 && eService.descriptors.exists(_.state == Draft)),
       (),
       EServiceCannotBeUpdated(eService.id.toString)
-    )
-
-  private def interfaceCanBeDeleted(eService: CatalogItem): Either[Throwable, CatalogDescriptor] = Either
-    .cond(
-      (eService.descriptors.length == 1 && eService.descriptors.exists(_.state == Draft)),
-      eService.descriptors.head,
-      InterfaceCannotBeDeleted(eService.id)
     )
 
   private[this] def deprecateDescriptor(descriptorId: String, eServiceId: String)(implicit
