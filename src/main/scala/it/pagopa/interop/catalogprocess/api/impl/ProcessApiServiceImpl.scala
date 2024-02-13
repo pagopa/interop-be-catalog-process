@@ -552,7 +552,7 @@ final case class ProcessApiServiceImpl(
   private def deleteInterfaceOnTechnologyUpdate(newTechnology: EServiceTechnology, catalogItem: CatalogItem)(implicit
     contexts: Seq[(String, String)]
   ): Future[Unit] = {
-    if (catalogItem.technology.toApi != newTechnology)
+    if (catalogItem.descriptors.nonEmpty && catalogItem.technology.toApi != newTechnology)
       for {
         descriptor <- catalogItem.descriptors
           .find(_.state == Draft)
