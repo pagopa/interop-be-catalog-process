@@ -214,8 +214,8 @@ object FakeDependencies {
       contexts: Seq[(String, String)]
     ): Future[Unit] = Future.successful(())
 
-    override def updateDraftDescriptor(eServiceId: String, descriptorId: String, seed: UpdateEServiceDescriptorSeed)(
-      implicit contexts: Seq[(String, String)]
+    override def updateDescriptor(eServiceId: String, descriptorId: String, seed: UpdateEServiceDescriptorSeed)(implicit
+      contexts: Seq[(String, String)]
     ): Future[EService] = Future.successful(
       EService(
         id = UUID.randomUUID(),

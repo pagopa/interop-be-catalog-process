@@ -80,6 +80,25 @@ object Converter {
       )
   }
 
+  implicit class UpdateEServiceDescriptorQuotasWrapper(private val seed: UpdateEServiceDescriptorQuotas)
+      extends AnyVal {
+    def toDependency(
+      descriptor: readmodel.CatalogDescriptor
+    ): CatalogManagementDependency.UpdateEServiceDescriptorSeed =
+      CatalogManagementDependency.UpdateEServiceDescriptorSeed(
+        description = descriptor.description,
+        audience = descriptor.audience,
+        voucherLifespan = seed.voucherLifespan,
+        dailyCallsPerConsumer = seed.dailyCallsPerConsumer,
+        dailyCallsTotal = seed.dailyCallsTotal,
+        state = descriptor.state.toDependency,
+        agreementApprovalPolicy = descriptor.agreementApprovalPolicy
+          .getOrElse(readmodel.PersistentAgreementApprovalPolicy.default)
+          .toDependency,
+        attributes = descriptor.attributes.toDependency
+      )
+  }
+
   implicit class UpdateEServiceDescriptorSeedWrapper(private val seed: UpdateEServiceDescriptorSeed) extends AnyVal {
     def toDependency: CatalogManagementDependency.UpdateEServiceDescriptorSeed =
       CatalogManagementDependency.UpdateEServiceDescriptorSeed(
@@ -376,9 +395,13 @@ object Converter {
   implicit class ReadModelAgreementApprovalPolicyWrapper(
     private val policy: readmodel.PersistentAgreementApprovalPolicy
   ) extends AnyVal {
-    def toApi: AgreementApprovalPolicy = policy match {
+    def toApi: AgreementApprovalPolicy                                    = policy match {
       case readmodel.Automatic => AgreementApprovalPolicy.AUTOMATIC
       case readmodel.Manual    => AgreementApprovalPolicy.MANUAL
+    }
+    def toDependency: CatalogManagementDependency.AgreementApprovalPolicy = policy match {
+      case readmodel.Automatic => CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC
+      case readmodel.Manual    => CatalogManagementDependency.AgreementApprovalPolicy.MANUAL
     }
   }
 
@@ -451,16 +474,24 @@ object Converter {
   }
 
   implicit class ReadModelAttributesWrapper(private val attributes: readmodel.CatalogAttributes) extends AnyVal {
-    def toApi: Attributes =
+    def toApi: Attributes                                    =
       Attributes(
         certified = attributes.certified.map(_.map(_.toApi)),
         declared = attributes.declared.map(_.map(_.toApi)),
         verified = attributes.verified.map(_.map(_.toApi))
       )
+    def toDependency: CatalogManagementDependency.Attributes =
+      CatalogManagementDependency.Attributes(
+        certified = attributes.certified.map(_.map(_.toDependency)),
+        declared = attributes.declared.map(_.map(_.toDependency)),
+        verified = attributes.verified.map(_.map(_.toDependency))
+      )
   }
 
   implicit class ReadModelAttributeWrapper(private val attribute: readmodel.CatalogAttribute) extends AnyVal {
     def toApi: Attribute = Attribute(attribute.id, attribute.explicitAttributeVerification)
+    def toDependency: CatalogManagementDependency.Attribute =
+      CatalogManagementDependency.Attribute(attribute.id, attribute.explicitAttributeVerification)
   }
 
   implicit class ReadModelTechnologyWrapper(private val technology: readmodel.CatalogItemTechnology) extends AnyVal {
@@ -505,13 +536,21 @@ object Converter {
 
   implicit class ReadModelDescriptorStateWrapper(private val clientStatus: readmodel.CatalogDescriptorState)
       extends AnyVal {
-    def toApi: EServiceDescriptorState =
+    def toApi: EServiceDescriptorState                                    =
       clientStatus match {
         case readmodel.Draft      => EServiceDescriptorState.DRAFT
         case readmodel.Published  => EServiceDescriptorState.PUBLISHED
         case readmodel.Deprecated => EServiceDescriptorState.DEPRECATED
         case readmodel.Suspended  => EServiceDescriptorState.SUSPENDED
         case readmodel.Archived   => EServiceDescriptorState.ARCHIVED
+      }
+    def toDependency: CatalogManagementDependency.EServiceDescriptorState =
+      clientStatus match {
+        case readmodel.Draft      => CatalogManagementDependency.EServiceDescriptorState.DRAFT
+        case readmodel.Published  => CatalogManagementDependency.EServiceDescriptorState.PUBLISHED
+        case readmodel.Deprecated => CatalogManagementDependency.EServiceDescriptorState.DEPRECATED
+        case readmodel.Suspended  => CatalogManagementDependency.EServiceDescriptorState.SUSPENDED
+        case readmodel.Archived   => CatalogManagementDependency.EServiceDescriptorState.ARCHIVED
       }
   }
 
