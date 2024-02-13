@@ -29,6 +29,8 @@ package object impl extends SprayJsonSupport with DefaultJsonProtocol {
   implicit val updateEServiceSeedFormat: RootJsonFormat[UpdateEServiceSeed]     = jsonFormat4(UpdateEServiceSeed)
   implicit val eServiceDescriptorSeedFormat: RootJsonFormat[EServiceDescriptorSeed]                             =
     jsonFormat7(EServiceDescriptorSeed)
+  implicit val updateEServiceDescriptorQuotasFormat: RootJsonFormat[UpdateEServiceDescriptorQuotas]             =
+    jsonFormat3(UpdateEServiceDescriptorQuotas)
   implicit val updateEServiceDescriptorSeedFormat: RootJsonFormat[UpdateEServiceDescriptorSeed]                 =
     jsonFormat7(UpdateEServiceDescriptorSeed)
   implicit val updateEServiceDescriptorDocumentSeedFormat: RootJsonFormat[UpdateEServiceDescriptorDocumentSeed] =
