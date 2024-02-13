@@ -81,5 +81,4 @@ object CatalogProcessErrors {
 
   final case class InterfaceAlreadyExists(descriptorId: UUID)
       extends ComponentError("0022", s"Descriptor ${descriptorId.toString} already has an interface")
-
 }
