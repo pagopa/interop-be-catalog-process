@@ -962,20 +962,24 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
       implicit val context: Seq[(String, String)] =
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
-      val eService = SpecData.eService.copy(descriptors = Seq.empty, producerId = requesterId)
+      val eService = SpecData.eService.copy(
+        descriptors = Seq.empty,
+        producerId = requesterId,
+        technology = CatalogManagementDependency.EServiceTechnology.REST
+      )
 
       val eServiceSeed =
         UpdateEServiceSeed(
           name = "newName",
           description = "newDescription",
-          technology = EServiceTechnology.REST,
+          technology = EServiceTechnology.SOAP,
           mode = EServiceMode.DELIVER
         )
 
       val updatedEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
         name = "newName",
         description = "newDescription",
-        technology = eService.technology,
+        technology = CatalogManagementDependency.EServiceTechnology.SOAP,
         mode = eService.mode
       )
 
@@ -984,7 +988,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         producerId = requesterId,
         name = "newName",
         description = "newDescription",
-        technology = eService.technology,
+        technology = CatalogManagementDependency.EServiceTechnology.SOAP,
         descriptors = Seq.empty,
         riskAnalysis = Seq.empty,
         mode = eService.mode
@@ -1198,70 +1202,6 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       Put() ~> service.updateEServiceById(SpecData.catalogItem.id.toString, eServiceSeed) ~> check {
         status shouldEqual StatusCodes.NotFound
-      }
-    }
-    "fail when technology has changed in case of no descriptors" in {
-      val requesterId = UUID.randomUUID()
-
-      implicit val context: Seq[(String, String)] =
-        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
-
-      val eService = SpecData.catalogItem.copy(descriptors = Seq.empty, producerId = requesterId)
-
-      val eServiceSeed =
-        UpdateEServiceSeed(
-          name = "newName",
-          description = "newDescription",
-          technology = EServiceTechnology.SOAP,
-          mode = EServiceMode.DELIVER
-        )
-
-      val updatedEServiceSeed = CatalogManagementDependency.UpdateEServiceSeed(
-        name = "newName",
-        description = "newDescription",
-        technology = CatalogManagementDependency.EServiceTechnology.SOAP,
-        mode = CatalogManagementDependency.EServiceMode.DELIVER
-      )
-
-      (mockCatalogManagementService
-        .getEServices(
-          _: UUID,
-          _: Option[String],
-          _: Seq[UUID],
-          _: Seq[UUID],
-          _: Seq[UUID],
-          _: Seq[CatalogDescriptorState],
-          _: Option[CatalogItemMode],
-          _: Int,
-          _: Int,
-          _: Boolean
-        )(_: ExecutionContext, _: ReadModelService, _: Seq[(String, String)]))
-        .expects(
-          requesterId,
-          Some(updatedEServiceSeed.name),
-          Seq.empty,
-          Seq(requesterId),
-          Seq.empty,
-          Seq.empty,
-          None,
-          0,
-          1,
-          true,
-          *,
-          *,
-          context
-        )
-        .once()
-        .returns(Future.successful(PaginatedResult(results = Seq.empty, 0)))
-
-      (mockCatalogManagementService
-        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
-        .expects(eService.id, *, *)
-        .once()
-        .returns(Future.successful(eService))
-
-      Put() ~> service.updateEServiceById(eService.id.toString, eServiceSeed) ~> check {
-        status shouldEqual StatusCodes.BadRequest
       }
     }
     "fail when technology has changed in case of multiple descriptors" in {

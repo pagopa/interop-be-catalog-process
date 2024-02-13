@@ -552,17 +552,13 @@ final case class ProcessApiServiceImpl(
   private def deleteInterfaceOnTechnologyUpdate(newTechnology: EServiceTechnology, catalogItem: CatalogItem)(implicit
     contexts: Seq[(String, String)]
   ): Future[Unit] = {
-    if (catalogItem.technology.toApi != newTechnology)
-      for {
-        descriptor <- catalogItem.descriptors
-          .find(_.state == Draft)
-          .toFuture(EServiceCannotBeUpdated(catalogItem.id.toString))
-        _          <- descriptor.interface.traverse(interface =>
-          catalogManagementService
-            .deleteEServiceDocument(catalogItem.id.toString, descriptor.id.toString, interface.id.toString)
-        )
-      } yield ()
-    else Future.unit
+    if (catalogItem.technology.toApi != newTechnology) {
+      val descriptorAndInterface =
+        catalogItem.descriptors.find(_.state == Draft).flatMap(d => d.interface.map(i => (d, i)))
+      descriptorAndInterface.fold(Future.unit)(di =>
+        catalogManagementService.deleteEServiceDocument(catalogItem.id.toString, di._1.id.toString, di._2.id.toString)
+      )
+    } else Future.unit
   }
 
   private def deleteRiskAnalysisOnModeUpdate(newMode: EServiceMode, catalogItem: CatalogItem)(implicit
