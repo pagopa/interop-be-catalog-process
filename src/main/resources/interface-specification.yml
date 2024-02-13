@@ -1215,6 +1215,8 @@ components:
         voucherLifespan:
           type: integer
           format: int32
+          minimum: 60
+          maximum: 86400
         dailyCallsPerConsumer:
           type: integer
           format: int32
@@ -1557,12 +1559,10 @@ components:
           description: 'maximum number of daily calls that this descriptor can afford per consumer.'
           type: integer
           format: int32
-          minimum: 0
         dailyCallsTotal:
           description: 'total daily calls available for this e-service.'
           type: integer
           format: int32
-          minimum: 0
         interface:
           $ref: '#/components/schemas/EServiceDoc'
         docs:
