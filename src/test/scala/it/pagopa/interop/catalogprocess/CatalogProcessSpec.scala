@@ -517,7 +517,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       val apiSeed: EServiceSeed =
         EServiceSeed(
-          name = "MyService",
+          name = SpecData.catalogItem.name,
           description = "My Service",
           technology = EServiceTechnology.REST,
           mode = EServiceMode.DELIVER
@@ -1487,8 +1487,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         description = None,
         audience = Seq("aud"),
         voucherLifespan = 60,
-        dailyCallsPerConsumer = 0,
-        dailyCallsTotal = 0,
+        dailyCallsPerConsumer = 10,
+        dailyCallsTotal = 100,
         agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
         attributes = AttributesSeed(
           certified = List(List(AttributeSeed(attributeId1, explicitAttributeVerification = false))),
@@ -1501,8 +1501,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         description = None,
         audience = Seq("aud"),
         voucherLifespan = 60,
-        dailyCallsPerConsumer = 0,
-        dailyCallsTotal = 0,
+        dailyCallsPerConsumer = 10,
+        dailyCallsTotal = 100,
         agreementApprovalPolicy = CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC,
         attributes = CatalogManagementDependency.Attributes(
           certified =
@@ -1523,8 +1523,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
         audience = Seq("aud"),
         voucherLifespan = 60,
-        dailyCallsPerConsumer = 0,
-        dailyCallsTotal = 0,
+        dailyCallsPerConsumer = 10,
+        dailyCallsTotal = 100,
         agreementApprovalPolicy = AUTOMATIC,
         serverUrls = Nil,
         attributes = CatalogManagementDependency.Attributes(
@@ -1569,6 +1569,156 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
 
       Post() ~> service.createDescriptor(SpecData.catalogItem.id.toString, seed) ~> check {
         status shouldEqual StatusCodes.OK
+      }
+    }
+    "fail if dailyCallsPerConsumer is greater than dailyCallsTotal" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val attributeId1: UUID = UUID.randomUUID()
+      val attributeId2: UUID = UUID.randomUUID()
+      val attributeId3: UUID = UUID.randomUUID()
+
+      val seed = EServiceDescriptorSeed(
+        description = None,
+        audience = Seq("aud"),
+        voucherLifespan = 60,
+        dailyCallsPerConsumer = 110,
+        dailyCallsTotal = 100,
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(
+          certified = List(List(AttributeSeed(attributeId1, explicitAttributeVerification = false))),
+          declared = List(List(AttributeSeed(attributeId2, explicitAttributeVerification = false))),
+          verified = List(List(AttributeSeed(attributeId3, explicitAttributeVerification = true)))
+        )
+      )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
+
+      Post() ~> service.createDescriptor(SpecData.catalogItem.id.toString, seed) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+      }
+    }
+    "fail if dailyCallsPerConsumer is less than previous one" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val attributeId1: UUID = UUID.randomUUID()
+      val attributeId2: UUID = UUID.randomUUID()
+      val attributeId3: UUID = UUID.randomUUID()
+
+      val seed = EServiceDescriptorSeed(
+        description = None,
+        audience = Seq("aud"),
+        voucherLifespan = 60,
+        dailyCallsPerConsumer = 5,
+        dailyCallsTotal = 100,
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(
+          certified = List(List(AttributeSeed(attributeId1, explicitAttributeVerification = false))),
+          declared = List(List(AttributeSeed(attributeId2, explicitAttributeVerification = false))),
+          verified = List(List(AttributeSeed(attributeId3, explicitAttributeVerification = true)))
+        )
+      )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Published)))
+          )
+        )
+
+      Post() ~> service.createDescriptor(SpecData.catalogItem.id.toString, seed) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+      }
+    }
+    val requesterId = UUID.randomUUID()
+
+    implicit val context: Seq[(String, String)] =
+      Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+    val attributeId1: UUID = UUID.randomUUID()
+    val attributeId2: UUID = UUID.randomUUID()
+    val attributeId3: UUID = UUID.randomUUID()
+
+    val seed = EServiceDescriptorSeed(
+      description = None,
+      audience = Seq("aud"),
+      voucherLifespan = 60,
+      dailyCallsPerConsumer = 0,
+      dailyCallsTotal = 0,
+      agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+      attributes = AttributesSeed(
+        certified = List(List(AttributeSeed(attributeId1, explicitAttributeVerification = false))),
+        declared = List(List(AttributeSeed(attributeId2, explicitAttributeVerification = false))),
+        verified = List(List(AttributeSeed(attributeId3, explicitAttributeVerification = true)))
+      )
+    )
+
+    (mockCatalogManagementService
+      .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+      .expects(SpecData.catalogItem.id, *, *)
+      .once()
+      .returns(Future.successful(SpecData.catalogItem.copy(producerId = requesterId)))
+
+    (mockAttributeRegistryManagementService
+      .getAttributeById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+      .expects(attributeId1, *, *)
+      .once()
+      .returns(Future.failed(AttributeNotFound(attributeId1)))
+
+    Post() ~> service.createDescriptor(SpecData.catalogItem.id.toString, seed) ~> check {
+      status shouldEqual StatusCodes.BadRequest
+    }
+    "fail if dailyCallsTotal is less than previous one" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      val attributeId1: UUID = UUID.randomUUID()
+      val attributeId2: UUID = UUID.randomUUID()
+      val attributeId3: UUID = UUID.randomUUID()
+
+      val seed = EServiceDescriptorSeed(
+        description = None,
+        audience = Seq("aud"),
+        voucherLifespan = 60,
+        dailyCallsPerConsumer = 20,
+        dailyCallsTotal = 90,
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(
+          certified = List(List(AttributeSeed(attributeId1, explicitAttributeVerification = false))),
+          declared = List(List(AttributeSeed(attributeId2, explicitAttributeVerification = false))),
+          verified = List(List(AttributeSeed(attributeId3, explicitAttributeVerification = true)))
+        )
+      )
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Published)))
+          )
+        )
+
+      Post() ~> service.createDescriptor(SpecData.catalogItem.id.toString, seed) ~> check {
+        status shouldEqual StatusCodes.BadRequest
       }
     }
     "fail if attribute does not exists" in {
@@ -1684,8 +1834,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         description = None,
         audience = Seq("aud"),
         voucherLifespan = 60,
-        dailyCallsPerConsumer = 0,
-        dailyCallsTotal = 0,
+        dailyCallsPerConsumer = 20,
+        dailyCallsTotal = 200,
         agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
         attributes = AttributesSeed(Nil, Nil, Nil)
       )
@@ -1694,8 +1844,8 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         description = None,
         audience = Seq("aud"),
         voucherLifespan = 60,
-        dailyCallsPerConsumer = 0,
-        dailyCallsTotal = 0,
+        dailyCallsPerConsumer = 20,
+        dailyCallsTotal = 200,
         agreementApprovalPolicy = CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC,
         state = CatalogManagementDependency.EServiceDescriptorState.DRAFT,
         attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil)
@@ -1715,6 +1865,111 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         seed
       ) ~> check {
         status shouldEqual StatusCodes.OK
+      }
+    }
+    "fail if dailyCallsPerConsumer is greater than dailyCallsTotal" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Draft)))
+          )
+        )
+
+      val seed = UpdateEServiceDescriptorSeed(
+        description = None,
+        audience = Seq("aud"),
+        voucherLifespan = 60,
+        dailyCallsPerConsumer = 220,
+        dailyCallsTotal = 200,
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(Nil, Nil, Nil)
+      )
+
+      Put() ~> service.updateDraftDescriptor(
+        SpecData.catalogItem.id.toString,
+        SpecData.catalogDescriptor.id.toString,
+        seed
+      ) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+      }
+    }
+    "fail if dailyCallsPerConsumer is less than previous one" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Draft)))
+          )
+        )
+
+      val seed = UpdateEServiceDescriptorSeed(
+        description = None,
+        audience = Seq("aud"),
+        voucherLifespan = 60,
+        dailyCallsPerConsumer = 5,
+        dailyCallsTotal = 200,
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(Nil, Nil, Nil)
+      )
+
+      Put() ~> service.updateDraftDescriptor(
+        SpecData.catalogItem.id.toString,
+        SpecData.catalogDescriptor.id.toString,
+        seed
+      ) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+      }
+    }
+    "fail if dailyCallsTotal is less than previous one" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Draft)))
+          )
+        )
+
+      val seed = UpdateEServiceDescriptorSeed(
+        description = None,
+        audience = Seq("aud"),
+        voucherLifespan = 60,
+        dailyCallsPerConsumer = 20,
+        dailyCallsTotal = 90,
+        agreementApprovalPolicy = AgreementApprovalPolicy.AUTOMATIC,
+        attributes = AttributesSeed(Nil, Nil, Nil)
+      )
+
+      Put() ~> service.updateDraftDescriptor(
+        SpecData.catalogItem.id.toString,
+        SpecData.catalogDescriptor.id.toString,
+        seed
+      ) ~> check {
+        status shouldEqual StatusCodes.BadRequest
       }
     }
     "fail if state is not Draft" in {
@@ -1861,14 +2116,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         )
 
       val seed =
-        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
+        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 20, dailyCallsTotal = 200)
 
       val depSeed = CatalogManagementDependency.UpdateEServiceDescriptorSeed(
         description = None,
         audience = Seq.empty,
         voucherLifespan = 60,
-        dailyCallsPerConsumer = 0,
-        dailyCallsTotal = 0,
+        dailyCallsPerConsumer = 20,
+        dailyCallsTotal = 200,
         agreementApprovalPolicy = CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC,
         state = CatalogManagementDependency.EServiceDescriptorState.PUBLISHED,
         attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil)
@@ -1908,14 +2163,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         )
 
       val seed =
-        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
+        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 20, dailyCallsTotal = 200)
 
       val depSeed = CatalogManagementDependency.UpdateEServiceDescriptorSeed(
         description = None,
         audience = Seq.empty,
         voucherLifespan = 60,
-        dailyCallsPerConsumer = 0,
-        dailyCallsTotal = 0,
+        dailyCallsPerConsumer = 20,
+        dailyCallsTotal = 200,
         agreementApprovalPolicy = CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC,
         state = CatalogManagementDependency.EServiceDescriptorState.DEPRECATED,
         attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil)
@@ -1956,14 +2211,14 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         )
 
       val seed =
-        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
+        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 20, dailyCallsTotal = 200)
 
       val depSeed = CatalogManagementDependency.UpdateEServiceDescriptorSeed(
         description = None,
         audience = Seq.empty,
         voucherLifespan = 60,
-        dailyCallsPerConsumer = 0,
-        dailyCallsTotal = 0,
+        dailyCallsPerConsumer = 20,
+        dailyCallsTotal = 200,
         agreementApprovalPolicy = CatalogManagementDependency.AgreementApprovalPolicy.AUTOMATIC,
         state = CatalogManagementDependency.EServiceDescriptorState.SUSPENDED,
         attributes = CatalogManagementDependency.Attributes(Nil, Nil, Nil)
@@ -1985,6 +2240,90 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         status shouldEqual StatusCodes.OK
       }
     }
+    "fail if dailyCallsPerConsumer is greater than dailyCallsTotal" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Published)))
+          )
+        )
+
+      val seed =
+        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 400, dailyCallsTotal = 200)
+
+      Put() ~> service.updateDescriptor(
+        SpecData.catalogItem.id.toString,
+        SpecData.catalogDescriptor.id.toString,
+        seed
+      ) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+      }
+    }
+    "fail if dailyCallsPerConsumer is less than previous one" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Published)))
+          )
+        )
+
+      val seed =
+        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 5, dailyCallsTotal = 200)
+
+      Put() ~> service.updateDescriptor(
+        SpecData.catalogItem.id.toString,
+        SpecData.catalogDescriptor.id.toString,
+        seed
+      ) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+      }
+    }
+    "fail if dailyCallsTotal is less than previous one" in {
+      val requesterId = UUID.randomUUID()
+
+      implicit val context: Seq[(String, String)] =
+        Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
+
+      (mockCatalogManagementService
+        .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
+        .expects(SpecData.catalogItem.id, *, *)
+        .once()
+        .returns(
+          Future.successful(
+            SpecData.catalogItem
+              .copy(producerId = requesterId, descriptors = Seq(SpecData.catalogDescriptor.copy(state = Published)))
+          )
+        )
+
+      val seed =
+        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 10, dailyCallsTotal = 90)
+
+      Put() ~> service.updateDescriptor(
+        SpecData.catalogItem.id.toString,
+        SpecData.catalogDescriptor.id.toString,
+        seed
+      ) ~> check {
+        status shouldEqual StatusCodes.BadRequest
+      }
+    }
     "fail if state is not Published/Deprecated/Suspended" in {
       val requesterId = UUID.randomUUID()
 
@@ -2003,7 +2342,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         )
 
       val seed =
-        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
+        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 20, dailyCallsTotal = 200)
 
       Put() ~> service.updateDescriptor(
         SpecData.catalogItem.id.toString,
@@ -2020,7 +2359,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
       val seed =
-        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
+        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 20, dailyCallsTotal = 200)
 
       (mockCatalogManagementService
         .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
@@ -2039,7 +2378,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         Seq("bearer" -> bearerToken, USER_ROLES -> "admin", ORGANIZATION_ID_CLAIM -> requesterId.toString)
 
       val seed =
-        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
+        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 20, dailyCallsTotal = 200)
 
       (mockCatalogManagementService
         .getEServiceById(_: UUID)(_: ExecutionContext, _: ReadModelService))
@@ -2063,7 +2402,7 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         .returns(Future.successful(SpecData.catalogItem.copy(producerId = UUID.randomUUID())))
 
       val seed =
-        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 0, dailyCallsTotal = 0)
+        UpdateEServiceDescriptorQuotas(voucherLifespan = 60, dailyCallsPerConsumer = 20, dailyCallsTotal = 200)
 
       Put() ~> service.updateDescriptor(SpecData.catalogItem.id.toString, UUID.randomUUID().toString, seed) ~> check {
         status shouldEqual StatusCodes.Forbidden
