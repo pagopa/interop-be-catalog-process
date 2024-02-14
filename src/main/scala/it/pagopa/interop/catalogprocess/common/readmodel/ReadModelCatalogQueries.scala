@@ -204,8 +204,8 @@ object ReadModelCatalogQueries extends ReadModelQuery {
         Some(Filters.or(certifiedFilter, declaredFilter, verifiedFilter))
     }
     val nameFilter          =
-      if (exactMatchOnName) name.map(n => safeRegex("data.name", s"^$n$$", "i"))
-      else name.map(safeRegex("data.name", _, "i"))
+      if (exactMatchOnName) name.map(n => Filters.regex("data.name", s"^${escape(n)}$$", "i"))
+      else name.map(n => Filters.regex("data.name", escape(n), "i"))
 
     val modeFilter = mode.map(_.toString).map(Filters.eq("data.mode", _))
 
