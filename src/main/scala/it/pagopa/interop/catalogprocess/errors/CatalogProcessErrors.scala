@@ -81,4 +81,16 @@ object CatalogProcessErrors {
 
   final case class InterfaceAlreadyExists(descriptorId: UUID)
       extends ComponentError("0022", s"Descriptor ${descriptorId.toString} already has an interface")
+
+  final case class DailyCallsIncongruent(dailyCallsPerConsumer: Int, dailyCallsTotal: Int)
+      extends ComponentError(
+        "0023",
+        s"Daily calls per consumer ($dailyCallsPerConsumer) is greater than daily calls ($dailyCallsTotal)"
+      )
+
+  final case class DailyCallsAreNotGreaterThanBefore(dailyCalls: Int, previousDailyCalls: Int)
+      extends ComponentError(
+        "0024",
+        s"Daily calls ($dailyCalls) must be greater than previous daily calls ($previousDailyCalls)"
+      )
 }
