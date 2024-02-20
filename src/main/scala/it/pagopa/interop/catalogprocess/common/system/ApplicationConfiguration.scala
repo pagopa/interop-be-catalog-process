@@ -6,10 +6,11 @@ import it.pagopa.interop.commons.cqrs.model.ReadModelConfig
 object ApplicationConfiguration {
   val config: Config = ConfigFactory.load()
 
-  val serverPort: Int = config.getInt("catalog-process.port")
-
-  val catalogManagementUrl: String       = config.getString("catalog-process.services.catalog-management")
-  val authorizationManagementUrl: String = config.getString("catalog-process.services.authorization-management")
+  val serverPort: Int                     = config.getInt("catalog-process.port")
+  val producerAllowedOrigins: Set[String] =
+    config.getString("catalog-process.producer-allowed-origins").split(",").toSet.filter(_.nonEmpty)
+  val catalogManagementUrl: String        = config.getString("catalog-process.services.catalog-management")
+  val authorizationManagementUrl: String  = config.getString("catalog-process.services.authorization-management")
 
   val jwtAudience: Set[String] = config.getString("catalog-process.jwt.audience").split(",").toSet.filter(_.nonEmpty)
 

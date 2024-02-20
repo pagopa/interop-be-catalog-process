@@ -31,7 +31,6 @@ import it.pagopa.interop.commons.jwt._
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.interop.commons.riskanalysis.api.impl.RiskAnalysisValidation
 import it.pagopa.interop.commons.riskanalysis.{model => Commons}
-import it.pagopa.interop.commons.utils.PRODUCER_ALLOWED_ORIGINS
 import it.pagopa.interop.commons.utils.AkkaUtils._
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
@@ -44,6 +43,7 @@ import it.pagopa.interop.agreementmanagement.model.agreement.{
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
+import it.pagopa.interop.catalogprocess.common.system.ApplicationConfiguration
 
 final case class ProcessApiServiceImpl(
   catalogManagementService: CatalogManagementService,
@@ -70,7 +70,9 @@ final case class ProcessApiServiceImpl(
     val result: Future[EService] = for {
       organizationId <- getOrganizationIdFutureUUID(contexts)
       origin         <- getExternalIdOriginFuture(contexts)
-      _ <- if (PRODUCER_ALLOWED_ORIGINS.contains(origin)) Future.unit else Future.failed(OriginIsNotAllowed(origin))
+      _              <-
+        if (ApplicationConfiguration.producerAllowedOrigins.contains(origin)) Future.unit
+        else Future.failed(OriginIsNotAllowed(origin))
       clientSeed = eServiceSeed.toDependency(organizationId)
       _               <- checkDuplicateName(organizationId, None, eServiceSeed.name, clientSeed.producerId)
       createdEService <- catalogManagementService.createEService(clientSeed)
