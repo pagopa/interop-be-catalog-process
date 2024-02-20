@@ -31,6 +31,7 @@ import it.pagopa.interop.commons.jwt._
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 import it.pagopa.interop.commons.riskanalysis.api.impl.RiskAnalysisValidation
 import it.pagopa.interop.commons.riskanalysis.{model => Commons}
+import it.pagopa.interop.commons.utils.PRODUCER_ALLOWED_ORIGINS
 import it.pagopa.interop.commons.utils.AkkaUtils._
 import it.pagopa.interop.commons.utils.OpenapiUtils.parseArrayParameters
 import it.pagopa.interop.commons.utils.TypeConversions._
@@ -58,8 +59,6 @@ final case class ProcessApiServiceImpl(
   implicit val logger: LoggerTakingImplicit[ContextFieldsToLog] =
     Logger.takingImplicit[ContextFieldsToLog](this.getClass)
 
-  val IPA = "IPA"
-
   override def createEService(eServiceSeed: EServiceSeed)(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
@@ -71,7 +70,7 @@ final case class ProcessApiServiceImpl(
     val result: Future[EService] = for {
       organizationId <- getOrganizationIdFutureUUID(contexts)
       origin         <- getExternalIdOriginFuture(contexts)
-      _              <- if (origin == IPA) Future.unit else Future.failed(OriginIsNotCompliant(IPA))
+      _ <- if (PRODUCER_ALLOWED_ORIGINS.contains(origin)) Future.unit else Future.failed(OriginIsNotAllowed(origin))
       clientSeed = eServiceSeed.toDependency(organizationId)
       _               <- checkDuplicateName(organizationId, None, eServiceSeed.name, clientSeed.producerId)
       createdEService <- catalogManagementService.createEService(clientSeed)
@@ -120,10 +119,6 @@ final case class ProcessApiServiceImpl(
     eService.descriptors
       .find(_.id.toString == descriptorId)
       .toRight(EServiceDescriptorNotFound(eService.id.toString, descriptorId))
-
-  private def getLatestDescriptor(eService: CatalogItem): Option[CatalogDescriptor] = eService.descriptors
-    .sortBy(_.version.toInt)(Ordering.Int.reverse)
-    .headOption
 
   override def getEServices(
     name: Option[String],
@@ -427,22 +422,6 @@ final case class ProcessApiServiceImpl(
       catalogItem               <- catalogManagementService.getEServiceById(eServiceUuid)
       _                         <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       _                         <- hasNotDraftDescriptor(catalogItem).toFuture
-      _                         <- checkDailyCalls(
-        eServiceDescriptorSeed.dailyCallsPerConsumer,
-        eServiceDescriptorSeed.dailyCallsTotal
-      ).toFuture
-      _                         <- getLatestDescriptor(catalogItem).fold(Future.unit)(descriptor =>
-        checkIfDailyCallsIsGreaterThanExisting(
-          eServiceDescriptorSeed.dailyCallsPerConsumer,
-          descriptor.dailyCallsPerConsumer
-        ).toFuture
-      )
-      _                         <- getLatestDescriptor(catalogItem).fold(Future.unit)(descriptor =>
-        checkIfDailyCallsIsGreaterThanExisting(
-          eServiceDescriptorSeed.dailyCallsTotal,
-          descriptor.dailyCallsTotal
-        ).toFuture
-      )
       _                         <- eServiceDescriptorSeed.attributes.certified.traverse(
         _.traverse(attr => attributeRegistryManagementService.getAttributeById(attr.id))
       )
@@ -483,18 +462,6 @@ final case class ProcessApiServiceImpl(
       _               <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
       descriptor      <- assertDescriptorExists(catalogItem, descriptorUuid)
       _               <- isDraftDescriptor(descriptor)
-      _               <- checkDailyCalls(
-        updateEServiceDescriptorSeed.dailyCallsPerConsumer,
-        updateEServiceDescriptorSeed.dailyCallsTotal
-      ).toFuture
-      _               <- checkIfDailyCallsIsGreaterThanExisting(
-        updateEServiceDescriptorSeed.dailyCallsPerConsumer,
-        descriptor.dailyCallsPerConsumer
-      ).toFuture
-      _               <- checkIfDailyCallsIsGreaterThanExisting(
-        updateEServiceDescriptorSeed.dailyCallsTotal,
-        descriptor.dailyCallsTotal
-      ).toFuture
       updatedEService <- catalogManagementService.updateDescriptor(
         eServiceId,
         descriptorId,
@@ -517,19 +484,13 @@ final case class ProcessApiServiceImpl(
       logger.info(operationLabel)
 
       val result: Future[EService] = for {
-        organizationId <- getOrganizationIdFutureUUID(contexts)
-        eServiceUuid   <- eServiceId.toFutureUUID
-        descriptorUuid <- descriptorId.toFutureUUID
-        catalogItem    <- catalogManagementService.getEServiceById(eServiceUuid)
-        _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
-        descriptor     <- assertDescriptorExists(catalogItem, descriptorUuid)
-        _              <- descriptorCanBeUpdated(descriptor)
-        _              <- checkDailyCalls(seed.dailyCallsPerConsumer, seed.dailyCallsTotal).toFuture
-        _              <- checkIfDailyCallsIsGreaterThanExisting(
-          seed.dailyCallsPerConsumer,
-          descriptor.dailyCallsPerConsumer
-        ).toFuture
-        _ <- checkIfDailyCallsIsGreaterThanExisting(seed.dailyCallsTotal, descriptor.dailyCallsTotal).toFuture
+        organizationId  <- getOrganizationIdFutureUUID(contexts)
+        eServiceUuid    <- eServiceId.toFutureUUID
+        descriptorUuid  <- descriptorId.toFutureUUID
+        catalogItem     <- catalogManagementService.getEServiceById(eServiceUuid)
+        _               <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
+        descriptor      <- assertDescriptorExists(catalogItem, descriptorUuid)
+        _               <- descriptorCanBeUpdated(descriptor)
         updatedEService <- catalogManagementService.updateDescriptor(
           eServiceId,
           descriptorId,
@@ -999,10 +960,4 @@ object ProcessApiServiceImpl {
       case Some(_) => Future.failed(InterfaceAlreadyExists(descriptor.id))
       case None    => Future.unit
     }
-
-  def checkDailyCalls(dailyCallsPerConsumer: Int, dailyCallsTotal: Int): Either[Throwable, Unit] = Either
-    .cond(dailyCallsPerConsumer <= dailyCallsTotal, (), DailyCallsIncongruent(dailyCallsPerConsumer, dailyCallsTotal))
-
-  def checkIfDailyCallsIsGreaterThanExisting(dailyCalls: Int, previousDailyCalls: Int): Either[Throwable, Unit] = Either
-    .cond(previousDailyCalls <= dailyCalls, (), DailyCallsAreNotGreaterThanBefore(dailyCalls, previousDailyCalls))
 }
