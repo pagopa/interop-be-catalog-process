@@ -43,6 +43,7 @@ import it.pagopa.interop.agreementmanagement.model.agreement.{
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
+import it.pagopa.interop.catalogprocess.common.system.ApplicationConfiguration
 
 final case class ProcessApiServiceImpl(
   catalogManagementService: CatalogManagementService,
@@ -58,8 +59,6 @@ final case class ProcessApiServiceImpl(
   implicit val logger: LoggerTakingImplicit[ContextFieldsToLog] =
     Logger.takingImplicit[ContextFieldsToLog](this.getClass)
 
-  val IPA = "IPA"
-
   override def createEService(eServiceSeed: EServiceSeed)(implicit
     contexts: Seq[(String, String)],
     toEntityMarshallerProblem: ToEntityMarshaller[Problem],
@@ -71,7 +70,9 @@ final case class ProcessApiServiceImpl(
     val result: Future[EService] = for {
       organizationId <- getOrganizationIdFutureUUID(contexts)
       origin         <- getExternalIdOriginFuture(contexts)
-      _              <- if (origin == IPA) Future.unit else Future.failed(OriginIsNotCompliant(IPA))
+      _              <-
+        if (ApplicationConfiguration.producerAllowedOrigins.contains(origin)) Future.unit
+        else Future.failed(OriginIsNotAllowed(origin))
       clientSeed = eServiceSeed.toDependency(organizationId)
       _               <- checkDuplicateName(organizationId, None, eServiceSeed.name, clientSeed.producerId)
       createdEService <- catalogManagementService.createEService(clientSeed)

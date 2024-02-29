@@ -43,8 +43,8 @@ object CatalogProcessErrors {
   final case class DuplicatedEServiceName(name: String)
       extends ComponentError("0010", s"EService with name: $name already in use")
 
-  final case class OriginIsNotCompliant(origin: String)
-      extends ComponentError("0011", s"Requester has not origin: $origin")
+  final case class OriginIsNotAllowed(origin: String)
+      extends ComponentError("0011", s"Requester origin: $origin is not allowed")
 
   final case class EServiceNotInDraftState(eServiceId: UUID)
       extends ComponentError("0012", s"EService $eServiceId is not draft")
