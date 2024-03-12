@@ -728,12 +728,22 @@ final case class ProcessApiServiceImpl(
       val operationLabel = s"Deleting EService $eServiceId"
       logger.info(operationLabel)
 
+      def isDeletable(catalogItem: CatalogItem): Either[Throwable, Option[CatalogDescriptor]] = Either
+        .cond(
+          catalogItem.descriptors.isEmpty ||
+            (catalogItem.descriptors.length == 1 && catalogItem.descriptors.exists(_.state == Draft)),
+          catalogItem.descriptors.headOption,
+          EServiceWithDescriptorsNotDeletable(catalogItem.id.toString)
+        )
+
       val result: Future[Unit] = for {
         organizationId <- getOrganizationIdFutureUUID(contexts)
         eServiceUuid   <- eServiceId.toFutureUUID
         catalogItem    <- catalogManagementService.getEServiceById(eServiceUuid)
         _              <- assertRequesterAllowed(catalogItem.producerId)(organizationId)
-        result         <- catalogManagementService.deleteEService(eServiceId)
+        descriptor     <- isDeletable(catalogItem).toFuture
+        _      <- descriptor.fold(Future.unit)(d => catalogManagementService.deleteDraft(eServiceId, d.id.toString))
+        result <- catalogManagementService.deleteEService(eServiceId)
       } yield result
 
       onComplete(result) {

@@ -18,8 +18,7 @@ import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors.{
   DescriptorDocumentNotFound,
   EServiceNotFound,
   EServiceRiskAnalysisNotFound,
-  AttributeNotFound,
-  EServiceWithDescriptorsNotDeletable
+  AttributeNotFound
 }
 import it.pagopa.interop.catalogprocess.model._
 import it.pagopa.interop.commons.cqrs.service.ReadModelService
@@ -3282,14 +3281,11 @@ class CatalogProcessSpec extends SpecHelper with AnyWordSpecLike with ScalatestR
         .once()
         .returns(Future.successful(eService))
 
-      (mockCatalogManagementService
-        .deleteEService(_: String)(_: Seq[(String, String)]))
-        .expects(eService.id.toString, *)
-        .returning(Future.failed(EServiceWithDescriptorsNotDeletable(SpecData.catalogItem.id.toString)))
-        .once()
-
       Delete() ~> service.deleteEService(SpecData.catalogItem.id.toString) ~> check {
         status shouldEqual StatusCodes.Conflict
+        val problem = responseAs[Problem]
+        problem.status shouldBe StatusCodes.Conflict.intValue
+        problem.errors.head.code shouldBe "009-0021"
       }
     }
     "fail if requester is not the Producer" in {

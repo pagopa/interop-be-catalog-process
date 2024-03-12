@@ -24,8 +24,7 @@ import it.pagopa.interop.catalogprocess.errors.CatalogProcessErrors.{
   DescriptorDocumentNotFound,
   EServiceDescriptorNotFound,
   EServiceNotFound,
-  EServiceRiskAnalysisNotFound,
-  EServiceWithDescriptorsNotDeletable
+  EServiceRiskAnalysisNotFound
 }
 import it.pagopa.interop.commons.logging.{CanLogContextFields, ContextFieldsToLog}
 
@@ -78,7 +77,6 @@ final case class CatalogManagementServiceImpl(invoker: CatalogManagementInvoker,
       invoker.invoke(request, s"E-Service $eServiceId deleted").recoverWith {
         case err: ApiError[_] if err.code == 404 =>
           Future.failed(EServiceNotFound(eServiceId))
-        case err: ApiError[_] if err.code == 409 => Future.failed(EServiceWithDescriptorsNotDeletable(eServiceId))
       }
     }
 
