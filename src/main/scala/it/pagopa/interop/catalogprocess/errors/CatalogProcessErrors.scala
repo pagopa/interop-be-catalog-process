@@ -87,10 +87,4 @@ object CatalogProcessErrors {
         "0023",
         s"Daily calls per consumer ($dailyCallsPerConsumer) is greater than daily calls ($dailyCallsTotal)"
       )
-
-  final case class DailyCallsAreNotGreaterThanBefore(dailyCalls: Int, previousDailyCalls: Int)
-      extends ComponentError(
-        "0024",
-        s"Daily calls ($dailyCalls) must be greater than previous daily calls ($previousDailyCalls)"
-      )
 }
