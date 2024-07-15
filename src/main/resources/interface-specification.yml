@@ -1112,8 +1112,8 @@ components:
           $ref: '#/components/schemas/EServiceTechnology'
         mode:
           $ref: '#/components/schemas/EServiceMode'
-    descriptor:
-      $ref: "#/components/schemas/DescriptorSeedForEServiceCreation"
+        descriptor:
+          $ref: "#/components/schemas/DescriptorSeedForEServiceCreation"
     UpdateEServiceSeed:
       type: object
       required:
