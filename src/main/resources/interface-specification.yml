@@ -1111,7 +1111,7 @@ components:
         technology:
           $ref: '#/components/schemas/EServiceTechnology'
         mode:
-          $ref: '#/components/schemas/EServiceMode'  
+          $ref: '#/components/schemas/EServiceMode'
         descriptor:
           $ref: "#/components/schemas/DescriptorSeedForEServiceCreation"
     UpdateEServiceSeed:
@@ -1133,7 +1133,7 @@ components:
         technology:
           $ref: '#/components/schemas/EServiceTechnology'
         mode:
-          $ref: '#/components/schemas/EServiceMode'
+          $ref: '#/components/schemas/EServiceMode'  
     DescriptorSeedForEServiceCreation:
       required:
         - audience
