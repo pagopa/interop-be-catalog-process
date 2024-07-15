@@ -18,7 +18,6 @@ env:
 jobs:
   publish:
     name: Publish Artifacts
-    needs: [build]
     permissions:
       id-token: write
       contents: read
