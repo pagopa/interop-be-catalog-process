@@ -1575,6 +1575,15 @@ components:
           type: string
         path:
           type: string
+    EServiceDescriptionSeed:
+      type: object
+      properties:
+        description:
+          type: string
+          minLength: 10
+          maxLength: 250
+      required:
+        - description
     EServiceDescriptor:
       type: object
       required:
