@@ -1148,7 +1148,6 @@ components:
         - description
         - technology
         - mode
-        - descriptor
       properties:
         name:
           type: string
@@ -1161,9 +1160,7 @@ components:
         technology:
           $ref: '#/components/schemas/EServiceTechnology'
         mode:
-          $ref: '#/components/schemas/EServiceMode'
-        descriptor:
-          $ref: "#/components/schemas/DescriptorSeedForEServiceCreation"
+          $ref: '#/components/schemas/EServiceMode'  
     UpdateEServiceSeed:
       type: object
       required:
@@ -1183,43 +1180,7 @@ components:
         technology:
           $ref: '#/components/schemas/EServiceTechnology'
         mode:
-          $ref: '#/components/schemas/EServiceMode'
-    DescriptorSeedForEServiceCreation:
-      required:
-        - audience
-        - voucherLifespan
-        - dailyCallsPerConsumer
-        - dailyCallsTotal
-        - agreementApprovalPolicy
-      type: object
-      properties:
-        description:
-          type: string
-          minLength: 10
-          maxLength: 250
-        audience:
-          type: array
-          items:
-            type: string
-            minLength: 1
-            maxLength: 250
-        voucherLifespan:
-          type: integer
-          format: int32
-          minimum: 60
-          maximum: 86400
-        dailyCallsPerConsumer:
-          description: "maximum number of daily calls that this descriptor can afford."
-          type: integer
-          format: int32
-          minimum: 1
-        dailyCallsTotal:
-          description: "total daily calls available for this e-service."
-          type: integer
-          format: int32
-          minimum: 1
-        agreementApprovalPolicy:
-          $ref: "#/components/schemas/AgreementApprovalPolicy"
+          $ref: '#/components/schemas/EServiceMode'  
     EServiceDescriptorSeed:
       required:
         - audience
@@ -1228,7 +1189,6 @@ components:
         - dailyCallsTotal
         - agreementApprovalPolicy
         - attributes
-        - docs
       type: object
       properties:
         description:
@@ -1260,10 +1220,6 @@ components:
           $ref: '#/components/schemas/AgreementApprovalPolicy'
         attributes:
           $ref: '#/components/schemas/AttributesSeed'
-        docs:
-          type: array
-          items:
-            $ref: "#/components/schemas/CreateEServiceDescriptorDocumentSeed"
     UpdateEServiceDescriptorSeed:
       required:
         - audience
@@ -1607,7 +1563,6 @@ components:
         - contentType
         - prettyName
         - path
-        - checksum
       properties:
         id:
           type: string
@@ -1620,17 +1575,6 @@ components:
           type: string
         path:
           type: string
-        checksum:
-          type: string
-    EServiceDescriptionSeed:
-      type: object
-      properties:
-        description:
-          type: string
-          minLength: 10
-          maxLength: 250
-      required:
-        - description
     EServiceDescriptor:
       type: object
       required:
